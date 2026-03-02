@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MultiBucket Explorer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero hero-compact">
+        <div>
+          <p class="eyebrow">MultiBucket Explorer</p>
+          <h1>MultiBucket Explorer</h1>
+        </div>
+      </section>
+
+      <details id="connectionPanel" class="panel credentials-panel" open>
+        <summary class="connection-summary">
+          <div>
+            <p class="panel-kicker">Conexão</p>
+            <h2>Acesso AWS</h2>
+          </div>
+          <div id="connectionSummaryText" class="connection-summary-text muted">
+            Configuração da conexão
+          </div>
+        </summary>
+
+        <div class="connection-panel-body">
+          <div class="panel-header">
+            <div></div>
+            <button id="connectButton" class="primary-button">Conectar</button>
+          </div>
+
+          <form id="credentialsForm" class="credentials-grid" autocomplete="off">
+            <label>
+              Região
+              <input id="region" name="region" placeholder="us-east-1" required />
+            </label>
+            <label>
+              Bucket
+              <input id="bucket" name="bucket" placeholder="meu-bucket" required />
+            </label>
+            <label>
+              Access Key ID
+              <input
+                id="accessKeyId"
+                name="accessKeyId"
+                placeholder="AKIA..."
+                required
+              />
+            </label>
+            <label>
+              Secret Access Key
+              <input
+                id="secretAccessKey"
+                name="secretAccessKey"
+                type="password"
+                placeholder="********"
+                required
+              />
+            </label>
+          </form>
+
+          <p id="connectionStatus" class="status-text muted">
+            Informe as credenciais e clique em conectar.
+          </p>
+          <div id="diagnosticBox" class="diagnostic-box muted">
+            Dica: execute o servidor Node local e abra a aplicação por
+            `http://localhost:8086`.
+          </div>
+        </div>
+      </details>
+
+      <section class="workspace">
+        <div class="panel browser-panel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Bucket Browser</p>
+              <h2>Objetos</h2>
+            </div>
+            <button id="upButton" class="ghost-button" disabled>Voltar pasta</button>
+          </div>
+
+          <div class="toolbar">
+            <div>
+              <span class="toolbar-label">Prefixo atual</span>
+              <code id="currentPrefix">/</code>
+            </div>
+            <div class="toolbar-actions">
+              <button id="refreshButton" class="ghost-button" disabled>Atualizar</button>
+              <button id="clearPrefixButton" class="danger-button" disabled>Limpar pasta</button>
+            </div>
+          </div>
+
+          <div id="objectList" class="object-list empty-state">
+            Conecte-se para listar os objetos do bucket.
+          </div>
+        </div>
+
+        <div class="panel preview-panel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">File Preview</p>
+              <h2>Pré-visualização</h2>
+            </div>
+            <div class="preview-actions">
+              <label class="preview-limit-control">
+                <span>Visualização</span>
+                <select id="previewMode">
+                  <option value="table" selected>Tabela</option>
+                  <option value="raw">Raw</option>
+                </select>
+              </label>
+              <label class="preview-limit-control">
+                <span>Linhas</span>
+                <select id="previewRowLimit">
+                  <option value="10" selected>10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                  <option value="all">Todas</option>
+                </select>
+              </label>
+              <label class="preview-limit-control">
+                <span>Ordem</span>
+                <select id="previewRowOrder">
+                  <option value="normal" selected>Normal</option>
+                  <option value="reverse">Último primeiro</option>
+                </select>
+              </label>
+              <button id="downloadButton" class="ghost-button" disabled>
+                Baixar arquivo
+              </button>
+            </div>
+          </div>
+
+          <div id="previewMeta" class="preview-meta muted">
+            Selecione um arquivo `.csv`, `.json`, `.parquet` ou `.gz` compatível para visualizar.
+          </div>
+
+          <div id="previewTableWrap" class="preview-table-wrap empty-state">
+            Nenhum CSV selecionado.
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
