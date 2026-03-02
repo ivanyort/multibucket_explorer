@@ -32,6 +32,7 @@ By default the application runs at `http://localhost:8086`.
 5. Avoid adding new dependencies without a clear need. The project is intentionally small and direct.
 6. Preserve compatibility with Node running in ESM mode and with simple local execution through `npm start`.
 7. If you add new operational scripts, document their usage in `README.md`.
+8. When creating commits, always include new files that are part of the delivery unless the user explicitly asks to exclude them.
 
 # Backend Rules
 1. All S3 access must continue to go through the backend. Do not move AWS access directly into the browser.
