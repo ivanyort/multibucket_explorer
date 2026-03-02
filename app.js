@@ -22,6 +22,8 @@ const elements = {
   providerCards: document.querySelectorAll("[data-provider-card]"),
   s3Fields: document.querySelector("#s3Fields"),
   adlsFields: document.querySelector("#adlsFields"),
+  gcsFields: document.querySelector("#gcsFields"),
+  minioFields: document.querySelector("#minioFields"),
   connectButton: document.querySelector("#connectButton"),
   connectionStatus: document.querySelector("#connectionStatus"),
   diagnosticBox: document.querySelector("#diagnosticBox"),
@@ -42,9 +44,15 @@ elements.credentialsForm.addEventListener("submit", (event) => {
   event.preventDefault();
 });
 elements.credentialsForm.addEventListener("input", persistConnectionForm);
+elements.credentialsForm.addEventListener("change", persistConnectionForm);
+const serviceAccountJsonField = elements.credentialsForm.elements.namedItem("serviceAccountJson");
+if (serviceAccountJsonField instanceof HTMLTextAreaElement) {
+  serviceAccountJsonField.addEventListener("input", syncProjectIdFromServiceAccountJson);
+  serviceAccountJsonField.addEventListener("change", syncProjectIdFromServiceAccountJson);
+}
 elements.providerCards.forEach((card) => {
   card.addEventListener("click", () => {
-    const provider = card.dataset.providerCard === "adls" ? "adls" : "s3";
+    const provider = ["adls", "gcs", "minio"].includes(card.dataset.providerCard) ? card.dataset.providerCard : "s3";
     elements.provider.value = provider;
     syncProviderFields();
     persistConnectionForm();
@@ -735,6 +743,15 @@ function restoreConnectionForm() {
     setInputValue("accountName", payload.accountName);
     setInputValue("fileSystem", payload.fileSystem);
     setInputValue("accountKey", payload.accountKey);
+    setInputValue("gcsBucket", payload.gcsBucket);
+    setInputValue("projectId", payload.projectId);
+    setInputValue("serviceAccountJson", payload.serviceAccountJson);
+    setInputValue("endpoint", payload.endpoint);
+    setInputValue("minioBucket", payload.minioBucket);
+    setInputValue("minioRegion", payload.minioRegion);
+    setInputValue("minioAccessKeyId", payload.minioAccessKeyId);
+    setInputValue("minioSecretAccessKey", payload.minioSecretAccessKey);
+    setCheckboxValue("ignoreTlsErrors", payload.ignoreTlsErrors === true);
     syncProviderFields();
     setConnectionStatus("Connection data restored from the browser.");
     refreshConnectionSummary();
@@ -746,16 +763,76 @@ function restoreConnectionForm() {
 function setInputValue(name, value) {
   const input = elements.credentialsForm.elements.namedItem(name);
 
-  if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement) {
+  if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement || input instanceof HTMLTextAreaElement) {
     input.value = typeof value === "string" ? value : "";
   }
+}
+
+function setCheckboxValue(name, checked) {
+  const input = elements.credentialsForm.elements.namedItem(name);
+
+  if (input instanceof HTMLInputElement && input.type === "checkbox") {
+    input.checked = checked;
+  }
+}
+
+function syncProjectIdFromServiceAccountJson() {
+  const projectIdField = elements.credentialsForm.elements.namedItem("projectId");
+  const serviceAccountJsonField = elements.credentialsForm.elements.namedItem("serviceAccountJson");
+
+  if (!(projectIdField instanceof HTMLInputElement) || !(serviceAccountJsonField instanceof HTMLTextAreaElement)) {
+    return;
+  }
+
+  if (projectIdField.value.trim()) {
+    return;
+  }
+
+  const projectId = extractProjectIdFromServiceAccountJson(serviceAccountJsonField.value);
+
+  if (!projectId) {
+    return;
+  }
+
+  projectIdField.value = projectId;
+  persistConnectionForm();
+}
+
+function extractProjectIdFromServiceAccountJson(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    return "";
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed.project_id === "string" ? parsed.project_id.trim() : "";
+  } catch {
+    return "";
+  }
+}
+
+function normalizeGcsBucketName(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  const withoutScheme = trimmed.replace(/^gs:\/\//i, "");
+  return withoutScheme.split("/")[0]?.trim() ?? "";
 }
 
 function getConnectionPayload() {
   const formData = new FormData(elements.credentialsForm);
 
   return {
-    provider: formData.get("provider")?.toString().trim() === "adls" ? "adls" : "s3",
+    provider: ["adls", "gcs", "minio"].includes(formData.get("provider")?.toString().trim())
+      ? formData.get("provider")?.toString().trim()
+      : "s3",
     region: formData.get("region")?.toString().trim() ?? "",
     bucket: formData.get("bucket")?.toString().trim() ?? "",
     accessKeyId: formData.get("accessKeyId")?.toString().trim() ?? "",
@@ -763,6 +840,17 @@ function getConnectionPayload() {
     accountName: formData.get("accountName")?.toString().trim() ?? "",
     fileSystem: formData.get("fileSystem")?.toString().trim() ?? "",
     accountKey: formData.get("accountKey")?.toString().trim() ?? "",
+    gcsBucket: normalizeGcsBucketName(formData.get("gcsBucket")?.toString() ?? ""),
+    projectId: formData.get("projectId")?.toString().trim() ?? "",
+    serviceAccountJson: formData.get("serviceAccountJson")?.toString().trim() ?? "",
+    endpoint: formData.get("endpoint")?.toString().trim() ?? "",
+    minioBucket: formData.get("minioBucket")?.toString().trim() ?? "",
+    minioRegion: formData.get("minioRegion")?.toString().trim() ?? "",
+    minioAccessKeyId: formData.get("minioAccessKeyId")?.toString().trim() ?? "",
+    minioSecretAccessKey: formData.get("minioSecretAccessKey")?.toString().trim() ?? "",
+    ignoreTlsErrors: elements.credentialsForm.elements.namedItem("ignoreTlsErrors") instanceof HTMLInputElement
+      ? elements.credentialsForm.elements.namedItem("ignoreTlsErrors").checked
+      : false,
   };
 }
 
@@ -770,6 +858,28 @@ function validateConnectionPayload(connection) {
   if (connection.provider === "adls") {
     if (!connection.accountName || !connection.fileSystem || !connection.accountKey) {
       return "Fill in account name, container name, and access key.";
+    }
+
+    return "";
+  }
+
+  if (connection.provider === "gcs") {
+    if (!connection.gcsBucket || !connection.serviceAccountJson) {
+      return "Fill in bucket and service account JSON.";
+    }
+
+    try {
+      JSON.parse(connection.serviceAccountJson);
+    } catch {
+      return "Service account JSON must be valid JSON.";
+    }
+
+    return "";
+  }
+
+  if (connection.provider === "minio") {
+    if (!connection.endpoint || !connection.minioBucket || !connection.minioAccessKeyId || !connection.minioSecretAccessKey) {
+      return "Fill in endpoint, bucket, access key ID, and secret access key.";
     }
 
     return "";
@@ -783,16 +893,43 @@ function validateConnectionPayload(connection) {
 }
 
 function getConnectionTargetName(connection) {
-  return connection.provider === "adls" ? connection.fileSystem : connection.bucket;
+  if (connection.provider === "adls") {
+    return connection.fileSystem;
+  }
+
+  if (connection.provider === "gcs") {
+    return connection.gcsBucket;
+  }
+
+  if (connection.provider === "minio") {
+    return connection.minioBucket;
+  }
+
+  return connection.bucket;
 }
 
 function getConnectionLocationName(connection) {
-  return connection.provider === "adls" ? connection.accountName : connection.region;
+  if (connection.provider === "adls") {
+    return connection.accountName;
+  }
+
+  if (connection.provider === "gcs") {
+    return connection.projectId || "GCP";
+  }
+
+  if (connection.provider === "minio") {
+    return connection.endpoint;
+  }
+
+  return connection.region;
 }
 
 function syncProviderFields() {
-  const provider = elements.provider.value === "adls" ? "adls" : "s3";
+  const provider = ["adls", "gcs", "minio"].includes(elements.provider.value) ? elements.provider.value : "s3";
+  const useS3 = provider === "s3";
   const useAdls = provider === "adls";
+  const useGcs = provider === "gcs";
+  const useMinio = provider === "minio";
 
   elements.providerCards.forEach((card) => {
     const isActive = card.dataset.providerCard === provider;
@@ -800,13 +937,21 @@ function syncProviderFields() {
     card.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
 
-  elements.s3Fields.hidden = useAdls;
+  elements.s3Fields.hidden = !useS3;
   elements.adlsFields.hidden = !useAdls;
-  elements.s3Fields.setAttribute("aria-hidden", useAdls ? "true" : "false");
+  elements.gcsFields.hidden = !useGcs;
+  elements.minioFields.hidden = !useMinio;
+  elements.s3Fields.setAttribute("aria-hidden", useS3 ? "false" : "true");
   elements.adlsFields.setAttribute("aria-hidden", useAdls ? "false" : "true");
+  elements.gcsFields.setAttribute("aria-hidden", useGcs ? "false" : "true");
+  elements.minioFields.setAttribute("aria-hidden", useMinio ? "false" : "true");
 
-  setFieldRequired(["region", "bucket", "accessKeyId", "secretAccessKey"], !useAdls);
+  setFieldRequired(["region", "bucket", "accessKeyId", "secretAccessKey"], provider === "s3");
   setFieldRequired(["accountName", "fileSystem", "accountKey"], useAdls);
+  setFieldRequired(["gcsBucket", "serviceAccountJson"], useGcs);
+  setFieldRequired(["projectId"], false);
+  setFieldRequired(["endpoint", "minioBucket", "minioAccessKeyId", "minioSecretAccessKey"], useMinio);
+  setFieldRequired(["minioRegion"], false);
   refreshConnectionSummary();
 }
 
@@ -814,7 +959,7 @@ function setFieldRequired(names, required) {
   names.forEach((name) => {
     const input = elements.credentialsForm.elements.namedItem(name);
 
-    if (input instanceof HTMLInputElement) {
+    if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
       input.required = required;
     }
   });

@@ -32,7 +32,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -183,6 +184,18 @@ select {
   font-size: 0.95rem;
 }
 
+.checkbox-field {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-field input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
 .span-2 {
   grid-column: 1 / -1;
 }
@@ -205,8 +218,20 @@ select {
   color: var(--text);
 }
 
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 13px 14px;
+  background: var(--surface-strong);
+  color: var(--text);
+  resize: vertical;
+  min-height: 160px;
+}
+
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   outline: 2px solid rgba(181, 84, 45, 0.2);
   border-color: rgba(181, 84, 45, 0.5);
 }

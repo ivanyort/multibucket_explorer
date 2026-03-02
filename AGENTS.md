@@ -20,8 +20,15 @@ The project uses plain ESM JavaScript and no frontend framework. Keep that simpl
 # Supported Providers
 - AWS S3
 - Azure Data Lake Storage Gen2 via the DFS endpoint
+- Google Cloud Storage
+- MinIO via S3-compatible endpoint access
 
-Until instructed otherwise, the ADLS path should remain based on shared key authentication with `account name + container name + access key`.
+Until instructed otherwise, provider authentication should remain:
+- ADLS: `account name + container name + access key`
+- GCS: `bucket + service account JSON`
+- MinIO: `endpoint + bucket + access keys`
+
+For MinIO, ignoring HTTPS certificate validation must remain an explicit per-connection opt-in in the UI and must not affect other providers.
 
 # Commands
 - install dependencies: `npm install`
@@ -55,9 +62,10 @@ By default the application runs at `http://localhost:8086`.
 3. Avoid frameworks, bundlers, or build steps if the problem can be solved within the current HTML/CSS/JS setup.
 4. When adding controls, wire state, visual feedback, and error handling consistently with the rest of `app.js`.
 5. Provider selection must remain explicit in the UI when behavior or required credentials differ across backends.
+6. Each provider should have its own visible connection block in the UI; users should not have to infer which fields belong to which backend.
 
 # Security And Sensitive Data
-1. Storage credentials are entered through the UI and are currently persisted in `localStorage`. Any change in this area must consider security impact and be documented.
+1. Storage credentials are entered through the UI and are currently persisted in `localStorage`. All provider-specific connection fields, credentials, secrets, textarea content, and toggles must remain persistable unless the behavior is intentionally redesigned. Any change in this area must consider security impact and be documented.
 2. Never log secrets such as AWS secret keys or Azure access keys in logs, error messages, state dumps, or documentation.
 3. Do not commit real credentials, private buckets, private file systems, or customer-sensitive data.
 4. If testing against real cloud storage is necessary, prefer minimally invasive validation and clearly confirm any destructive action.

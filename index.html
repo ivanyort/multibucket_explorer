@@ -62,6 +62,24 @@
                   <strong>ADLS</strong>
                   <span>Azure Data Lake Storage Gen2 with account and container name.</span>
                 </button>
+                <button
+                  type="button"
+                  class="provider-card"
+                  data-provider-card="gcs"
+                  aria-pressed="false"
+                >
+                  <strong>GCS</strong>
+                  <span>Google Cloud Storage with bucket and service account JSON.</span>
+                </button>
+                <button
+                  type="button"
+                  class="provider-card"
+                  data-provider-card="minio"
+                  aria-pressed="false"
+                >
+                  <strong>MinIO</strong>
+                  <span>S3-compatible storage with custom endpoint and access keys.</span>
+                </button>
               </div>
             </div>
 
@@ -127,6 +145,80 @@
                   placeholder="********"
                 />
               </label>
+              </div>
+            </section>
+
+            <section
+              id="gcsFields"
+              class="span-2 provider-fields"
+              aria-label="GCS connection settings"
+              hidden
+            >
+              <div class="provider-fields-header">
+                <p class="panel-kicker">GCS Connection</p>
+                <p class="provider-fields-copy">Use a Google Cloud Storage bucket and a service account JSON key.</p>
+              </div>
+              <div class="credentials-grid provider-fields-grid">
+                <label>
+                  Bucket or URL
+                  <input id="gcsBucket" name="gcsBucket" placeholder="gs://my-bucket or my-bucket" />
+                </label>
+                <label>
+                  Project ID (auto-filled from the JSON when present)
+                  <input id="projectId" name="projectId" placeholder="my-project-id" />
+                </label>
+                <label class="span-2">
+                  Service Account JSON
+                  <textarea
+                    id="serviceAccountJson"
+                    name="serviceAccountJson"
+                    rows="8"
+                    placeholder='{"type":"service_account", ...}'
+                  ></textarea>
+                </label>
+              </div>
+            </section>
+
+            <section
+              id="minioFields"
+              class="span-2 provider-fields"
+              aria-label="MinIO connection settings"
+              hidden
+            >
+              <div class="provider-fields-header">
+                <p class="panel-kicker">MinIO Connection</p>
+                <p class="provider-fields-copy">Use a custom MinIO endpoint with S3-compatible access keys.</p>
+              </div>
+              <div class="credentials-grid provider-fields-grid">
+                <label class="span-2">
+                  Endpoint
+                  <input id="endpoint" name="endpoint" placeholder="http://localhost:9000" />
+                </label>
+                <label>
+                  Bucket
+                  <input id="minioBucket" name="minioBucket" placeholder="my-bucket" />
+                </label>
+                <label>
+                  Region
+                  <input id="minioRegion" name="minioRegion" placeholder="us-east-1" />
+                </label>
+                <label>
+                  Access Key ID
+                  <input id="minioAccessKeyId" name="minioAccessKeyId" placeholder="minioadmin" />
+                </label>
+                <label>
+                  Secret Access Key
+                  <input
+                    id="minioSecretAccessKey"
+                    name="minioSecretAccessKey"
+                    type="password"
+                    placeholder="********"
+                  />
+                </label>
+                <label class="span-2 checkbox-field">
+                  <input id="ignoreTlsErrors" name="ignoreTlsErrors" type="checkbox" />
+                  <span>Ignore HTTPS certificate errors for this MinIO connection</span>
+                </label>
               </div>
             </section>
           </form>

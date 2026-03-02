@@ -2,11 +2,14 @@ import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
+import https from "node:https";
 import { Readable } from "node:stream";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createGunzip, gunzipSync } from "node:zlib";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 import { DataLakeServiceClient, StorageSharedKeyCredential } from "@azure/storage-file-datalake";
+import { Storage as GoogleCloudStorage } from "@google-cloud/storage";
 import { parquetMetadataAsync, parquetReadObjects } from "hyparquet";
 import { compressors as hyparquetCompressors } from "hyparquet-compressors";
 import {
@@ -224,9 +227,41 @@ function createS3Client(connection) {
   });
 }
 
+function createMinioClient(connection) {
+  const useInsecureTls =
+    connection.ignoreTlsErrors && connection.endpoint.toLowerCase().startsWith("https://");
+
+  return new S3Client({
+    region: connection.region || "us-east-1",
+    endpoint: connection.endpoint,
+    forcePathStyle: true,
+    ...(useInsecureTls
+      ? {
+          requestHandler: new NodeHttpHandler({
+            httpsAgent: new https.Agent({
+              rejectUnauthorized: false,
+            }),
+          }),
+        }
+      : {}),
+    credentials: {
+      accessKeyId: connection.accessKeyId,
+      secretAccessKey: connection.secretAccessKey,
+    },
+  });
+}
+
 function createAdlsServiceClient(connection) {
   const credential = new StorageSharedKeyCredential(connection.accountName, connection.accountKey);
   return new DataLakeServiceClient(`https://${connection.accountName}.dfs.core.windows.net`, credential);
+}
+
+function createGcsClient(connection) {
+  const credentials = JSON.parse(connection.serviceAccountJson);
+  return new GoogleCloudStorage({
+    projectId: connection.projectId || credentials.project_id,
+    credentials,
+  });
 }
 
 async function createStorageSession(connection) {
@@ -244,7 +279,21 @@ async function createStorageSession(connection) {
     };
   }
 
-  const client = createS3Client(connection);
+  if (connection.provider === "gcs") {
+    const client = createGcsClient(connection);
+    const bucket = client.bucket(connection.bucket);
+    await bucket.getFiles({ maxResults: 1, autoPaginate: false });
+
+    return {
+      provider: "gcs",
+      client,
+      bucket,
+      bucketName: connection.bucket,
+      projectId: connection.projectId,
+    };
+  }
+
+  const client = connection.provider === "minio" ? createMinioClient(connection) : createS3Client(connection);
   await client.send(
     new ListObjectsV2Command({
       Bucket: connection.bucket,
@@ -253,24 +302,45 @@ async function createStorageSession(connection) {
   );
 
   return {
-    provider: "s3",
+    provider: connection.provider,
     client,
     bucket: connection.bucket,
     region: connection.region,
+    endpoint: connection.endpoint,
   };
 }
 
 function getConnectionTargetName(connection) {
-  return connection.provider === "adls" ? connection.fileSystem : connection.bucket;
+  if (connection.provider === "adls") {
+    return connection.fileSystem;
+  }
+
+  return connection.bucket;
 }
 
 function getConnectionLocationName(connection) {
-  return connection.provider === "adls" ? connection.accountName : connection.region;
+  if (connection.provider === "adls") {
+    return connection.accountName;
+  }
+
+  if (connection.provider === "gcs") {
+    return connection.projectId || "GCP";
+  }
+
+  if (connection.provider === "minio") {
+    return connection.endpoint;
+  }
+
+  return connection.region;
 }
 
 async function listStorageObjects(session, prefix) {
   if (session.storage.provider === "adls") {
     return listAdlsObjects(session, prefix);
+  }
+
+  if (session.storage.provider === "gcs") {
+    return listGcsObjects(session, prefix);
   }
 
   const result = await session.storage.client.send(
@@ -298,6 +368,47 @@ async function listStorageObjects(session, prefix) {
     })) ?? [];
 
   return { folders, files };
+}
+
+async function listGcsObjects(session, prefix) {
+  const [files, , apiResponse] = await session.storage.bucket.getFiles({
+    prefix,
+    delimiter: "/",
+    autoPaginate: false,
+  });
+
+  const folders = (apiResponse.prefixes ?? []).map((folderPrefix) => ({
+    type: "folder",
+    key: folderPrefix,
+    name: trimCurrentPrefix(folderPrefix, prefix).replace(/\/$/, ""),
+  }));
+
+  const fileItems = files
+    .filter((file) => file.name !== prefix)
+    .map((file) => ({
+      type: "file",
+      key: file.name,
+      name: trimCurrentPrefix(file.name, prefix),
+      size: Number(file.metadata.size ?? 0),
+      lastModified: file.metadata.updated ?? null,
+    }));
+
+  return { folders, files: fileItems };
+}
+
+function normalizeGcsBucketName(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  const withoutScheme = trimmed.replace(/^gs:\/\//i, "");
+  return withoutScheme.split("/")[0]?.trim() ?? "";
 }
 
 async function listAdlsObjects(session, prefix) {
@@ -351,6 +462,23 @@ async function listStoragePaths(session, prefix, recursive = true) {
     return paths;
   }
 
+  if (session.storage.provider === "gcs") {
+    const items = [];
+    let query = {
+      prefix,
+      autoPaginate: false,
+      ...(recursive ? {} : { delimiter: "/" }),
+    };
+
+    do {
+      const [files, nextQuery] = await session.storage.bucket.getFiles(query);
+      items.push(...files);
+      query = nextQuery;
+    } while (query);
+
+    return items;
+  }
+
   let continuationToken;
   const items = [];
 
@@ -382,6 +510,12 @@ async function deleteStoragePrefix(session, prefix) {
     const deletedCount = paths.filter((item) => !item.isDirectory).length;
     await session.storage.fileSystemClient.getDirectoryClient(normalizedPrefix).delete(true);
     return deletedCount;
+  }
+
+  if (session.storage.provider === "gcs") {
+    const files = await listStoragePaths(session, prefix, true);
+    await Promise.all(files.map((file) => file.delete()));
+    return files.length;
   }
 
   let continuationToken;
@@ -426,6 +560,17 @@ async function getDownloadResponse(session, key) {
       contentType: response.contentType,
       contentLength: response.contentLength,
       body: response.readableStreamBody,
+    };
+  }
+
+  if (session.storage.provider === "gcs") {
+    const file = session.storage.bucket.file(key);
+    const [metadata] = await file.getMetadata();
+
+    return {
+      contentType: metadata.contentType,
+      contentLength: Number(metadata.size ?? 0),
+      body: file.createReadStream(),
     };
   }
 
@@ -478,6 +623,11 @@ async function readObjectBufferRaw(session, key) {
     return fileClient.readToBuffer();
   }
 
+  if (session.storage.provider === "gcs") {
+    const [buffer] = await session.storage.bucket.file(key).download();
+    return buffer;
+  }
+
   const response = await session.storage.client.send(
     new GetObjectCommand({
       Bucket: session.storage.bucket,
@@ -493,6 +643,10 @@ async function getObjectReadableStream(session, key) {
     const fileClient = session.storage.fileSystemClient.getFileClient(key);
     const response = await fileClient.read();
     return response.readableStreamBody ?? null;
+  }
+
+  if (session.storage.provider === "gcs") {
+    return session.storage.bucket.file(key).createReadStream();
   }
 
   const response = await session.storage.client.send(
@@ -511,6 +665,11 @@ async function getObjectContentLength(session, key) {
     return Number(response.contentLength ?? 0);
   }
 
+  if (session.storage.provider === "gcs") {
+    const [metadata] = await session.storage.bucket.file(key).getMetadata();
+    return Number(metadata.size ?? 0);
+  }
+
   const response = await session.storage.client.send(
     new HeadObjectCommand({
       Bucket: session.storage.bucket,
@@ -527,6 +686,11 @@ async function readObjectRangeBuffer(session, key, start, end) {
   if (session.storage.provider === "adls") {
     const fileClient = session.storage.fileSystemClient.getFileClient(key);
     return fileClient.readToBuffer(start, count);
+  }
+
+  if (session.storage.provider === "gcs") {
+    const [buffer] = await session.storage.bucket.file(key).download({ start, end });
+    return buffer;
   }
 
   const response = await session.storage.client.send(
@@ -594,16 +758,52 @@ function readJsonBody(request) {
 }
 
 function normalizeConnection(body) {
+  const provider = ["adls", "gcs", "minio"].includes(body.provider) ? body.provider : "s3";
+
   return {
-    provider: body.provider === "adls" ? "adls" : "s3",
-    region: typeof body.region === "string" ? body.region.trim() : "",
-    bucket: typeof body.bucket === "string" ? body.bucket.trim() : "",
-    accessKeyId: typeof body.accessKeyId === "string" ? body.accessKeyId.trim() : "",
-    secretAccessKey: typeof body.secretAccessKey === "string" ? body.secretAccessKey.trim() : "",
+    provider,
+    region:
+      provider === "minio"
+        ? typeof body.minioRegion === "string"
+          ? body.minioRegion.trim()
+          : ""
+        : typeof body.region === "string"
+          ? body.region.trim()
+          : "",
+    bucket:
+      provider === "gcs"
+        ? normalizeGcsBucketName(body.gcsBucket)
+        : provider === "minio"
+          ? typeof body.minioBucket === "string"
+            ? body.minioBucket.trim()
+            : ""
+          : typeof body.bucket === "string"
+            ? body.bucket.trim()
+            : "",
+    accessKeyId:
+      provider === "minio"
+        ? typeof body.minioAccessKeyId === "string"
+          ? body.minioAccessKeyId.trim()
+          : ""
+        : typeof body.accessKeyId === "string"
+          ? body.accessKeyId.trim()
+          : "",
+    secretAccessKey:
+      provider === "minio"
+        ? typeof body.minioSecretAccessKey === "string"
+          ? body.minioSecretAccessKey.trim()
+          : ""
+        : typeof body.secretAccessKey === "string"
+          ? body.secretAccessKey.trim()
+          : "",
     sessionToken: typeof body.sessionToken === "string" ? body.sessionToken.trim() : "",
     accountName: typeof body.accountName === "string" ? body.accountName.trim() : "",
     fileSystem: typeof body.fileSystem === "string" ? body.fileSystem.trim() : "",
     accountKey: typeof body.accountKey === "string" ? body.accountKey.trim() : "",
+    endpoint: typeof body.endpoint === "string" ? body.endpoint.trim() : "",
+    ignoreTlsErrors: body.ignoreTlsErrors === true,
+    projectId: typeof body.projectId === "string" ? body.projectId.trim() : "",
+    serviceAccountJson: typeof body.serviceAccountJson === "string" ? body.serviceAccountJson.trim() : "",
   };
 }
 
@@ -612,6 +812,28 @@ function validateConnection(connection) {
     if (!connection.accountName || !connection.fileSystem || !connection.accountKey) {
       throw new Error("Fill in account name, file system, and account key.");
     }
+    return;
+  }
+
+  if (connection.provider === "gcs") {
+    if (!connection.bucket || !connection.serviceAccountJson) {
+      throw new Error("Fill in bucket, and service account JSON.");
+    }
+
+    try {
+      JSON.parse(connection.serviceAccountJson);
+    } catch {
+      throw new Error("Service account JSON must be valid JSON.");
+    }
+
+    return;
+  }
+
+  if (connection.provider === "minio") {
+    if (!connection.endpoint || !connection.bucket || !connection.accessKeyId || !connection.secretAccessKey) {
+      throw new Error("Fill in endpoint, bucket, access key ID, and secret access key.");
+    }
+
     return;
   }
 
