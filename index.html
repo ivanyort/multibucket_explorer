@@ -19,31 +19,39 @@
           <p class="eyebrow">MultiBucket Explorer</p>
           <h1>MultiBucket Explorer</h1>
         </div>
+        <div class="language-switcher">
+          <label for="languageSelect" data-i18n="language.label">Language</label>
+          <select id="languageSelect" aria-label="Language">
+            <option value="en">English</option>
+            <option value="pt-BR">Português (Brasil)</option>
+            <option value="es">Español</option>
+          </select>
+        </div>
       </section>
 
       <details id="connectionPanel" class="panel credentials-panel" open>
         <summary class="connection-summary">
           <div>
-            <p class="panel-kicker">Connection</p>
-            <h2>Storage Access</h2>
+            <p class="panel-kicker" data-i18n="connection.kicker">Connection</p>
+            <h2 data-i18n="connection.title">Storage Access</h2>
           </div>
           <div id="connectionSummaryText" class="connection-summary-text muted">
-            Connection settings
+            <span data-i18n="connection.settings">Connection settings</span>
           </div>
         </summary>
 
         <div class="connection-panel-body">
           <div class="panel-header">
             <div></div>
-            <button id="connectButton" class="primary-button">Connect</button>
+            <button id="connectButton" class="primary-button" data-i18n="connection.connect">Connect</button>
           </div>
 
           <form id="credentialsForm" class="credentials-grid" autocomplete="off">
             <input id="provider" name="provider" type="hidden" value="s3" />
 
             <div class="span-2">
-              <p class="panel-kicker">Providers</p>
-              <div class="provider-card-grid" role="radiogroup" aria-label="Storage provider">
+              <p class="panel-kicker" data-i18n="providers.kicker">Providers</p>
+              <div class="provider-card-grid" role="radiogroup" aria-label="Storage provider" data-i18n-aria-label="providers.ariaLabel">
                 <button
                   type="button"
                   class="provider-card is-active"
@@ -51,7 +59,7 @@
                   aria-pressed="true"
                 >
                   <strong>S3</strong>
-                  <span>AWS buckets with region and access keys.</span>
+                  <span data-i18n="providers.s3">AWS buckets with region and access keys.</span>
                 </button>
                 <button
                   type="button"
@@ -60,7 +68,7 @@
                   aria-pressed="false"
                 >
                   <strong>ADLS</strong>
-                  <span>Azure Data Lake Storage Gen2 with account and container name.</span>
+                  <span data-i18n="providers.adls">Azure Data Lake Storage Gen2 with account and container name.</span>
                 </button>
                 <button
                   type="button"
@@ -69,7 +77,7 @@
                   aria-pressed="false"
                 >
                   <strong>GCS</strong>
-                  <span>Google Cloud Storage with bucket and service account JSON.</span>
+                  <span data-i18n="providers.gcs">Google Cloud Storage with bucket and service account JSON.</span>
                 </button>
                 <button
                   type="button"
@@ -78,40 +86,42 @@
                   aria-pressed="false"
                 >
                   <strong>MinIO</strong>
-                  <span>S3-compatible storage with custom endpoint and access keys.</span>
+                  <span data-i18n="providers.minio">S3-compatible storage with custom endpoint and access keys.</span>
                 </button>
               </div>
             </div>
 
-            <section id="s3Fields" class="span-2 provider-fields" aria-label="S3 connection settings">
+            <section id="s3Fields" class="span-2 provider-fields" aria-label="S3 connection settings" data-i18n-aria-label="s3.ariaLabel">
               <div class="provider-fields-header">
-                <p class="panel-kicker">S3 Connection</p>
-                <p class="provider-fields-copy">Use AWS bucket credentials for this connection.</p>
+                <p class="panel-kicker" data-i18n="s3.kicker">S3 Connection</p>
+                <p class="provider-fields-copy" data-i18n="s3.copy">Use AWS bucket credentials for this connection.</p>
               </div>
               <div class="credentials-grid provider-fields-grid">
               <label>
-                Region
-                <input id="region" name="region" placeholder="us-east-1" />
+                <span data-i18n="fields.region">Region</span>
+                <input id="region" name="region" placeholder="us-east-1" data-i18n-placeholder="placeholders.region" />
               </label>
               <label>
-                Bucket
-                <input id="bucket" name="bucket" placeholder="my-bucket" />
+                <span data-i18n="fields.bucket">Bucket</span>
+                <input id="bucket" name="bucket" placeholder="my-bucket" data-i18n-placeholder="placeholders.bucket" />
               </label>
               <label>
-                Access Key ID
+                <span data-i18n="fields.accessKeyId">Access Key ID</span>
                 <input
                   id="accessKeyId"
                   name="accessKeyId"
                   placeholder="AKIA..."
+                  data-i18n-placeholder="placeholders.accessKeyId"
                 />
               </label>
               <label>
-                Secret Access Key
+                <span data-i18n="fields.secretAccessKey">Secret Access Key</span>
                 <input
                   id="secretAccessKey"
                   name="secretAccessKey"
                   type="password"
                   placeholder="********"
+                  data-i18n-placeholder="placeholders.secretAccessKey"
                 />
               </label>
               </div>
@@ -121,28 +131,30 @@
               id="adlsFields"
               class="span-2 provider-fields"
               aria-label="ADLS connection settings"
+              data-i18n-aria-label="adls.ariaLabel"
               hidden
             >
               <div class="provider-fields-header">
-                <p class="panel-kicker">ADLS Connection</p>
-                <p class="provider-fields-copy">Use Azure Data Lake Storage Gen2 account credentials and container name.</p>
+                <p class="panel-kicker" data-i18n="adls.kicker">ADLS Connection</p>
+                <p class="provider-fields-copy" data-i18n="adls.copy">Use Azure Data Lake Storage Gen2 account credentials and container name.</p>
               </div>
               <div class="credentials-grid provider-fields-grid">
               <label>
-                Account Name
-                <input id="accountName" name="accountName" placeholder="myaccount" />
+                <span data-i18n="fields.accountName">Account Name</span>
+                <input id="accountName" name="accountName" placeholder="myaccount" data-i18n-placeholder="placeholders.accountName" />
               </label>
               <label>
-                Container Name
-                <input id="fileSystem" name="fileSystem" placeholder="my-filesystem" />
+                <span data-i18n="fields.containerName">Container Name</span>
+                <input id="fileSystem" name="fileSystem" placeholder="my-filesystem" data-i18n-placeholder="placeholders.fileSystem" />
               </label>
               <label>
-                Access Key
+                <span data-i18n="fields.accessKey">Access Key</span>
                 <input
                   id="accountKey"
                   name="accountKey"
                   type="password"
                   placeholder="********"
+                  data-i18n-placeholder="placeholders.secretAccessKey"
                 />
               </label>
               </div>
@@ -152,28 +164,30 @@
               id="gcsFields"
               class="span-2 provider-fields"
               aria-label="GCS connection settings"
+              data-i18n-aria-label="gcs.ariaLabel"
               hidden
             >
               <div class="provider-fields-header">
-                <p class="panel-kicker">GCS Connection</p>
-                <p class="provider-fields-copy">Use a Google Cloud Storage bucket and a service account JSON key.</p>
+                <p class="panel-kicker" data-i18n="gcs.kicker">GCS Connection</p>
+                <p class="provider-fields-copy" data-i18n="gcs.copy">Use a Google Cloud Storage bucket and a service account JSON key.</p>
               </div>
               <div class="credentials-grid provider-fields-grid">
                 <label>
-                  Bucket or URL
-                  <input id="gcsBucket" name="gcsBucket" placeholder="gs://my-bucket or my-bucket" />
+                  <span data-i18n="fields.bucketOrUrl">Bucket or URL</span>
+                  <input id="gcsBucket" name="gcsBucket" placeholder="gs://my-bucket or my-bucket" data-i18n-placeholder="placeholders.gcsBucket" />
                 </label>
                 <label>
-                  Project ID (auto-filled from the JSON when present)
-                  <input id="projectId" name="projectId" placeholder="my-project-id" />
+                  <span data-i18n="fields.projectId">Project ID (auto-filled from the JSON when present)</span>
+                  <input id="projectId" name="projectId" placeholder="my-project-id" data-i18n-placeholder="placeholders.projectId" />
                 </label>
                 <label class="span-2">
-                  Service Account JSON
+                  <span data-i18n="fields.serviceAccountJson">Service Account JSON</span>
                   <textarea
                     id="serviceAccountJson"
                     name="serviceAccountJson"
                     rows="8"
                     placeholder='{"type":"service_account", ...}'
+                    data-i18n-placeholder="placeholders.serviceAccountJson"
                   ></textarea>
                 </label>
               </div>
@@ -183,53 +197,50 @@
               id="minioFields"
               class="span-2 provider-fields"
               aria-label="MinIO connection settings"
+              data-i18n-aria-label="minio.ariaLabel"
               hidden
             >
               <div class="provider-fields-header">
-                <p class="panel-kicker">MinIO Connection</p>
-                <p class="provider-fields-copy">Use a custom MinIO endpoint with S3-compatible access keys.</p>
+                <p class="panel-kicker" data-i18n="minio.kicker">MinIO Connection</p>
+                <p class="provider-fields-copy" data-i18n="minio.copy">Use a custom MinIO endpoint with S3-compatible access keys.</p>
               </div>
               <div class="credentials-grid provider-fields-grid">
                 <label class="span-2">
-                  Endpoint
-                  <input id="endpoint" name="endpoint" placeholder="http://localhost:9000" />
+                  <span data-i18n="fields.endpoint">Endpoint</span>
+                  <input id="endpoint" name="endpoint" placeholder="http://localhost:9000" data-i18n-placeholder="placeholders.endpoint" />
                 </label>
                 <label>
-                  Bucket
-                  <input id="minioBucket" name="minioBucket" placeholder="my-bucket" />
+                  <span data-i18n="fields.bucket">Bucket</span>
+                  <input id="minioBucket" name="minioBucket" placeholder="my-bucket" data-i18n-placeholder="placeholders.bucket" />
                 </label>
                 <label>
-                  Region
-                  <input id="minioRegion" name="minioRegion" placeholder="us-east-1" />
+                  <span data-i18n="fields.region">Region</span>
+                  <input id="minioRegion" name="minioRegion" placeholder="us-east-1" data-i18n-placeholder="placeholders.region" />
                 </label>
                 <label>
-                  Access Key ID
-                  <input id="minioAccessKeyId" name="minioAccessKeyId" placeholder="minioadmin" />
+                  <span data-i18n="fields.accessKeyId">Access Key ID</span>
+                  <input id="minioAccessKeyId" name="minioAccessKeyId" placeholder="minioadmin" data-i18n-placeholder="placeholders.minioAccessKeyId" />
                 </label>
                 <label>
-                  Secret Access Key
+                  <span data-i18n="fields.secretAccessKey">Secret Access Key</span>
                   <input
                     id="minioSecretAccessKey"
                     name="minioSecretAccessKey"
                     type="password"
                     placeholder="********"
+                    data-i18n-placeholder="placeholders.secretAccessKey"
                   />
                 </label>
                 <label class="span-2 checkbox-field">
                   <input id="ignoreTlsErrors" name="ignoreTlsErrors" type="checkbox" />
-                  <span>Ignore HTTPS certificate errors for this MinIO connection</span>
+                  <span data-i18n="minio.ignoreTlsErrors">Ignore HTTPS certificate errors for this MinIO connection</span>
                 </label>
               </div>
             </section>
           </form>
 
-          <p id="connectionStatus" class="status-text muted">
-            Enter credentials and click connect.
-          </p>
-          <div id="diagnosticBox" class="diagnostic-box muted">
-            Tip: run the local Node server and open the application at
-            `http://localhost:8086`.
-          </div>
+          <p id="connectionStatus" class="status-text muted"></p>
+          <div id="diagnosticBox" class="diagnostic-box muted"></div>
         </div>
       </details>
 
@@ -237,15 +248,15 @@
         <div class="panel browser-panel">
           <div class="panel-header">
             <div>
-              <p class="panel-kicker">Object Browser</p>
-              <h2>Objects</h2>
+              <p class="panel-kicker" data-i18n="browser.kicker">Object Browser</p>
+              <h2 data-i18n="browser.title">Objects</h2>
             </div>
           </div>
 
           <div class="toolbar">
             <div>
-              <span class="toolbar-label">Current prefix</span>
-              <nav id="currentPrefix" class="current-prefix" aria-label="Current prefix">/</nav>
+              <span class="toolbar-label" data-i18n="browser.currentPrefix">Current prefix</span>
+              <nav id="currentPrefix" class="current-prefix" aria-label="Current prefix" data-i18n-aria-label="browser.currentPrefix">/</nav>
             </div>
             <div class="toolbar-actions">
               <button
@@ -254,6 +265,8 @@
                 type="button"
                 aria-label="Refresh"
                 title="Refresh"
+                data-i18n-aria-label="browser.refresh"
+                data-i18n-title="browser.refresh"
                 disabled
               >
                 <span aria-hidden="true">
@@ -268,6 +281,8 @@
                 type="button"
                 aria-label="Clear prefix"
                 title="Clear prefix"
+                data-i18n-aria-label="browser.clearPrefix"
+                data-i18n-title="browser.clearPrefix"
                 disabled
               >
                 <span aria-hidden="true">
@@ -280,53 +295,51 @@
           </div>
 
           <div id="objectList" class="object-list empty-state">
-            Connect to list storage objects.
+            <span data-i18n="browser.connectToList">Connect to list storage objects.</span>
           </div>
         </div>
 
         <div class="panel preview-panel">
           <div class="panel-header">
             <div>
-              <p class="panel-kicker">File Preview</p>
-              <h2>Preview</h2>
+              <p class="panel-kicker" data-i18n="preview.kicker">File Preview</p>
+              <h2 data-i18n="preview.title">Preview</h2>
             </div>
             <div class="preview-actions">
               <label class="preview-limit-control">
-                <span>View</span>
+                <span data-i18n="preview.view">View</span>
                 <select id="previewMode">
-                  <option value="table" selected>Table</option>
-                  <option value="raw">Raw</option>
+                  <option value="table" selected data-i18n="preview.table">Table</option>
+                  <option value="raw" data-i18n="preview.raw">Raw</option>
                 </select>
               </label>
               <label class="preview-limit-control">
-                <span>Rows</span>
+                <span data-i18n="preview.rows">Rows</span>
                 <select id="previewRowLimit">
                   <option value="10" selected>10</option>
                   <option value="25">25</option>
                   <option value="50">50</option>
                   <option value="100">100</option>
-                  <option value="all">All</option>
+                  <option value="all" data-i18n="preview.all">All</option>
                 </select>
               </label>
               <label class="preview-limit-control">
-                <span>Order</span>
+                <span data-i18n="preview.order">Order</span>
                 <select id="previewRowOrder">
-                  <option value="normal" selected>Normal</option>
-                  <option value="reverse">Newest first</option>
+                  <option value="normal" selected data-i18n="preview.normal">Normal</option>
+                  <option value="reverse" data-i18n="preview.reverse">Newest first</option>
                 </select>
               </label>
-              <button id="downloadButton" class="ghost-button" disabled>
+              <button id="downloadButton" class="ghost-button" disabled data-i18n="preview.download">
                 Download file
               </button>
             </div>
           </div>
 
-          <div id="previewMeta" class="preview-meta muted">
-            Select a compatible `.csv`, `.json`, `.dfm`, `.parquet`, or `.gz` file to preview.
-          </div>
+          <div id="previewMeta" class="preview-meta muted"></div>
 
           <div id="previewTableWrap" class="preview-table-wrap empty-state">
-            No file selected.
+            <span data-i18n="preview.noFileSelected">No file selected.</span>
           </div>
         </div>
       </section>
@@ -340,18 +353,18 @@
       aria-labelledby="confirmModalTitle"
       aria-describedby="confirmModalBody"
       hidden
-    >
+      >
       <div class="modal-backdrop" data-modal-close></div>
       <div class="modal-card" role="document">
-        <p class="panel-kicker">Destructive Action</p>
-        <h2 id="confirmModalTitle">Delete prefix</h2>
-        <p id="confirmModalBody" class="modal-copy">
+        <p class="panel-kicker" data-i18n="delete.confirmKicker">Destructive Action</p>
+        <h2 id="confirmModalTitle" data-i18n="delete.confirmTitle">Delete prefix</h2>
+        <p id="confirmModalBody" class="modal-copy" data-i18n="delete.confirmBody">
           Are you absolutely sure you want to delete all files under this prefix?
         </p>
         <code id="confirmModalPrefix" class="modal-prefix"></code>
         <div class="modal-actions">
-          <button id="confirmModalCancel" class="ghost-button" type="button">Cancel</button>
-          <button id="confirmModalConfirm" class="danger-button" type="button">Delete files</button>
+          <button id="confirmModalCancel" class="ghost-button" type="button" data-i18n="common.cancel">Cancel</button>
+          <button id="confirmModalConfirm" class="danger-button" type="button" data-i18n="delete.confirmAction">Delete files</button>
         </div>
       </div>
     </div>
@@ -364,13 +377,13 @@
       aria-labelledby="deleteProgressTitle"
       aria-describedby="deleteProgressBody"
       hidden
-    >
+      >
       <div class="modal-backdrop"></div>
       <div class="modal-card modal-card-compact" role="document">
         <div class="progress-indicator" aria-hidden="true"></div>
-        <p class="panel-kicker">Delete In Progress</p>
-        <h2 id="deleteProgressTitle">Deleting files</h2>
-        <p id="deleteProgressBody" class="modal-copy">
+        <p class="panel-kicker" data-i18n="delete.progressKicker">Delete In Progress</p>
+        <h2 id="deleteProgressTitle" data-i18n="delete.progressTitle">Deleting files</h2>
+        <p id="deleteProgressBody" class="modal-copy" data-i18n="delete.progressBody">
           The selected prefix is being deleted. This can take a while when many files are involved.
         </p>
         <code id="deleteProgressPrefix" class="modal-prefix"></code>

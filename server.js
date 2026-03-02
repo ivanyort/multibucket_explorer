@@ -33,7 +33,80 @@ const MIME_TYPES = {
   ".json": "application/json; charset=utf-8",
 };
 
+const SERVER_TRANSLATIONS = {
+  en: {
+    route_not_found: "Route not found.",
+    internal_server_error: "Internal server error.",
+    key_required: "The key parameter is required.",
+    delete_root_forbidden: "For safety, deleting the storage root is not allowed.",
+    access_denied: "Access denied.",
+    file_not_found: "File not found.",
+    file_empty: "The file was empty.",
+    session_not_provided: "Session not provided.",
+    session_invalid: "Invalid or expired session. Connect again.",
+    session_expired: "Session expired. Connect again.",
+    invalid_json_body: "Invalid JSON in request body.",
+    fill_adls: "Fill in account name, file system, and account key.",
+    fill_gcs: "Fill in bucket, and service account JSON.",
+    invalid_service_account_json: "Service account JSON must be valid JSON.",
+    fill_minio: "Fill in endpoint, bucket, access key ID, and secret access key.",
+    fill_s3: "Fill in region, bucket, and credentials.",
+    unsupported_preview_format: "Unsupported preview format.",
+    parquet_preview_failed: "Failed to read Parquet preview: {message}",
+  },
+  "pt-BR": {
+    route_not_found: "Rota nao encontrada.",
+    internal_server_error: "Erro interno do servidor.",
+    key_required: "O parametro key e obrigatorio.",
+    delete_root_forbidden: "Por seguranca, nao e permitido apagar a raiz do storage.",
+    access_denied: "Acesso negado.",
+    file_not_found: "Arquivo nao encontrado.",
+    file_empty: "O arquivo esta vazio.",
+    session_not_provided: "Sessao nao informada.",
+    session_invalid: "Sessao invalida ou expirada. Conecte-se novamente.",
+    session_expired: "Sessao expirada. Conecte-se novamente.",
+    invalid_json_body: "JSON invalido no corpo da requisicao.",
+    fill_adls: "Preencha nome da conta, file system e account key.",
+    fill_gcs: "Preencha bucket e service account JSON.",
+    invalid_service_account_json: "O service account JSON deve ser um JSON valido.",
+    fill_minio: "Preencha endpoint, bucket, access key ID e secret access key.",
+    fill_s3: "Preencha regiao, bucket e credenciais.",
+    unsupported_preview_format: "Formato de pre-visualizacao nao suportado.",
+    parquet_preview_failed: "Falha ao ler a pre-visualizacao do Parquet: {message}",
+  },
+  es: {
+    route_not_found: "Ruta no encontrada.",
+    internal_server_error: "Error interno del servidor.",
+    key_required: "El parametro key es obligatorio.",
+    delete_root_forbidden: "Por seguridad, no se permite borrar la raiz del storage.",
+    access_denied: "Acceso denegado.",
+    file_not_found: "Archivo no encontrado.",
+    file_empty: "El archivo esta vacio.",
+    session_not_provided: "Sesion no informada.",
+    session_invalid: "Sesion invalida o expirada. Conectate de nuevo.",
+    session_expired: "Sesion expirada. Conectate de nuevo.",
+    invalid_json_body: "JSON invalido en el cuerpo de la solicitud.",
+    fill_adls: "Completa nombre de la cuenta, file system y account key.",
+    fill_gcs: "Completa bucket y service account JSON.",
+    invalid_service_account_json: "El service account JSON debe ser un JSON valido.",
+    fill_minio: "Completa endpoint, bucket, access key ID y secret access key.",
+    fill_s3: "Completa region, bucket y credenciales.",
+    unsupported_preview_format: "Formato de vista previa no compatible.",
+    parquet_preview_failed: "Error al leer la vista previa de Parquet: {message}",
+  },
+};
+
+class LocalizedError extends Error {
+  constructor(key, variables = {}) {
+    super(key);
+    this.translationKey = key;
+    this.translationVariables = variables;
+  }
+}
+
 const server = createServer(async (request, response) => {
+  const locale = getRequestLocale(request);
+
   try {
     const url = new URL(request.url ?? "/", `http://${request.headers.host}`);
 
@@ -48,7 +121,7 @@ const server = createServer(async (request, response) => {
     }
 
     if (request.method === "GET" && url.pathname === "/api/preview") {
-      await handlePreview(url, response);
+      await handlePreview(url, response, locale);
       return;
     }
 
@@ -63,13 +136,13 @@ const server = createServer(async (request, response) => {
     }
 
     if (request.method === "GET") {
-      await serveStatic(url.pathname, response);
+      await serveStatic(url.pathname, response, locale);
       return;
     }
 
-    sendJson(response, 404, { error: "Route not found." });
+    sendJson(response, 404, { error: localizeError(locale, new LocalizedError("route_not_found")) });
   } catch (error) {
-    sendJson(response, 500, { error: getErrorMessage(error) });
+    sendJson(response, 500, { error: localizeError(locale, error) });
   }
 });
 
@@ -114,7 +187,7 @@ async function handleListObjects(url, response) {
   });
 }
 
-async function handlePreview(url, response) {
+async function handlePreview(url, response, locale) {
   const key = url.searchParams.get("key") ?? "";
   const limit = parsePreviewLimit(url.searchParams.get("limit"));
   const order = parsePreviewOrder(url.searchParams.get("order"));
@@ -122,10 +195,10 @@ async function handlePreview(url, response) {
   const session = getSession(url.searchParams.get("sessionId"));
 
   if (!key) {
-    throw new Error("The key parameter is required.");
+    throw new LocalizedError("key_required");
   }
 
-  const previewData = await loadPreviewData(session, key, limit, order, mode);
+  const previewData = await loadPreviewData(session, key, limit, order, mode, locale);
 
   sendJson(response, 200, {
     rows: previewData.rows,
@@ -144,7 +217,7 @@ async function handleDownload(url, response) {
   const session = getSession(url.searchParams.get("sessionId"));
 
   if (!key) {
-    throw new Error("The key parameter is required.");
+    throw new LocalizedError("key_required");
   }
 
   const result = await getDownloadResponse(session, key);
@@ -175,7 +248,7 @@ async function handleDeletePrefix(request, response) {
   const prefix = typeof body.prefix === "string" ? body.prefix.trim() : "";
 
   if (!prefix) {
-    throw new Error("For safety, deleting the storage root is not allowed.");
+    throw new LocalizedError("delete_root_forbidden");
   }
 
   const deletedCount = await deleteStoragePrefix(session, prefix);
@@ -186,12 +259,12 @@ async function handleDeletePrefix(request, response) {
   });
 }
 
-async function serveStatic(requestPath, response) {
+async function serveStatic(requestPath, response, locale) {
   const safePath = requestPath === "/" ? "/index.html" : requestPath;
   const resolvedPath = path.resolve(__dirname, `.${safePath}`);
 
   if (!resolvedPath.startsWith(__dirname)) {
-    sendJson(response, 403, { error: "Access denied." });
+    sendJson(response, 403, { error: translateServer(locale, "access_denied") });
     return;
   }
 
@@ -199,12 +272,12 @@ async function serveStatic(requestPath, response) {
   try {
     fileStat = await stat(resolvedPath);
   } catch {
-    sendJson(response, 404, { error: "File not found." });
+    sendJson(response, 404, { error: translateServer(locale, "file_not_found") });
     return;
   }
 
   if (!fileStat.isFile()) {
-    sendJson(response, 404, { error: "File not found." });
+    sendJson(response, 404, { error: translateServer(locale, "file_not_found") });
     return;
   }
 
@@ -262,6 +335,42 @@ function createGcsClient(connection) {
     projectId: connection.projectId || credentials.project_id,
     credentials,
   });
+}
+
+function getRequestLocale(request) {
+  const explicit = typeof request.headers["x-app-language"] === "string" ? request.headers["x-app-language"] : "";
+  const accepted = typeof request.headers["accept-language"] === "string" ? request.headers["accept-language"] : "";
+  return normalizeLocale(explicit || accepted);
+}
+
+function normalizeLocale(value) {
+  if (typeof value !== "string") {
+    return "en";
+  }
+
+  if (value.startsWith("pt-BR") || value.startsWith("pt")) {
+    return "pt-BR";
+  }
+
+  if (value.startsWith("es")) {
+    return "es";
+  }
+
+  return "en";
+}
+
+function translateServer(locale, key, variables = {}) {
+  const dictionary = SERVER_TRANSLATIONS[locale] ?? SERVER_TRANSLATIONS.en;
+  const template = dictionary[key] ?? SERVER_TRANSLATIONS.en[key] ?? key;
+  return template.replace(/\{(\w+)\}/g, (_, name) => `${variables[name] ?? ""}`);
+}
+
+function localizeError(locale, error) {
+  if (error instanceof LocalizedError) {
+    return translateServer(locale, error.translationKey, error.translationVariables);
+  }
+
+  return getErrorMessage(error, locale);
 }
 
 async function createStorageSession(connection) {
@@ -503,7 +612,7 @@ async function deleteStoragePrefix(session, prefix) {
     const normalizedPrefix = normalizeAdlsDirectory(prefix);
 
     if (!normalizedPrefix) {
-      throw new Error("For safety, deleting the storage root is not allowed.");
+      throw new LocalizedError("delete_root_forbidden");
     }
 
     const paths = await listStoragePaths(session, prefix, true);
@@ -601,7 +710,7 @@ async function readObjectText(session, key, gzip = false) {
   const text = buffer.toString("utf-8");
 
   if (!text) {
-    throw new Error("The file was empty.");
+    throw new LocalizedError("file_empty");
   }
 
   return text;
@@ -611,7 +720,7 @@ async function readObjectBuffer(session, key, gzip = false) {
   const buffer = await readObjectBufferRaw(session, key);
 
   if (!buffer.length) {
-    throw new Error("The file was empty.");
+    throw new LocalizedError("file_empty");
   }
 
   return gzip ? gunzipSync(buffer) : buffer;
@@ -706,18 +815,18 @@ async function readObjectRangeBuffer(session, key, start, end) {
 
 function getSession(sessionId) {
   if (!sessionId) {
-    throw new Error("Session not provided.");
+    throw new LocalizedError("session_not_provided");
   }
 
   const session = sessions.get(sessionId);
 
   if (!session) {
-    throw new Error("Invalid or expired session. Connect again.");
+    throw new LocalizedError("session_invalid");
   }
 
   if (Date.now() - session.createdAt > SESSION_TTL_MS) {
     sessions.delete(sessionId);
-    throw new Error("Session expired. Connect again.");
+    throw new LocalizedError("session_expired");
   }
 
   return session;
@@ -749,7 +858,7 @@ function readJsonBody(request) {
       try {
         resolve(body ? JSON.parse(body) : {});
       } catch {
-        reject(new Error("Invalid JSON in request body."));
+        reject(new LocalizedError("invalid_json_body"));
       }
     });
 
@@ -810,20 +919,20 @@ function normalizeConnection(body) {
 function validateConnection(connection) {
   if (connection.provider === "adls") {
     if (!connection.accountName || !connection.fileSystem || !connection.accountKey) {
-      throw new Error("Fill in account name, file system, and account key.");
+      throw new LocalizedError("fill_adls");
     }
     return;
   }
 
   if (connection.provider === "gcs") {
     if (!connection.bucket || !connection.serviceAccountJson) {
-      throw new Error("Fill in bucket, and service account JSON.");
+      throw new LocalizedError("fill_gcs");
     }
 
     try {
       JSON.parse(connection.serviceAccountJson);
     } catch {
-      throw new Error("Service account JSON must be valid JSON.");
+      throw new LocalizedError("invalid_service_account_json");
     }
 
     return;
@@ -831,14 +940,14 @@ function validateConnection(connection) {
 
   if (connection.provider === "minio") {
     if (!connection.endpoint || !connection.bucket || !connection.accessKeyId || !connection.secretAccessKey) {
-      throw new Error("Fill in endpoint, bucket, access key ID, and secret access key.");
+      throw new LocalizedError("fill_minio");
     }
 
     return;
   }
 
   if (!connection.region || !connection.bucket || !connection.accessKeyId || !connection.secretAccessKey) {
-    throw new Error("Fill in region, bucket, and credentials.");
+    throw new LocalizedError("fill_s3");
   }
 }
 
@@ -849,9 +958,13 @@ function sendJson(response, statusCode, payload) {
   response.end(JSON.stringify(payload));
 }
 
-function getErrorMessage(error) {
+function getErrorMessage(error, locale = "en") {
   if (typeof error === "string" && error) {
     return error;
+  }
+
+  if (error instanceof LocalizedError) {
+    return translateServer(locale, error.translationKey, error.translationVariables);
   }
 
   if (error && typeof error === "object") {
@@ -861,7 +974,7 @@ function getErrorMessage(error) {
     }
   }
 
-  return "Internal server error.";
+  return translateServer(locale, "internal_server_error");
 }
 
 function parsePreviewLimit(value) {
@@ -901,7 +1014,7 @@ async function loadPreviewRows(session, key, limit, order, formatOptions) {
     const tailText = await loadCsvTailText(session, key, limit, formatOptions.recordDelimiter);
 
     if (!tailText) {
-      throw new Error("The file was empty.");
+      throw new LocalizedError("file_empty");
     }
 
     return parseCsv(tailText, null, {
@@ -918,7 +1031,7 @@ async function loadPreviewRows(session, key, limit, order, formatOptions) {
   const csvText = await readObjectText(session, key);
 
   if (!csvText) {
-    throw new Error("The file was empty.");
+    throw new LocalizedError("file_empty");
   }
 
   return parseCsv(csvText, limit, {
@@ -928,7 +1041,7 @@ async function loadPreviewRows(session, key, limit, order, formatOptions) {
   });
 }
 
-async function loadPreviewData(session, key, limit, order, mode) {
+async function loadPreviewData(session, key, limit, order, mode, locale) {
   const previewTarget = analyzePreviewTarget(key);
   const extension = previewTarget.extension;
   const isGzip = previewTarget.isGzip;
@@ -995,7 +1108,7 @@ async function loadPreviewData(session, key, limit, order, mode) {
   }
 
   if (extension === ".parquet" || extension === ".parq") {
-    const records = await loadParquetPreviewRecords(session, key, limit, order, isGzip);
+    const records = await loadParquetPreviewRecords(session, key, limit, order, isGzip, locale);
     const normalized = normalizePreviewRecords(records);
     return {
       rows: normalized.rows,
@@ -1008,7 +1121,7 @@ async function loadPreviewData(session, key, limit, order, mode) {
     };
   }
 
-  throw new Error("Unsupported preview format.");
+  throw new LocalizedError("unsupported_preview_format");
 }
 
 async function loadDfmMetadata(session, csvKey) {
@@ -1156,7 +1269,7 @@ async function loadJsonPreviewRecords(session, key, limit, order, gzip = false, 
   let records = [];
 
   if (!trimmed) {
-    throw new Error("The file was empty.");
+    throw new LocalizedError("file_empty");
   }
 
   try {
@@ -1198,7 +1311,7 @@ async function loadJsonRawPreview(session, key, limit, order, gzip = false, exte
   const trimmed = text.trim();
 
   if (!trimmed) {
-    throw new Error("The file was empty.");
+    throw new LocalizedError("file_empty");
   }
 
   if (isLineDelimitedJson) {
@@ -1257,7 +1370,7 @@ async function tryLoadGzipDelimitedLines(session, key, limit, order) {
   const body = await getObjectReadableStream(session, key);
 
   if (!body) {
-      throw new Error("The file was empty.");
+    throw new LocalizedError("file_empty");
   }
 
   const source = body instanceof Readable ? body : Readable.from(body);
@@ -1319,7 +1432,7 @@ async function tryLoadGzipDelimitedLines(session, key, limit, order) {
   return order === "reverse" ? lines : lines.slice(0, limit);
 }
 
-async function loadParquetPreviewRecords(session, key, limit, order, gzip = false) {
+async function loadParquetPreviewRecords(session, key, limit, order, gzip = false, locale = "en") {
   try {
     const fileBuffer = await readObjectBuffer(session, key, gzip);
     const file = toArrayBuffer(fileBuffer);
@@ -1340,7 +1453,9 @@ async function loadParquetPreviewRecords(session, key, limit, order, gzip = fals
 
     return order === "reverse" ? [...records].reverse() : records;
   } catch (error) {
-    throw new Error(`Failed to read Parquet preview: ${getErrorMessage(error)}`);
+    throw new LocalizedError("parquet_preview_failed", {
+      message: localizeError(locale, error),
+    });
   }
 }
 
@@ -1453,7 +1568,7 @@ async function loadDelimitedHeadRecords(session, key, limit) {
   const body = await getObjectReadableStream(session, key);
 
   if (!body) {
-    throw new Error("The file was empty.");
+    throw new LocalizedError("file_empty");
   }
 
   const decoder = new TextDecoder("utf-8");
@@ -1541,7 +1656,7 @@ async function loadCsvHeadRows(session, key, limit, formatOptions) {
   const body = await getObjectReadableStream(session, key);
 
   if (!body) {
-    throw new Error("The file was empty.");
+    throw new LocalizedError("file_empty");
   }
 
   const collector = createCsvCollector(limit, {
@@ -1567,7 +1682,7 @@ async function loadCsvHeadRows(session, key, limit, formatOptions) {
   finalizeCsvCollector(collector);
 
   if (!collector.rows.length) {
-    throw new Error("The file was empty.");
+    throw new LocalizedError("file_empty");
   }
 
   return buildCsvResult(collector);

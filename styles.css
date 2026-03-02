@@ -57,9 +57,28 @@ textarea {
 }
 
 .hero-compact {
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr auto;
   gap: 8px;
   margin-bottom: 14px;
+  align-items: end;
+}
+
+.language-switcher {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.language-switcher label {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-dark);
+}
+
+.language-switcher select {
+  min-width: 190px;
 }
 
 .hero h1,

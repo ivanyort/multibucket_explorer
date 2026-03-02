@@ -1,5 +1,6 @@
 const state = {
   provider: "s3",
+  language: "en",
   targetName: "",
   locationName: "",
   prefix: "",
@@ -13,9 +14,223 @@ const state = {
 };
 
 const STORAGE_KEY = "multibucket-explorer-connection";
+const LANGUAGE_STORAGE_KEY = "multibucket-explorer-language";
+const SUPPORTED_LANGUAGES = ["en", "pt-BR", "es"];
+const DATE_LOCALES = {
+  en: "en-US",
+  "pt-BR": "pt-BR",
+  es: "es-ES",
+};
+const translations = {
+  en: {
+    language: { label: "Language" },
+    connection: { kicker: "Connection", title: "Storage Access", settings: "Connection settings", connect: "Connect" },
+    providers: {
+      kicker: "Providers",
+      ariaLabel: "Storage provider",
+      s3: "AWS buckets with region and access keys.",
+      adls: "Azure Data Lake Storage Gen2 with account and container name.",
+      gcs: "Google Cloud Storage with bucket and service account JSON.",
+      minio: "S3-compatible storage with custom endpoint and access keys.",
+    },
+    s3: { ariaLabel: "S3 connection settings", kicker: "S3 Connection", copy: "Use AWS bucket credentials for this connection." },
+    adls: { ariaLabel: "ADLS connection settings", kicker: "ADLS Connection", copy: "Use Azure Data Lake Storage Gen2 account credentials and container name." },
+    gcs: { ariaLabel: "GCS connection settings", kicker: "GCS Connection", copy: "Use a Google Cloud Storage bucket and a service account JSON key." },
+    minio: {
+      ariaLabel: "MinIO connection settings",
+      kicker: "MinIO Connection",
+      copy: "Use a custom MinIO endpoint with S3-compatible access keys.",
+      ignoreTlsErrors: "Ignore HTTPS certificate errors for this MinIO connection",
+    },
+    fields: {
+      region: "Region", bucket: "Bucket", accessKeyId: "Access Key ID", secretAccessKey: "Secret Access Key",
+      accountName: "Account Name", containerName: "Container Name", accessKey: "Access Key",
+      bucketOrUrl: "Bucket or URL", projectId: "Project ID (auto-filled from the JSON when present)",
+      serviceAccountJson: "Service Account JSON", endpoint: "Endpoint",
+    },
+    placeholders: {
+      region: "us-east-1", bucket: "my-bucket", accessKeyId: "AKIA...", secretAccessKey: "********",
+      accountName: "myaccount", fileSystem: "my-filesystem", gcsBucket: "gs://my-bucket or my-bucket",
+      projectId: "my-project-id", serviceAccountJson: '{"type":"service_account", ...}', endpoint: "http://localhost:9000",
+      minioAccessKeyId: "minioadmin",
+    },
+    browser: {
+      kicker: "Object Browser", title: "Objects", currentPrefix: "Current prefix", refresh: "Refresh",
+      clearPrefix: "Clear prefix", connectToList: "Connect to list storage objects.",
+      noItems: "No items found in this prefix.", loading: "Loading objects...", failed: "Failed to list objects.",
+      folder: "Folder", file: "File",
+    },
+    preview: {
+      kicker: "File Preview", title: "Preview", view: "View", table: "Table", raw: "Raw", rows: "Rows", all: "All",
+      order: "Order", normal: "Normal", reverse: "Newest first", download: "Download file",
+      selectCompatible: "Select a compatible `.csv`, `.json`, `.dfm`, `.parquet`, or `.gz` file to preview.",
+      noFileSelected: "No file selected.", reading: "Reading file...", loadingFor: "Loading preview for {key}...",
+      unsupportedFormat: "Unsupported preview format: {key}",
+      unsupportedBody: "Select a .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, or matching .gz file.",
+      emptyFile: "Empty file.", emptyBody: "The file has no rows to display.", failed: "Failed to load preview.",
+      rawModeSuffix: "raw mode", formatSuffix: "format {format}", reverseOrder: "reverse order",
+      showingRows: "{key} · showing {count} sample row(s){orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
+      dfmFound: " · DFM: {dfmKey} ({count} columns)", dfmNotFound: " · DFM not found",
+    },
+    delete: {
+      confirmKicker: "Destructive Action", confirmTitle: "Delete prefix",
+      confirmBody: "Are you absolutely sure you want to delete all files under this prefix?",
+      confirmAction: "Delete files", progressKicker: "Delete In Progress", progressTitle: "Deleting files",
+      progressBody: "The selected prefix is being deleted. This can take a while when many files are involved.",
+      cancelled: "Prefix deletion cancelled.", deleting: "Deleting all objects under {prefix}...", deleted: "{count} object(s) deleted from {prefix}.",
+    },
+    common: { cancel: "Cancel" },
+    messages: {
+      enterCredentials: "Enter credentials and click connect.", startupDiagnostic: "Frontend configured to use the local API.\nStart the Node server and open the application at http://localhost:8086.",
+      connecting: "Connecting...", connectingTo: "Connecting to {target} ({location})...", validateAccess: "Calling the local backend to validate storage access...",
+      connectionOk: "Connection OK through the local backend.\nProvider: {provider}\nTarget: {target}\nLocation: {location}\nSession: {session}",
+      failedToConnect: "Failed to connect.", restored: "Connection data restored from the browser.",
+      loadedSummary: "{folders} folder(s) and {files} file(s) loaded from {target}.",
+      unexpectedStorageError: "Unexpected error while accessing storage.", backendError: "Error returned by the local backend:\n{message}",
+      noFailureDetails: "Failure without additional details.",
+      fillAdls: "Fill in account name, container name, and access key.", fillGcs: "Fill in bucket and service account JSON.",
+      invalidServiceAccountJson: "Service account JSON must be valid JSON.", fillMinio: "Fill in endpoint, bucket, access key ID, and secret access key.",
+      fillS3: "Fill in region, bucket, and credentials.",
+    },
+    table: { name: "Name", type: "Type", size: "Size", date: "Date", column: "column_{index}" },
+  },
+  "pt-BR": {
+    language: { label: "Idioma" },
+    connection: { kicker: "Conexão", title: "Acesso ao Storage", settings: "Configurações da conexão", connect: "Conectar" },
+    providers: {
+      kicker: "Provedores", ariaLabel: "Provedor de storage",
+      s3: "Buckets AWS com região e chaves de acesso.",
+      adls: "Azure Data Lake Storage Gen2 com conta e nome do container.",
+      gcs: "Google Cloud Storage com bucket e JSON de service account.",
+      minio: "Storage compatível com S3 com endpoint customizado e chaves de acesso.",
+    },
+    s3: { ariaLabel: "Configurações de conexão S3", kicker: "Conexão S3", copy: "Use as credenciais do bucket AWS nesta conexão." },
+    adls: { ariaLabel: "Configurações de conexão ADLS", kicker: "Conexão ADLS", copy: "Use credenciais da conta Azure Data Lake Storage Gen2 e o nome do container." },
+    gcs: { ariaLabel: "Configurações de conexão GCS", kicker: "Conexão GCS", copy: "Use um bucket Google Cloud Storage e uma chave JSON de service account." },
+    minio: { ariaLabel: "Configurações de conexão MinIO", kicker: "Conexão MinIO", copy: "Use um endpoint MinIO customizado com chaves compatíveis com S3.", ignoreTlsErrors: "Ignorar erros de certificado HTTPS nesta conexão MinIO" },
+    fields: {
+      region: "Região", bucket: "Bucket", accessKeyId: "Access Key ID", secretAccessKey: "Secret Access Key",
+      accountName: "Nome da conta", containerName: "Nome do container", accessKey: "Access Key",
+      bucketOrUrl: "Bucket ou URL", projectId: "Project ID (preenchido automaticamente a partir do JSON quando presente)",
+      serviceAccountJson: "Service Account JSON", endpoint: "Endpoint",
+    },
+    placeholders: {
+      region: "us-east-1", bucket: "meu-bucket", accessKeyId: "AKIA...", secretAccessKey: "********",
+      accountName: "minhaconta", fileSystem: "meu-container", gcsBucket: "gs://meu-bucket ou meu-bucket",
+      projectId: "meu-projeto", serviceAccountJson: '{"type":"service_account", ...}', endpoint: "http://localhost:9000",
+      minioAccessKeyId: "minioadmin",
+    },
+    browser: {
+      kicker: "Navegador de Objetos", title: "Objetos", currentPrefix: "Prefixo atual", refresh: "Atualizar",
+      clearPrefix: "Limpar prefixo", connectToList: "Conecte-se para listar os objetos do storage.",
+      noItems: "Nenhum item encontrado neste prefixo.", loading: "Carregando objetos...", failed: "Falha ao listar objetos.",
+      folder: "Pasta", file: "Arquivo",
+    },
+    preview: {
+      kicker: "Pré-visualização de Arquivo", title: "Prévia", view: "Visualização", table: "Tabela", raw: "Bruto", rows: "Linhas", all: "Todas",
+      order: "Ordem", normal: "Normal", reverse: "Mais novos primeiro", download: "Baixar arquivo",
+      selectCompatible: "Selecione um arquivo compatível `.csv`, `.json`, `.dfm`, `.parquet` ou `.gz` para visualizar.",
+      noFileSelected: "Nenhum arquivo selecionado.", reading: "Lendo arquivo...", loadingFor: "Carregando prévia de {key}...",
+      unsupportedFormat: "Formato de prévia não suportado: {key}",
+      unsupportedBody: "Selecione um arquivo .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq ou .gz correspondente.",
+      emptyFile: "Arquivo vazio.", emptyBody: "O arquivo não tem linhas para exibir.", failed: "Falha ao carregar a prévia.",
+      rawModeSuffix: "modo bruto", formatSuffix: "formato {format}", reverseOrder: "ordem reversa",
+      showingRows: "{key} · exibindo {count} linha(s) de amostra{orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
+      dfmFound: " · DFM: {dfmKey} ({count} colunas)", dfmNotFound: " · DFM não encontrado",
+    },
+    delete: {
+      confirmKicker: "Ação Destrutiva", confirmTitle: "Excluir prefixo",
+      confirmBody: "Você tem certeza absoluta que deseja apagar todos os arquivos sob este prefixo?",
+      confirmAction: "Apagar arquivos", progressKicker: "Exclusão em Andamento", progressTitle: "Apagando arquivos",
+      progressBody: "O prefixo selecionado está sendo apagado. Isso pode demorar quando houver muitos arquivos envolvidos.",
+      cancelled: "Exclusão do prefixo cancelada.", deleting: "Apagando todos os objetos sob {prefix}...", deleted: "{count} objeto(s) apagado(s) de {prefix}.",
+    },
+    common: { cancel: "Cancelar" },
+    messages: {
+      enterCredentials: "Preencha as credenciais e clique em conectar.", startupDiagnostic: "Frontend configurado para usar a API local.\nInicie o servidor Node e abra a aplicação em http://localhost:8086.",
+      connecting: "Conectando...", connectingTo: "Conectando a {target} ({location})...", validateAccess: "Chamando o backend local para validar o acesso ao storage...",
+      connectionOk: "Conexão OK pelo backend local.\nProvedor: {provider}\nDestino: {target}\nLocalização: {location}\nSessão: {session}",
+      failedToConnect: "Falha ao conectar.", restored: "Dados de conexão restaurados do navegador.",
+      loadedSummary: "{folders} pasta(s) e {files} arquivo(s) carregados de {target}.",
+      unexpectedStorageError: "Erro inesperado ao acessar o storage.", backendError: "Erro retornado pelo backend local:\n{message}",
+      noFailureDetails: "Falha sem detalhes adicionais.",
+      fillAdls: "Preencha nome da conta, nome do container e access key.", fillGcs: "Preencha bucket e service account JSON.",
+      invalidServiceAccountJson: "O service account JSON deve ser um JSON válido.", fillMinio: "Preencha endpoint, bucket, access key ID e secret access key.",
+      fillS3: "Preencha região, bucket e credenciais.",
+    },
+    table: { name: "Nome", type: "Tipo", size: "Tamanho", date: "Data", column: "coluna_{index}" },
+  },
+  es: {
+    language: { label: "Idioma" },
+    connection: { kicker: "Conexión", title: "Acceso al Storage", settings: "Configuración de la conexión", connect: "Conectar" },
+    providers: {
+      kicker: "Proveedores", ariaLabel: "Proveedor de storage",
+      s3: "Buckets de AWS con región y claves de acceso.",
+      adls: "Azure Data Lake Storage Gen2 con cuenta y nombre del contenedor.",
+      gcs: "Google Cloud Storage con bucket y JSON de service account.",
+      minio: "Storage compatible con S3 con endpoint personalizado y claves de acceso.",
+    },
+    s3: { ariaLabel: "Configuración de conexión S3", kicker: "Conexión S3", copy: "Usa las credenciales del bucket de AWS para esta conexión." },
+    adls: { ariaLabel: "Configuración de conexión ADLS", kicker: "Conexión ADLS", copy: "Usa credenciales de la cuenta Azure Data Lake Storage Gen2 y el nombre del contenedor." },
+    gcs: { ariaLabel: "Configuración de conexión GCS", kicker: "Conexión GCS", copy: "Usa un bucket de Google Cloud Storage y una clave JSON de service account." },
+    minio: { ariaLabel: "Configuración de conexión MinIO", kicker: "Conexión MinIO", copy: "Usa un endpoint MinIO personalizado con claves compatibles con S3.", ignoreTlsErrors: "Ignorar errores de certificado HTTPS para esta conexión MinIO" },
+    fields: {
+      region: "Región", bucket: "Bucket", accessKeyId: "Access Key ID", secretAccessKey: "Secret Access Key",
+      accountName: "Nombre de la cuenta", containerName: "Nombre del contenedor", accessKey: "Access Key",
+      bucketOrUrl: "Bucket o URL", projectId: "Project ID (se completa automáticamente desde el JSON cuando está presente)",
+      serviceAccountJson: "Service Account JSON", endpoint: "Endpoint",
+    },
+    placeholders: {
+      region: "us-east-1", bucket: "mi-bucket", accessKeyId: "AKIA...", secretAccessKey: "********",
+      accountName: "micuenta", fileSystem: "mi-contenedor", gcsBucket: "gs://mi-bucket o mi-bucket",
+      projectId: "mi-proyecto", serviceAccountJson: '{"type":"service_account", ...}', endpoint: "http://localhost:9000",
+      minioAccessKeyId: "minioadmin",
+    },
+    browser: {
+      kicker: "Explorador de Objetos", title: "Objetos", currentPrefix: "Prefijo actual", refresh: "Actualizar",
+      clearPrefix: "Borrar prefijo", connectToList: "Conéctate para listar los objetos del storage.",
+      noItems: "No se encontraron elementos en este prefijo.", loading: "Cargando objetos...", failed: "Error al listar objetos.",
+      folder: "Carpeta", file: "Archivo",
+    },
+    preview: {
+      kicker: "Vista Previa de Archivo", title: "Vista previa", view: "Vista", table: "Tabla", raw: "Raw", rows: "Filas", all: "Todas",
+      order: "Orden", normal: "Normal", reverse: "Más nuevos primero", download: "Descargar archivo",
+      selectCompatible: "Selecciona un archivo compatible `.csv`, `.json`, `.dfm`, `.parquet` o `.gz` para previsualizar.",
+      noFileSelected: "Ningún archivo seleccionado.", reading: "Leyendo archivo...", loadingFor: "Cargando vista previa de {key}...",
+      unsupportedFormat: "Formato de vista previa no compatible: {key}",
+      unsupportedBody: "Selecciona un archivo .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq o un .gz correspondiente.",
+      emptyFile: "Archivo vacío.", emptyBody: "El archivo no tiene filas para mostrar.", failed: "Error al cargar la vista previa.",
+      rawModeSuffix: "modo raw", formatSuffix: "formato {format}", reverseOrder: "orden inverso",
+      showingRows: "{key} · mostrando {count} fila(s) de muestra{orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
+      dfmFound: " · DFM: {dfmKey} ({count} columnas)", dfmNotFound: " · DFM no encontrado",
+    },
+    delete: {
+      confirmKicker: "Acción Destructiva", confirmTitle: "Eliminar prefijo",
+      confirmBody: "¿Estás absolutamente seguro de que deseas borrar todos los archivos bajo este prefijo?",
+      confirmAction: "Borrar archivos", progressKicker: "Eliminación en Curso", progressTitle: "Borrando archivos",
+      progressBody: "Se está borrando el prefijo seleccionado. Esto puede tardar cuando hay muchos archivos involucrados.",
+      cancelled: "Eliminación del prefijo cancelada.", deleting: "Borrando todos los objetos bajo {prefix}...", deleted: "{count} objeto(s) eliminado(s) de {prefix}.",
+    },
+    common: { cancel: "Cancelar" },
+    messages: {
+      enterCredentials: "Ingresa las credenciales y haz clic en conectar.", startupDiagnostic: "Frontend configurado para usar la API local.\nInicia el servidor Node y abre la aplicación en http://localhost:8086.",
+      connecting: "Conectando...", connectingTo: "Conectando a {target} ({location})...", validateAccess: "Llamando al backend local para validar el acceso al storage...",
+      connectionOk: "Conexión OK a través del backend local.\nProveedor: {provider}\nDestino: {target}\nUbicación: {location}\nSesión: {session}",
+      failedToConnect: "Error al conectar.", restored: "Datos de conexión restaurados desde el navegador.",
+      loadedSummary: "{folders} carpeta(s) y {files} archivo(s) cargados desde {target}.",
+      unexpectedStorageError: "Error inesperado al acceder al storage.", backendError: "Error devuelto por el backend local:\n{message}",
+      noFailureDetails: "Fallo sin detalles adicionales.",
+      fillAdls: "Completa el nombre de la cuenta, el nombre del contenedor y la access key.", fillGcs: "Completa bucket y service account JSON.",
+      invalidServiceAccountJson: "El service account JSON debe ser un JSON válido.", fillMinio: "Completa endpoint, bucket, access key ID y secret access key.",
+      fillS3: "Completa región, bucket y credenciales.",
+    },
+    table: { name: "Nombre", type: "Tipo", size: "Tamaño", date: "Fecha", column: "columna_{index}" },
+  },
+};
 
 const elements = {
   connectionPanel: document.querySelector("#connectionPanel"),
+  languageSelect: document.querySelector("#languageSelect"),
   connectionSummaryText: document.querySelector("#connectionSummaryText"),
   credentialsForm: document.querySelector("#credentialsForm"),
   provider: document.querySelector("#provider"),
@@ -44,6 +259,16 @@ const elements = {
   deleteProgressModal: document.querySelector("#deleteProgressModal"),
   deleteProgressPrefix: document.querySelector("#deleteProgressPrefix"),
 };
+
+state.language = restoreLanguage();
+if (elements.languageSelect instanceof HTMLSelectElement) {
+  elements.languageSelect.value = state.language;
+  elements.languageSelect.addEventListener("change", () => {
+    state.language = SUPPORTED_LANGUAGES.includes(elements.languageSelect.value) ? elements.languageSelect.value : "en";
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, state.language);
+    applyLanguage();
+  });
+}
 
 elements.credentialsForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -86,9 +311,78 @@ elements.previewRowOrder.addEventListener("change", () => {
 
 restoreConnectionForm();
 syncProviderFields();
+applyLanguage();
 setStartupDiagnostic();
 refreshConnectionSummary();
 syncPreviewModeAvailability("");
+
+function restoreLanguage() {
+  const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  return SUPPORTED_LANGUAGES.includes(stored) ? stored : "en";
+}
+
+function t(key, variables = {}) {
+  const value = key.split(".").reduce((current, part) => current?.[part], translations[state.language] ?? translations.en);
+  const fallback = key.split(".").reduce((current, part) => current?.[part], translations.en);
+  const template = typeof value === "string" ? value : typeof fallback === "string" ? fallback : key;
+  return template.replace(/\{(\w+)\}/g, (_, name) => `${variables[name] ?? ""}`);
+}
+
+function applyLanguage() {
+  document.documentElement.lang = state.language;
+  if (elements.languageSelect instanceof HTMLSelectElement) {
+    elements.languageSelect.value = state.language;
+    elements.languageSelect.setAttribute("aria-label", t("language.label"));
+  }
+
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    const key = element.getAttribute("data-i18n");
+    if (key) {
+      element.textContent = t(key);
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+    const key = element.getAttribute("data-i18n-placeholder");
+    if (key && (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement)) {
+      element.placeholder = t(key);
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
+    const key = element.getAttribute("data-i18n-aria-label");
+    if (key) {
+      element.setAttribute("aria-label", t(key));
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-title]").forEach((element) => {
+    const key = element.getAttribute("data-i18n-title");
+    if (key) {
+      element.setAttribute("title", t(key));
+    }
+  });
+
+  if (!elements.connectionStatus.textContent.trim()) {
+    setConnectionStatus(t("messages.enterCredentials"));
+  }
+  if (!elements.diagnosticBox.textContent.trim()) {
+    setDiagnosticMessage(t("messages.startupDiagnostic"));
+  }
+  if (!state.sessionId && !state.objectItems.length) {
+    renderObjectPlaceholder(t("browser.connectToList"));
+  }
+  if (!state.selectedKey && elements.previewTableWrap.classList.contains("empty-state")) {
+    resetPreview(t("preview.selectCompatible"), false, t("preview.noFileSelected"));
+  }
+  renderCurrentPrefix();
+  if (state.objectItems.length) {
+    renderObjectList();
+  }
+  if (state.selectedKey && state.sessionId) {
+    previewObject(state.selectedKey);
+  }
+}
 
 async function connectToBucket() {
   const connection = getConnectionPayload();
@@ -112,10 +406,10 @@ async function connectToBucket() {
   elements.clearPrefixButton.disabled = true;
   elements.downloadButton.disabled = true;
   syncPreviewModeAvailability("");
-  renderObjectPlaceholder("Connecting...");
-  resetPreview("Select a `.csv` file to preview.");
-  setConnectionStatus(`Connecting to ${state.targetName} (${state.locationName})...`);
-  setDiagnosticMessage("Calling the local backend to validate storage access...");
+  renderObjectPlaceholder(t("messages.connecting"));
+  resetPreview(t("preview.selectCompatible"));
+  setConnectionStatus(t("messages.connectingTo", { target: state.targetName, location: state.locationName }));
+  setDiagnosticMessage(t("messages.validateAccess"));
 
   try {
     const response = await apiFetch("/api/connect", {
@@ -132,10 +426,15 @@ async function connectToBucket() {
     elements.connectionPanel.open = false;
     refreshConnectionSummary();
     setDiagnosticMessage(
-      `Connection OK through the local backend.\nProvider: ${state.provider.toUpperCase()}\nTarget: ${state.targetName}\nLocation: ${state.locationName}\nSession: ${state.sessionId}`,
+      t("messages.connectionOk", {
+        provider: state.provider.toUpperCase(),
+        target: state.targetName,
+        location: state.locationName,
+        session: state.sessionId,
+      }),
     );
   } catch (error) {
-    renderObjectPlaceholder("Failed to connect.");
+    renderObjectPlaceholder(t("messages.failedToConnect"));
     setConnectionStatus(getErrorMessage(error), true);
     setDiagnosticMessage(buildDiagnosticMessage(error));
   }
@@ -149,8 +448,8 @@ async function loadObjects(prefix) {
   state.prefix = prefix;
   renderCurrentPrefix();
   elements.clearPrefixButton.disabled = !prefix;
-  renderObjectPlaceholder("Loading objects...");
-  resetPreview("Select a compatible `.csv`, `.json`, `.dfm`, `.parquet`, or `.gz` file to preview.");
+  renderObjectPlaceholder(t("browser.loading"));
+  resetPreview(t("preview.selectCompatible"));
 
   try {
     const response = await apiFetch(
@@ -159,10 +458,14 @@ async function loadObjects(prefix) {
     state.objectItems = response.items ?? [];
     renderObjectList();
     setConnectionStatus(
-      `${response.summary?.folders ?? 0} folder(s) and ${response.summary?.files ?? 0} file(s) loaded from ${state.targetName}.`,
+      t("messages.loadedSummary", {
+        folders: response.summary?.folders ?? 0,
+        files: response.summary?.files ?? 0,
+        target: state.targetName,
+      }),
     );
   } catch (error) {
-    renderObjectPlaceholder("Failed to list objects.");
+    renderObjectPlaceholder(t("browser.failed"));
     setConnectionStatus(getErrorMessage(error), true);
     setDiagnosticMessage(buildDiagnosticMessage(error));
   }
@@ -211,7 +514,7 @@ function renderCurrentPrefix() {
 
 function renderObjectList() {
   if (!state.objectItems.length) {
-    renderObjectPlaceholder("No items found in this prefix.");
+    renderObjectPlaceholder(t("browser.noItems"));
     return;
   }
 
@@ -227,10 +530,10 @@ function renderObjectList() {
   const headerRow = document.createElement("tr");
 
   [
-    { key: "name", label: "Name" },
-    { key: "type", label: "Type" },
-    { key: "size", label: "Size" },
-    { key: "lastModified", label: "Date" },
+    { key: "name", label: t("table.name") },
+    { key: "type", label: t("table.type") },
+    { key: "size", label: t("table.size") },
+    { key: "lastModified", label: t("table.date") },
   ].forEach((column) => {
     const th = document.createElement("th");
     const button = document.createElement("button");
@@ -262,7 +565,7 @@ function renderObjectList() {
     nameCell.appendChild(nameWrap);
 
     const typeCell = document.createElement("td");
-    typeCell.textContent = item.type === "folder" ? "Folder" : "File";
+    typeCell.textContent = item.type === "folder" ? t("browser.folder") : t("browser.file");
 
     const sizeCell = document.createElement("td");
     sizeCell.textContent = item.type === "folder" ? "—" : formatBytes(item.size);
@@ -271,7 +574,7 @@ function renderObjectList() {
     dateCell.textContent =
       item.type === "folder" || !item.lastModified
         ? "—"
-        : new Date(item.lastModified).toLocaleString("en-US");
+        : new Date(item.lastModified).toLocaleString(DATE_LOCALES[state.language] ?? "en-US");
 
     row.append(nameCell, typeCell, sizeCell, dateCell);
     row.addEventListener("click", () => handleObjectSelection(item));
@@ -304,17 +607,17 @@ async function previewObject(key) {
 
   if (!isPreviewableFile(key)) {
     resetPreview(
-      `Unsupported preview format: ${key}`,
+      t("preview.unsupportedFormat", { key }),
       false,
-      "Select a .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, or matching .gz file.",
+      t("preview.unsupportedBody"),
     );
     return;
   }
 
   syncPreviewModeAvailability(key);
-  elements.previewMeta.textContent = `Loading preview for ${key}...`;
+  elements.previewMeta.textContent = t("preview.loadingFor", { key });
   elements.previewTableWrap.className = "preview-table-wrap empty-state";
-  elements.previewTableWrap.textContent = "Reading file...";
+  elements.previewTableWrap.textContent = t("preview.reading");
 
   try {
     const rowLimit = getPreviewRowLimit();
@@ -337,22 +640,29 @@ async function previewObject(key) {
     const dfmSuffix =
       response.previewFormat === "csv" || response.previewFormat === "csv.gz"
         ? response.dfmKey
-          ? ` · DFM: ${response.dfmKey} (${response.metadataColumns?.length ?? 0} columns)`
-          : " · DFM not found"
+          ? t("preview.dfmFound", { dfmKey: response.dfmKey, count: response.metadataColumns?.length ?? 0 })
+          : t("preview.dfmNotFound")
         : "";
-    const modeSuffix = response.previewMode === "raw" ? " · raw mode" : "";
-    const formatSuffix = response.previewFormat ? ` · format ${response.previewFormat}` : "";
-    const orderLabel = getPreviewRowOrder() === "reverse" ? " · reverse order" : "";
+    const modeSuffix = response.previewMode === "raw" ? ` · ${t("preview.rawModeSuffix")}` : "";
+    const formatSuffix = response.previewFormat ? ` · ${t("preview.formatSuffix", { format: response.previewFormat })}` : "";
+    const orderLabel = getPreviewRowOrder() === "reverse" ? ` · ${t("preview.reverseOrder")}` : "";
     elements.previewMeta.textContent =
-      `${key} · showing ${response.lineCount ?? 0} sample row(s)${orderLabel}${modeSuffix}${formatSuffix}${dfmSuffix}`;
+      t("preview.showingRows", {
+        key,
+        count: response.lineCount ?? 0,
+        orderSuffix: orderLabel,
+        modeSuffix,
+        formatSuffix,
+        dfmSuffix,
+      });
   } catch (error) {
-    resetPreview(getErrorMessage(error), true, "Failed to load preview.");
+    resetPreview(getErrorMessage(error), true, t("preview.failed"));
   }
 }
 
 function renderPreviewTable(preview) {
   if (!preview.headerRow.length) {
-    resetPreview("Empty file.", false, "The file has no rows to display.");
+    resetPreview(t("preview.emptyFile"), false, t("preview.emptyBody"));
     return;
   }
 
@@ -363,7 +673,7 @@ function renderPreviewTable(preview) {
 
   preview.headerRow.forEach((column, index) => {
     const th = document.createElement("th");
-    th.textContent = column || `column_${index + 1}`;
+    th.textContent = column || t("table.column", { index: index + 1 });
     headerTr.appendChild(th);
   });
 
@@ -592,11 +902,11 @@ function buildPreviewModel(rows, metadataColumns = [], rowOrder = "normal") {
 }
 
 function createGeneratedHeader(columnCount) {
-  return Array.from({ length: columnCount }, (_, index) => `column_${index + 1}`);
+  return Array.from({ length: columnCount }, (_, index) => t("table.column", { index: index + 1 }));
 }
 
 function normalizeHeaderRow(headerRow, columnCount) {
-  return Array.from({ length: columnCount }, (_, index) => headerRow[index] || `column_${index + 1}`);
+  return Array.from({ length: columnCount }, (_, index) => headerRow[index] || t("table.column", { index: index + 1 }));
 }
 
 function normalizeRowLength(row, columnCount) {
@@ -608,7 +918,7 @@ function resetPreview(message, isError = false, bodyMessage) {
   elements.previewMeta.textContent = message;
   elements.previewTableWrap.className = "preview-table-wrap empty-state";
   elements.previewTableWrap.textContent =
-    bodyMessage ?? (isError ? "Failed to load preview." : "No file selected.");
+    bodyMessage ?? (isError ? t("preview.failed") : t("preview.noFileSelected"));
 }
 
 function renderObjectPlaceholder(message) {
@@ -689,15 +999,15 @@ function getErrorMessage(error) {
     return error.message;
   }
 
-  return "Unexpected error while accessing storage.";
+  return t("messages.unexpectedStorageError");
 }
 
 function buildDiagnosticMessage(error) {
   if (error instanceof Error) {
-    return `Error returned by the local backend:\n${error.message}`;
+    return t("messages.backendError", { message: error.message });
   }
 
-  return "Failure without additional details.";
+  return t("messages.noFailureDetails");
 }
 
 async function clearCurrentPrefix() {
@@ -708,13 +1018,13 @@ async function clearCurrentPrefix() {
   const confirmation = await confirmPrefixDeletion(state.prefix);
 
   if (!confirmation) {
-    setConnectionStatus("Prefix deletion cancelled.");
+    setConnectionStatus(t("delete.cancelled"));
     return;
   }
 
   elements.clearPrefixButton.disabled = true;
   showDeleteProgress(state.prefix);
-  setConnectionStatus(`Deleting all objects under ${state.prefix}...`);
+  setConnectionStatus(t("delete.deleting", { prefix: state.prefix }));
 
   try {
     const response = await apiFetch("/api/delete-prefix", {
@@ -727,9 +1037,9 @@ async function clearCurrentPrefix() {
 
     state.selectedKey = "";
     elements.downloadButton.disabled = true;
-    resetPreview("Select a `.csv` file to preview.");
+    resetPreview(t("preview.selectCompatible"));
     setConnectionStatus(
-      `${response.deletedCount ?? 0} object(s) deleted from ${state.prefix}.`,
+      t("delete.deleted", { count: response.deletedCount ?? 0, prefix: state.prefix }),
     );
     await loadObjects(state.prefix);
   } catch (error) {
@@ -796,9 +1106,7 @@ function hideDeleteProgress() {
 }
 
 function setStartupDiagnostic() {
-  setDiagnosticMessage(
-    "Frontend configured to use the local API.\nStart the Node server and open the application at http://localhost:8086.",
-  );
+  setDiagnosticMessage(t("messages.startupDiagnostic"));
 }
 
 function persistConnectionForm() {
@@ -834,7 +1142,7 @@ function restoreConnectionForm() {
     setInputValue("minioSecretAccessKey", payload.minioSecretAccessKey);
     setCheckboxValue("ignoreTlsErrors", payload.ignoreTlsErrors === true);
     syncProviderFields();
-    setConnectionStatus("Connection data restored from the browser.");
+    setConnectionStatus(t("messages.restored"));
     refreshConnectionSummary();
   } catch {
     window.localStorage.removeItem(STORAGE_KEY);
@@ -881,8 +1189,8 @@ function syncProjectIdFromServiceAccountJson() {
 
 function extractProjectIdFromServiceAccountJson(value) {
   if (typeof value !== "string" || !value.trim()) {
-    return "";
-  }
+      return "";
+    }
 
   try {
     const parsed = JSON.parse(value);
@@ -938,7 +1246,7 @@ function getConnectionPayload() {
 function validateConnectionPayload(connection) {
   if (connection.provider === "adls") {
     if (!connection.accountName || !connection.fileSystem || !connection.accountKey) {
-      return "Fill in account name, container name, and access key.";
+      return t("messages.fillAdls");
     }
 
     return "";
@@ -946,13 +1254,13 @@ function validateConnectionPayload(connection) {
 
   if (connection.provider === "gcs") {
     if (!connection.gcsBucket || !connection.serviceAccountJson) {
-      return "Fill in bucket and service account JSON.";
+      return t("messages.fillGcs");
     }
 
     try {
       JSON.parse(connection.serviceAccountJson);
     } catch {
-      return "Service account JSON must be valid JSON.";
+      return t("messages.invalidServiceAccountJson");
     }
 
     return "";
@@ -960,14 +1268,14 @@ function validateConnectionPayload(connection) {
 
   if (connection.provider === "minio") {
     if (!connection.endpoint || !connection.minioBucket || !connection.minioAccessKeyId || !connection.minioSecretAccessKey) {
-      return "Fill in endpoint, bucket, access key ID, and secret access key.";
+      return t("messages.fillMinio");
     }
 
     return "";
   }
 
   if (!connection.region || !connection.bucket || !connection.accessKeyId || !connection.secretAccessKey) {
-    return "Fill in region, bucket, and credentials.";
+    return t("messages.fillS3");
   }
 
   return "";
@@ -1124,13 +1432,14 @@ function refreshConnectionSummary() {
 
   elements.connectionSummaryText.textContent = parts.length
     ? parts.join(" · ")
-    : "Connection settings";
+    : t("connection.settings");
 }
 
 async function apiFetch(url, init = {}) {
   const response = await fetch(url, {
     headers: {
       "Content-Type": "application/json",
+      "X-App-Language": state.language,
       ...(init.headers ?? {}),
     },
     ...init,
