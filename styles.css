@@ -396,6 +396,79 @@ code {
   border-radius: 18px;
 }
 
+.json-tree {
+  min-height: 220px;
+  padding: 16px 18px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+
+.json-branch,
+.json-leaf {
+  margin-left: 0;
+}
+
+.json-details {
+  margin: 0;
+}
+
+.json-summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.json-summary::-webkit-details-marker {
+  display: none;
+}
+
+.json-summary::before {
+  content: "▾";
+  display: inline-block;
+  width: 1rem;
+  color: var(--brand-dark);
+}
+
+.json-details:not([open]) > .json-summary::before {
+  content: "▸";
+}
+
+.json-children {
+  margin-left: 1.2rem;
+  padding-left: 0.9rem;
+  border-left: 1px solid rgba(67, 49, 31, 0.14);
+}
+
+.json-closing,
+.json-leaf {
+  margin-left: 1rem;
+}
+
+.json-key {
+  color: var(--brand-dark);
+}
+
+.json-string {
+  color: var(--success);
+}
+
+.json-number {
+  color: #235fa7;
+}
+
+.json-boolean {
+  color: #7a3fb5;
+}
+
+.json-null,
+.json-meta,
+.json-empty {
+  color: var(--muted);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

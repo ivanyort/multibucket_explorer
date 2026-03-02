@@ -120,7 +120,7 @@ async function loadObjects(prefix) {
   elements.upButton.disabled = !prefix;
   elements.clearPrefixButton.disabled = !prefix;
   renderObjectPlaceholder("Loading objects...");
-  resetPreview("Select a compatible `.csv`, `.json`, `.parquet`, or `.gz` file to preview.");
+  resetPreview("Select a compatible `.csv`, `.json`, `.dfm`, `.parquet`, or `.gz` file to preview.");
 
   try {
     const response = await apiFetch(
@@ -235,7 +235,7 @@ async function previewObject(key) {
     resetPreview(
       `Unsupported preview format: ${key}`,
       false,
-      "Select a .csv, .json, .jsonl, .ndjson, .parquet, .parq, or matching .gz file.",
+      "Select a .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, or matching .gz file.",
     );
     return;
   }
@@ -254,7 +254,7 @@ async function previewObject(key) {
     );
 
     if (response.previewMode === "raw") {
-      renderPreviewRaw(response.rawText ?? "");
+      renderPreviewRaw(response.rawText ?? "", response.previewFormat ?? "");
     } else {
       const preview = buildPreviewModel(
         response.rows ?? [],
@@ -316,13 +316,165 @@ function renderPreviewTable(preview) {
   elements.previewTableWrap.appendChild(table);
 }
 
-function renderPreviewRaw(rawText) {
+function renderPreviewRaw(rawText, previewFormat = "") {
+  elements.previewTableWrap.className = "preview-table-wrap";
+  elements.previewTableWrap.innerHTML = "";
+
+  if (shouldRenderJsonTree(previewFormat, rawText)) {
+    try {
+      const parsed = parseRawJsonPreview(rawText, previewFormat);
+      const tree = document.createElement("div");
+      tree.className = "json-tree";
+      tree.appendChild(renderJsonTreeNode(parsed, 0));
+      elements.previewTableWrap.appendChild(tree);
+      return;
+    } catch {
+      // Fall back to raw text when the payload is not a single JSON document.
+    }
+  }
+
   const pre = document.createElement("pre");
   pre.className = "preview-raw";
   pre.textContent = rawText || "";
-  elements.previewTableWrap.className = "preview-table-wrap";
-  elements.previewTableWrap.innerHTML = "";
   elements.previewTableWrap.appendChild(pre);
+}
+
+function shouldRenderJsonTree(previewFormat, rawText) {
+  if (!rawText) {
+    return false;
+  }
+
+  return ["dfm", "dfm.gz"].includes(previewFormat);
+}
+
+function parseRawJsonPreview(rawText, previewFormat) {
+  if (["jsonl", "jsonl.gz", "ndjson", "ndjson.gz"].includes(previewFormat)) {
+    return parseJsonLines(rawText);
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    const lines = splitJsonLines(rawText);
+
+    if (lines.length > 1) {
+      return lines.map((line) => JSON.parse(line));
+    }
+
+    throw new Error("Raw preview is not valid JSON.");
+  }
+}
+
+function parseJsonLines(rawText) {
+  return splitJsonLines(rawText).map((line) => JSON.parse(line));
+}
+
+function splitJsonLines(rawText) {
+  return rawText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function renderJsonTreeNode(value, depth, keyName = "") {
+  if (Array.isArray(value)) {
+    return renderJsonBranch({
+      keyName,
+      label: `Array(${value.length})`,
+      openToken: "[",
+      closeToken: "]",
+      items: value.map((item, index) => ({ keyName: String(index), value: item })),
+      depth,
+    });
+  }
+
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value);
+    return renderJsonBranch({
+      keyName,
+      label: `Object(${entries.length})`,
+      openToken: "{",
+      closeToken: "}",
+      items: entries.map(([entryKey, entryValue]) => ({ keyName: entryKey, value: entryValue })),
+      depth,
+    });
+  }
+
+  return renderJsonLeaf(keyName, value);
+}
+
+function renderJsonBranch({ keyName, label, openToken, closeToken, items, depth }) {
+  const branch = document.createElement("div");
+  branch.className = "json-branch";
+
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "json-leaf";
+    empty.append(renderJsonKey(keyName), renderJsonValue(`${openToken}${closeToken}`, "json-empty"));
+    branch.appendChild(empty);
+    return branch;
+  }
+
+  const details = document.createElement("details");
+  details.className = "json-details";
+  details.open = depth < 2;
+
+  const summary = document.createElement("summary");
+  summary.className = "json-summary";
+  summary.append(renderJsonKey(keyName), renderJsonValue(`${openToken} ${label}`, "json-meta"));
+
+  const children = document.createElement("div");
+  children.className = "json-children";
+
+  items.forEach((item) => {
+    children.appendChild(renderJsonTreeNode(item.value, depth + 1, item.keyName));
+  });
+
+  const closing = document.createElement("div");
+  closing.className = "json-closing";
+  closing.textContent = closeToken;
+
+  details.append(summary, children, closing);
+  branch.appendChild(details);
+  return branch;
+}
+
+function renderJsonLeaf(keyName, value) {
+  const leaf = document.createElement("div");
+  leaf.className = "json-leaf";
+  leaf.append(renderJsonKey(keyName), renderJsonPrimitive(value));
+  return leaf;
+}
+
+function renderJsonKey(keyName) {
+  const key = document.createElement("span");
+  key.className = "json-key";
+  key.textContent = keyName ? `"${keyName}": ` : "";
+  return key;
+}
+
+function renderJsonPrimitive(value) {
+  if (value === null) {
+    return renderJsonValue("null", "json-null");
+  }
+
+  switch (typeof value) {
+    case "string":
+      return renderJsonValue(JSON.stringify(value), "json-string");
+    case "number":
+      return renderJsonValue(String(value), "json-number");
+    case "boolean":
+      return renderJsonValue(String(value), "json-boolean");
+    default:
+      return renderJsonValue(String(value), "json-meta");
+  }
+}
+
+function renderJsonValue(text, className) {
+  const value = document.createElement("span");
+  value.className = className;
+  value.textContent = text;
+  return value;
 }
 
 function buildPreviewModel(rows, metadataColumns = [], rowOrder = "normal") {
@@ -602,6 +754,8 @@ function isPreviewableFile(key) {
   return (
     normalizedKey.endsWith(".csv") ||
     normalizedKey.endsWith(".csv.gz") ||
+    normalizedKey.endsWith(".dfm") ||
+    normalizedKey.endsWith(".dfm.gz") ||
     normalizedKey.endsWith(".json") ||
     normalizedKey.endsWith(".json.gz") ||
     normalizedKey.endsWith(".jsonl") ||
@@ -610,14 +764,20 @@ function isPreviewableFile(key) {
     normalizedKey.endsWith(".ndjson.gz") ||
     normalizedKey.endsWith(".parquet") ||
     normalizedKey.endsWith(".parquet.gz") ||
+    normalizedKey.endsWith(".gzip.parquet") ||
+    normalizedKey.endsWith(".gz.parquet") ||
     normalizedKey.endsWith(".parq") ||
-    normalizedKey.endsWith(".parq.gz")
+    normalizedKey.endsWith(".parq.gz") ||
+    normalizedKey.endsWith(".gzip.parq") ||
+    normalizedKey.endsWith(".gz.parq")
   );
 }
 
 function isJsonPreviewFile(key) {
   const normalizedKey = key.toLowerCase();
   return (
+    normalizedKey.endsWith(".dfm") ||
+    normalizedKey.endsWith(".dfm.gz") ||
     normalizedKey.endsWith(".json") ||
     normalizedKey.endsWith(".json.gz") ||
     normalizedKey.endsWith(".jsonl") ||

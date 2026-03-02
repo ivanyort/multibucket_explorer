@@ -6,7 +6,8 @@ import { Readable } from "node:stream";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createGunzip, gunzipSync } from "node:zlib";
-import parquet from "parquetjs-lite";
+import { parquetMetadataAsync, parquetReadObjects } from "hyparquet";
+import { compressors as hyparquetCompressors } from "hyparquet-compressors";
 import {
   DeleteObjectsCommand,
   GetObjectCommand,
@@ -362,6 +363,10 @@ function sendJson(response, statusCode, payload) {
 }
 
 function getErrorMessage(error) {
+  if (typeof error === "string" && error) {
+    return error;
+  }
+
   if (error && typeof error === "object") {
     const message = Reflect.get(error, "message");
     if (typeof message === "string" && message) {
@@ -469,7 +474,7 @@ async function loadPreviewData(session, key, limit, order, mode) {
     };
   }
 
-  if (extension === ".json" || extension === ".jsonl" || extension === ".ndjson") {
+  if (extension === ".json" || extension === ".jsonl" || extension === ".ndjson" || extension === ".dfm") {
     if (mode === "raw") {
       const rawText = await loadJsonRawPreview(session, key, limit, order, isGzip, extension);
       return {
@@ -477,6 +482,19 @@ async function loadPreviewData(session, key, limit, order, mode) {
         metadataColumns: [],
         dfmKey: null,
         previewFormat: isGzip ? `${extension.slice(1)}.gz` : extension.slice(1),
+        previewMode: "raw",
+        rawText,
+        lineCount: countRawPreviewLines(rawText),
+      };
+    }
+
+    if (extension === ".dfm") {
+      const rawText = await loadJsonRawPreview(session, key, limit, order, isGzip, extension);
+      return {
+        rows: [],
+        metadataColumns: [],
+        dfmKey: null,
+        previewFormat: isGzip ? "dfm.gz" : "dfm",
         previewMode: "raw",
         rawText,
         lineCount: countRawPreviewLines(rawText),
@@ -726,17 +744,17 @@ async function loadJsonPreviewRecords(session, key, limit, order, gzip = false, 
 async function loadJsonRawPreview(session, key, limit, order, gzip = false, extension = ".json") {
   const isLineDelimitedJson = extension === ".jsonl" || extension === ".ndjson";
 
-  if (limit !== null && (isLineDelimitedJson || extension === ".json")) {
+  if (limit !== null && isLineDelimitedJson) {
     if (gzip) {
       const lines = await tryLoadGzipDelimitedLines(session, key, limit, order);
 
       if (lines) {
-        return order === "reverse" ? [...lines].reverse().join("\n") : lines.join("\n");
+        return formatRawJsonLines(order === "reverse" ? [...lines].reverse() : lines);
       }
     } else if (order === "normal") {
-      return (await loadDelimitedHeadRecords(session, key, limit)).join("\n");
+      return formatRawJsonLines(await loadDelimitedHeadRecords(session, key, limit));
     } else {
-      return (await loadDelimitedTailRecords(session, key, limit, "\n")).reverse().join("\n");
+      return formatRawJsonLines((await loadDelimitedTailRecords(session, key, limit, "\n")).reverse());
     }
   }
 
@@ -748,14 +766,39 @@ async function loadJsonRawPreview(session, key, limit, order, gzip = false, exte
   }
 
   if (isLineDelimitedJson) {
-    return trimmed;
+    return formatRawJsonLines(slicePreviewRecords(splitJsonLines(trimmed), limit, order));
   }
 
   try {
     return JSON.stringify(JSON.parse(trimmed), null, 2);
   } catch {
+    const lines = splitJsonLines(trimmed);
+
+    if (lines.length > 1) {
+      return formatRawJsonLines(slicePreviewRecords(lines, limit, order));
+    }
+
     return trimmed;
   }
+}
+
+function formatRawJsonLines(lines) {
+  return lines
+    .map((line) => {
+      try {
+        return JSON.stringify(JSON.parse(line), null, 2);
+      } catch {
+        return line;
+      }
+    })
+    .join("\n\n");
+}
+
+function splitJsonLines(text) {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 async function tryLoadGzipJsonRecords(session, key, limit, order) {
@@ -846,69 +889,27 @@ async function tryLoadGzipDelimitedLines(session, key, limit, order) {
 }
 
 async function loadParquetPreviewRecords(session, key, limit, order, gzip = false) {
-  if (gzip) {
-    const fileBuffer = await loadObjectBuffer(session, key, true);
-    const reader = await parquet.ParquetReader.openBuffer(fileBuffer);
-
-    try {
-      const cursor = reader.getCursor();
-      const records = [];
-      let record = null;
-
-      while ((record = await cursor.next())) {
-        if (order === "reverse" && limit !== null) {
-          if (records.length === limit) {
-            records.shift();
-          }
-          records.push(record);
-          continue;
-        }
-
-        records.push(record);
-
-        if (order === "normal" && limit !== null && records.length >= limit) {
-          break;
-        }
-      }
-
-      return slicePreviewRecords(records, limit, order);
-    } finally {
-      await reader.close();
-    }
-  }
-
-  const reader = await parquet.ParquetReader.openS3(
-    createParquetS3Adapter(session.client),
-    {
-      Bucket: session.bucket,
-      Key: key,
-    },
-  );
-
   try {
-    const cursor = reader.getCursor();
-    const records = [];
-    let record = null;
+    const fileBuffer = await loadObjectBuffer(session, key, gzip);
+    const file = toArrayBuffer(fileBuffer);
+    const metadata = await parquetMetadataAsync(file, { compressors: hyparquetCompressors });
+    const totalRows = Number(metadata.num_rows ?? 0);
+    const effectiveLimit = limit ?? totalRows;
+    const rowStart =
+      order === "reverse" ? Math.max(totalRows - effectiveLimit, 0) : 0;
+    const rowEnd =
+      limit === null ? totalRows : Math.min(rowStart + effectiveLimit, totalRows);
 
-    while ((record = await cursor.next())) {
-      if (order === "reverse" && limit !== null) {
-        if (records.length === limit) {
-          records.shift();
-        }
-        records.push(record);
-        continue;
-      }
+    const records = await parquetReadObjects({
+      file,
+      compressors: hyparquetCompressors,
+      rowStart,
+      rowEnd,
+    });
 
-      records.push(record);
-
-      if (order === "normal" && limit !== null && records.length >= limit) {
-        break;
-      }
-    }
-
-    return slicePreviewRecords(records, limit, order);
-  } finally {
-    await reader.close();
+    return order === "reverse" ? [...records].reverse() : records;
+  } catch (error) {
+    throw new Error(`Failed to read Parquet preview: ${getErrorMessage(error)}`);
   }
 }
 
@@ -988,6 +989,24 @@ function analyzePreviewTarget(key) {
 }
 
 function stripGzipExtension(key) {
+  const normalizedKey = key.toLowerCase();
+
+  if (normalizedKey.endsWith(".gzip.parquet")) {
+    return key;
+  }
+
+  if (normalizedKey.endsWith(".gz.parquet")) {
+    return key;
+  }
+
+  if (normalizedKey.endsWith(".gzip.parq")) {
+    return key;
+  }
+
+  if (normalizedKey.endsWith(".gz.parq")) {
+    return key;
+  }
+
   return isGzipKey(key) ? key.slice(0, -3) : key;
 }
 
@@ -995,30 +1014,8 @@ function isGzipKey(key) {
   return key.toLowerCase().endsWith(".gz");
 }
 
-function createParquetS3Adapter(s3Client) {
-  return {
-    headObject(params) {
-      return {
-        promise: async () => {
-          const result = await s3Client.send(new HeadObjectCommand(params));
-          return {
-            ContentLength: result.ContentLength ?? 0,
-          };
-        },
-      };
-    },
-    getObject(params) {
-      return {
-        promise: async () => {
-          const result = await s3Client.send(new GetObjectCommand(params));
-          const body = await result.Body?.transformToByteArray();
-          return {
-            Body: body ? Buffer.from(body) : Buffer.alloc(0),
-          };
-        },
-      };
-    },
-  };
+function toArrayBuffer(buffer) {
+  return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 }
 
 async function loadDelimitedHeadRecords(session, key, limit) {
