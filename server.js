@@ -6,6 +6,7 @@ import { Readable } from "node:stream";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createGunzip, gunzipSync } from "node:zlib";
+import { DataLakeServiceClient, StorageSharedKeyCredential } from "@azure/storage-file-datalake";
 import { parquetMetadataAsync, parquetReadObjects } from "hyparquet";
 import { compressors as hyparquetCompressors } from "hyparquet-compressors";
 import {
@@ -78,56 +79,28 @@ async function handleConnect(request, response) {
   const connection = normalizeConnection(body);
   validateConnection(connection);
 
-  const client = createS3Client(connection);
-  await client.send(
-    new ListObjectsV2Command({
-      Bucket: connection.bucket,
-      MaxKeys: 1,
-    }),
-  );
+  const storage = await createStorageSession(connection);
 
   const sessionId = randomUUID();
   sessions.set(sessionId, {
     ...connection,
-    client,
+    storage,
     createdAt: Date.now(),
   });
   pruneSessions();
 
   sendJson(response, 200, {
     sessionId,
-    bucket: connection.bucket,
-    region: connection.region,
+    provider: connection.provider,
+    targetName: getConnectionTargetName(connection),
+    locationName: getConnectionLocationName(connection),
   });
 }
 
 async function handleListObjects(url, response) {
   const prefix = url.searchParams.get("prefix") ?? "";
   const session = getSession(url.searchParams.get("sessionId"));
-
-  const result = await session.client.send(
-    new ListObjectsV2Command({
-      Bucket: session.bucket,
-      Prefix: prefix,
-      Delimiter: "/",
-    }),
-  );
-
-  const folders =
-    result.CommonPrefixes?.map((item) => ({
-      type: "folder",
-      key: item.Prefix,
-      name: trimCurrentPrefix(item.Prefix ?? "", prefix).replace(/\/$/, ""),
-    })) ?? [];
-
-  const files =
-    result.Contents?.filter((item) => item.Key !== prefix).map((item) => ({
-      type: "file",
-      key: item.Key,
-      name: trimCurrentPrefix(item.Key ?? "", prefix),
-      size: item.Size ?? 0,
-      lastModified: item.LastModified?.toISOString() ?? null,
-    })) ?? [];
+  const { folders, files } = await listStorageObjects(session, prefix);
 
   sendJson(response, 200, {
     items: [...folders, ...files],
@@ -171,28 +144,22 @@ async function handleDownload(url, response) {
     throw new Error("The key parameter is required.");
   }
 
-  const result = await session.client.send(
-    new GetObjectCommand({
-      Bucket: session.bucket,
-      Key: key,
-    }),
-  );
-
-  const contentType = result.ContentType || "application/octet-stream";
+  const result = await getDownloadResponse(session, key);
+  const contentType = result.contentType || "application/octet-stream";
   const fileName = path.basename(key);
 
   response.writeHead(200, {
     "Content-Type": contentType,
     "Content-Disposition": `attachment; filename="${encodeURIComponent(fileName)}"`,
-    ...(result.ContentLength ? { "Content-Length": String(result.ContentLength) } : {}),
+    ...(result.contentLength ? { "Content-Length": String(result.contentLength) } : {}),
   });
 
-  if (!result.Body) {
+  if (!result.body) {
     response.end();
     return;
   }
 
-  for await (const chunk of result.Body) {
+  for await (const chunk of result.body) {
     response.write(chunk);
   }
 
@@ -205,39 +172,10 @@ async function handleDeletePrefix(request, response) {
   const prefix = typeof body.prefix === "string" ? body.prefix.trim() : "";
 
   if (!prefix) {
-    throw new Error("For safety, deleting the bucket root is not allowed.");
+    throw new Error("For safety, deleting the storage root is not allowed.");
   }
 
-  let continuationToken;
-  let deletedCount = 0;
-
-  do {
-    const listResult = await session.client.send(
-      new ListObjectsV2Command({
-        Bucket: session.bucket,
-        Prefix: prefix,
-        ContinuationToken: continuationToken,
-      }),
-    );
-
-    const objects =
-      listResult.Contents?.map((item) => item.Key).filter((key) => typeof key === "string" && key.length) ?? [];
-
-    if (objects.length) {
-      await session.client.send(
-        new DeleteObjectsCommand({
-          Bucket: session.bucket,
-          Delete: {
-            Objects: objects.map((key) => ({ Key: key })),
-            Quiet: true,
-          },
-        }),
-      );
-      deletedCount += objects.length;
-    }
-
-    continuationToken = listResult.IsTruncated ? listResult.NextContinuationToken : undefined;
-  } while (continuationToken);
+  const deletedCount = await deleteStoragePrefix(session, prefix);
 
   sendJson(response, 200, {
     deletedCount,
@@ -284,6 +222,322 @@ function createS3Client(connection) {
       ...(connection.sessionToken ? { sessionToken: connection.sessionToken } : {}),
     },
   });
+}
+
+function createAdlsServiceClient(connection) {
+  const credential = new StorageSharedKeyCredential(connection.accountName, connection.accountKey);
+  return new DataLakeServiceClient(`https://${connection.accountName}.dfs.core.windows.net`, credential);
+}
+
+async function createStorageSession(connection) {
+  if (connection.provider === "adls") {
+    const serviceClient = createAdlsServiceClient(connection);
+    const fileSystemClient = serviceClient.getFileSystemClient(connection.fileSystem);
+    await fileSystemClient.getProperties();
+
+    return {
+      provider: "adls",
+      serviceClient,
+      fileSystemClient,
+      accountName: connection.accountName,
+      fileSystem: connection.fileSystem,
+    };
+  }
+
+  const client = createS3Client(connection);
+  await client.send(
+    new ListObjectsV2Command({
+      Bucket: connection.bucket,
+      MaxKeys: 1,
+    }),
+  );
+
+  return {
+    provider: "s3",
+    client,
+    bucket: connection.bucket,
+    region: connection.region,
+  };
+}
+
+function getConnectionTargetName(connection) {
+  return connection.provider === "adls" ? connection.fileSystem : connection.bucket;
+}
+
+function getConnectionLocationName(connection) {
+  return connection.provider === "adls" ? connection.accountName : connection.region;
+}
+
+async function listStorageObjects(session, prefix) {
+  if (session.storage.provider === "adls") {
+    return listAdlsObjects(session, prefix);
+  }
+
+  const result = await session.storage.client.send(
+    new ListObjectsV2Command({
+      Bucket: session.storage.bucket,
+      Prefix: prefix,
+      Delimiter: "/",
+    }),
+  );
+
+  const folders =
+    result.CommonPrefixes?.map((item) => ({
+      type: "folder",
+      key: item.Prefix,
+      name: trimCurrentPrefix(item.Prefix ?? "", prefix).replace(/\/$/, ""),
+    })) ?? [];
+
+  const files =
+    result.Contents?.filter((item) => item.Key !== prefix).map((item) => ({
+      type: "file",
+      key: item.Key,
+      name: trimCurrentPrefix(item.Key ?? "", prefix),
+      size: item.Size ?? 0,
+      lastModified: item.LastModified?.toISOString() ?? null,
+    })) ?? [];
+
+  return { folders, files };
+}
+
+async function listAdlsObjects(session, prefix) {
+  const items = [];
+  const path = normalizeAdlsDirectory(prefix);
+  const iterator = session.storage.fileSystemClient.listPaths({
+    path: path || undefined,
+    recursive: false,
+  });
+
+  for await (const item of iterator) {
+    if (!item.name) {
+      continue;
+    }
+
+    const normalizedName = item.isDirectory ? ensureTrailingSlash(item.name) : item.name;
+
+    if (normalizedName === prefix || item.name === path) {
+      continue;
+    }
+
+    items.push({
+      type: item.isDirectory ? "folder" : "file",
+      key: item.isDirectory ? ensureTrailingSlash(item.name) : item.name,
+      name: trimCurrentPrefix(normalizedName, prefix).replace(/\/$/, ""),
+      size: Number(item.contentLength ?? 0),
+      lastModified: item.lastModified ? new Date(item.lastModified).toISOString() : null,
+    });
+  }
+
+  return {
+    folders: items.filter((item) => item.type === "folder"),
+    files: items.filter((item) => item.type === "file"),
+  };
+}
+
+async function listStoragePaths(session, prefix, recursive = true) {
+  if (session.storage.provider === "adls") {
+    const path = normalizeAdlsDirectory(prefix);
+    const paths = [];
+
+    for await (const item of session.storage.fileSystemClient.listPaths({
+      path: path || undefined,
+      recursive,
+    })) {
+      if (item.name) {
+        paths.push(item);
+      }
+    }
+
+    return paths;
+  }
+
+  let continuationToken;
+  const items = [];
+
+  do {
+    const listResult = await session.storage.client.send(
+      new ListObjectsV2Command({
+        Bucket: session.storage.bucket,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      }),
+    );
+
+    items.push(...(listResult.Contents ?? []));
+    continuationToken = listResult.IsTruncated ? listResult.NextContinuationToken : undefined;
+  } while (continuationToken);
+
+  return items;
+}
+
+async function deleteStoragePrefix(session, prefix) {
+  if (session.storage.provider === "adls") {
+    const normalizedPrefix = normalizeAdlsDirectory(prefix);
+
+    if (!normalizedPrefix) {
+      throw new Error("For safety, deleting the storage root is not allowed.");
+    }
+
+    const paths = await listStoragePaths(session, prefix, true);
+    const deletedCount = paths.filter((item) => !item.isDirectory).length;
+    await session.storage.fileSystemClient.getDirectoryClient(normalizedPrefix).delete(true);
+    return deletedCount;
+  }
+
+  let continuationToken;
+  let deletedCount = 0;
+
+  do {
+    const listResult = await session.storage.client.send(
+      new ListObjectsV2Command({
+        Bucket: session.storage.bucket,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      }),
+    );
+
+    const objects =
+      listResult.Contents?.map((item) => item.Key).filter((key) => typeof key === "string" && key.length) ?? [];
+
+    if (objects.length) {
+      await session.storage.client.send(
+        new DeleteObjectsCommand({
+          Bucket: session.storage.bucket,
+          Delete: {
+            Objects: objects.map((key) => ({ Key: key })),
+            Quiet: true,
+          },
+        }),
+      );
+      deletedCount += objects.length;
+    }
+
+    continuationToken = listResult.IsTruncated ? listResult.NextContinuationToken : undefined;
+  } while (continuationToken);
+
+  return deletedCount;
+}
+
+async function getDownloadResponse(session, key) {
+  if (session.storage.provider === "adls") {
+    const fileClient = session.storage.fileSystemClient.getFileClient(key);
+    const response = await fileClient.read();
+    return {
+      contentType: response.contentType,
+      contentLength: response.contentLength,
+      body: response.readableStreamBody,
+    };
+  }
+
+  const response = await session.storage.client.send(
+    new GetObjectCommand({
+      Bucket: session.storage.bucket,
+      Key: key,
+    }),
+  );
+
+  return {
+    contentType: response.ContentType,
+    contentLength: response.ContentLength,
+    body: response.Body,
+  };
+}
+
+function normalizeAdlsDirectory(prefix) {
+  return prefix.replace(/\/+$/, "");
+}
+
+function ensureTrailingSlash(value) {
+  return value.endsWith("/") ? value : `${value}/`;
+}
+
+async function readObjectText(session, key, gzip = false) {
+  const buffer = await readObjectBuffer(session, key, gzip);
+  const text = buffer.toString("utf-8");
+
+  if (!text) {
+    throw new Error("The file was empty.");
+  }
+
+  return text;
+}
+
+async function readObjectBuffer(session, key, gzip = false) {
+  const buffer = await readObjectBufferRaw(session, key);
+
+  if (!buffer.length) {
+    throw new Error("The file was empty.");
+  }
+
+  return gzip ? gunzipSync(buffer) : buffer;
+}
+
+async function readObjectBufferRaw(session, key) {
+  if (session.storage.provider === "adls") {
+    const fileClient = session.storage.fileSystemClient.getFileClient(key);
+    return fileClient.readToBuffer();
+  }
+
+  const response = await session.storage.client.send(
+    new GetObjectCommand({
+      Bucket: session.storage.bucket,
+      Key: key,
+    }),
+  );
+  const bytes = await response.Body?.transformToByteArray();
+  return bytes?.length ? Buffer.from(bytes) : Buffer.alloc(0);
+}
+
+async function getObjectReadableStream(session, key) {
+  if (session.storage.provider === "adls") {
+    const fileClient = session.storage.fileSystemClient.getFileClient(key);
+    const response = await fileClient.read();
+    return response.readableStreamBody ?? null;
+  }
+
+  const response = await session.storage.client.send(
+    new GetObjectCommand({
+      Bucket: session.storage.bucket,
+      Key: key,
+    }),
+  );
+
+  return response.Body ?? null;
+}
+
+async function getObjectContentLength(session, key) {
+  if (session.storage.provider === "adls") {
+    const response = await session.storage.fileSystemClient.getFileClient(key).getProperties();
+    return Number(response.contentLength ?? 0);
+  }
+
+  const response = await session.storage.client.send(
+    new HeadObjectCommand({
+      Bucket: session.storage.bucket,
+      Key: key,
+    }),
+  );
+
+  return Number(response.ContentLength ?? 0);
+}
+
+async function readObjectRangeBuffer(session, key, start, end) {
+  const count = end - start + 1;
+
+  if (session.storage.provider === "adls") {
+    const fileClient = session.storage.fileSystemClient.getFileClient(key);
+    return fileClient.readToBuffer(start, count);
+  }
+
+  const response = await session.storage.client.send(
+    new GetObjectCommand({
+      Bucket: session.storage.bucket,
+      Key: key,
+      Range: `bytes=${start}-${end}`,
+    }),
+  );
+  const bytes = await response.Body?.transformToByteArray();
+  return bytes?.length ? Buffer.from(bytes) : Buffer.alloc(0);
 }
 
 function getSession(sessionId) {
@@ -341,15 +595,26 @@ function readJsonBody(request) {
 
 function normalizeConnection(body) {
   return {
+    provider: body.provider === "adls" ? "adls" : "s3",
     region: typeof body.region === "string" ? body.region.trim() : "",
     bucket: typeof body.bucket === "string" ? body.bucket.trim() : "",
     accessKeyId: typeof body.accessKeyId === "string" ? body.accessKeyId.trim() : "",
     secretAccessKey: typeof body.secretAccessKey === "string" ? body.secretAccessKey.trim() : "",
     sessionToken: typeof body.sessionToken === "string" ? body.sessionToken.trim() : "",
+    accountName: typeof body.accountName === "string" ? body.accountName.trim() : "",
+    fileSystem: typeof body.fileSystem === "string" ? body.fileSystem.trim() : "",
+    accountKey: typeof body.accountKey === "string" ? body.accountKey.trim() : "",
   };
 }
 
 function validateConnection(connection) {
+  if (connection.provider === "adls") {
+    if (!connection.accountName || !connection.fileSystem || !connection.accountKey) {
+      throw new Error("Fill in account name, file system, and account key.");
+    }
+    return;
+  }
+
   if (!connection.region || !connection.bucket || !connection.accessKeyId || !connection.secretAccessKey) {
     throw new Error("Fill in region, bucket, and credentials.");
   }
@@ -401,7 +666,7 @@ function parsePreviewMode(value) {
 
 async function loadPreviewRows(session, key, limit, order, formatOptions) {
   if (isGzipKey(key)) {
-    const csvText = await loadObjectText(session, key, true);
+    const csvText = await readObjectText(session, key, true);
 
     return parseCsv(csvText, limit, {
       fieldDelimiter: formatOptions.fieldDelimiter,
@@ -428,14 +693,7 @@ async function loadPreviewRows(session, key, limit, order, formatOptions) {
     return loadCsvHeadRows(session, key, limit, formatOptions);
   }
 
-  const result = await session.client.send(
-    new GetObjectCommand({
-      Bucket: session.bucket,
-      Key: key,
-    }),
-  );
-
-  const csvText = await result.Body?.transformToString();
+  const csvText = await readObjectText(session, key);
 
   if (!csvText) {
     throw new Error("The file was empty.");
@@ -589,16 +847,11 @@ async function findMatchingDfmMetadata(session, csvKey) {
   const normalizedKey = stripGzipExtension(csvKey);
   const directoryPrefix = getDirectoryPrefix(normalizedKey);
   const csvBaseName = path.basename(normalizedKey, path.extname(normalizedKey));
-  const listResult = await session.client.send(
-    new ListObjectsV2Command({
-      Bucket: session.bucket,
-      Prefix: directoryPrefix,
-    }),
-  );
+  const listResult = await listStoragePaths(session, directoryPrefix, true);
 
-  const dfmKeys =
-    listResult.Contents?.map((item) => item.Key).filter((key) => typeof key === "string" && key.toLowerCase().endsWith(".dfm")) ??
-    [];
+  const dfmKeys = listResult
+    .map((item) => ("name" in item ? item.name : item.Key))
+    .filter((key) => typeof key === "string" && key.toLowerCase().endsWith(".dfm"));
 
   const basenameMatch = dfmKeys.find((key) => {
     const dfmBaseName = path.basename(key, path.extname(key));
@@ -643,7 +896,7 @@ function getDirectoryPrefix(key) {
 
 async function loadJsonObject(session, key) {
   try {
-    const jsonText = await loadObjectText(session, key);
+    const jsonText = await readObjectText(session, key);
 
     if (!jsonText) {
       return null;
@@ -653,45 +906,6 @@ async function loadJsonObject(session, key) {
   } catch {
     return null;
   }
-}
-
-async function loadObjectText(session, key, gzip = false) {
-  const response = await session.client.send(
-    new GetObjectCommand({
-      Bucket: session.bucket,
-      Key: key,
-    }),
-  );
-  let text = "";
-
-  if (gzip) {
-    const bytes = await response.Body?.transformToByteArray();
-    text = bytes?.length ? gunzipSync(Buffer.from(bytes)).toString("utf-8") : "";
-  } else {
-    text = await response.Body?.transformToString();
-  }
-
-  if (!text) {
-    throw new Error("The file was empty.");
-  }
-
-  return text;
-}
-
-async function loadObjectBuffer(session, key, gzip = false) {
-  const response = await session.client.send(
-    new GetObjectCommand({
-      Bucket: session.bucket,
-      Key: key,
-    }),
-  );
-  const bytes = await response.Body?.transformToByteArray();
-
-  if (!bytes?.length) {
-    throw new Error("The file was empty.");
-  }
-
-  return gzip ? gunzipSync(Buffer.from(bytes)) : Buffer.from(bytes);
 }
 
 async function loadJsonPreviewRecords(session, key, limit, order, gzip = false, extension = ".json") {
@@ -715,7 +929,7 @@ async function loadJsonPreviewRecords(session, key, limit, order, gzip = false, 
     return lines.map((line) => JSON.parse(line)).reverse();
   }
 
-  const text = await loadObjectText(session, key, gzip);
+  const text = await readObjectText(session, key, gzip);
   const trimmed = text.trim();
   let records = [];
 
@@ -758,7 +972,7 @@ async function loadJsonRawPreview(session, key, limit, order, gzip = false, exte
     }
   }
 
-  const text = await loadObjectText(session, key, gzip);
+  const text = await readObjectText(session, key, gzip);
   const trimmed = text.trim();
 
   if (!trimmed) {
@@ -818,18 +1032,13 @@ async function tryLoadGzipJsonRecords(session, key, limit, order) {
 }
 
 async function tryLoadGzipDelimitedLines(session, key, limit, order) {
-  const response = await session.client.send(
-    new GetObjectCommand({
-      Bucket: session.bucket,
-      Key: key,
-    }),
-  );
+  const body = await getObjectReadableStream(session, key);
 
-  if (!response.Body) {
+  if (!body) {
       throw new Error("The file was empty.");
   }
 
-  const source = response.Body instanceof Readable ? response.Body : Readable.from(response.Body);
+  const source = body instanceof Readable ? body : Readable.from(body);
   const gunzip = createGunzip();
   let buffer = "";
   const lines = [];
@@ -890,7 +1099,7 @@ async function tryLoadGzipDelimitedLines(session, key, limit, order) {
 
 async function loadParquetPreviewRecords(session, key, limit, order, gzip = false) {
   try {
-    const fileBuffer = await loadObjectBuffer(session, key, gzip);
+    const fileBuffer = await readObjectBuffer(session, key, gzip);
     const file = toArrayBuffer(fileBuffer);
     const metadata = await parquetMetadataAsync(file, { compressors: hyparquetCompressors });
     const totalRows = Number(metadata.num_rows ?? 0);
@@ -1019,14 +1228,9 @@ function toArrayBuffer(buffer) {
 }
 
 async function loadDelimitedHeadRecords(session, key, limit) {
-  const result = await session.client.send(
-    new GetObjectCommand({
-      Bucket: session.bucket,
-      Key: key,
-    }),
-  );
+  const body = await getObjectReadableStream(session, key);
 
-  if (!result.Body) {
+  if (!body) {
     throw new Error("The file was empty.");
   }
 
@@ -1034,7 +1238,7 @@ async function loadDelimitedHeadRecords(session, key, limit) {
   let buffer = "";
   const records = [];
 
-  for await (const chunk of result.Body) {
+  for await (const chunk of body) {
     buffer += decoder.decode(chunk, { stream: true });
     const parts = buffer.split(/\r?\n/);
     buffer = parts.pop() ?? "";
@@ -1049,8 +1253,8 @@ async function loadDelimitedHeadRecords(session, key, limit) {
       records.push(normalized);
 
       if (records.length >= limit) {
-        if (typeof result.Body.destroy === "function") {
-          result.Body.destroy();
+        if (typeof body.destroy === "function") {
+          body.destroy();
         }
         return records;
       }
@@ -1077,13 +1281,7 @@ async function loadDelimitedTailRecords(session, key, limit, recordDelimiter = "
 
 async function loadTextTailChunk(session, key, limit, recordDelimiter) {
   const delimiter = typeof recordDelimiter === "string" && recordDelimiter.length ? recordDelimiter : "\n";
-  const headResult = await session.client.send(
-    new HeadObjectCommand({
-      Bucket: session.bucket,
-      Key: key,
-    }),
-  );
-  const contentLength = headResult.ContentLength ?? 0;
+  const contentLength = await getObjectContentLength(session, key);
 
   if (!contentLength) {
     return "";
@@ -1097,15 +1295,8 @@ async function loadTextTailChunk(session, key, limit, recordDelimiter) {
   while (position > 0) {
     const start = Math.max(0, position - chunkSize);
     const end = position - 1;
-    const result = await session.client.send(
-      new GetObjectCommand({
-        Bucket: session.bucket,
-        Key: key,
-        Range: `bytes=${start}-${end}`,
-      }),
-    );
-    const bytes = await result.Body?.transformToByteArray();
-    const chunkText = bytes ? decoder.decode(bytes) : "";
+    const bytes = await readObjectRangeBuffer(session, key, start, end);
+    const chunkText = bytes.length ? decoder.decode(bytes) : "";
 
     buffer = chunkText + buffer;
     position = start;
@@ -1125,14 +1316,9 @@ async function loadCsvTailText(session, key, limit, recordDelimiter) {
 }
 
 async function loadCsvHeadRows(session, key, limit, formatOptions) {
-  const result = await session.client.send(
-    new GetObjectCommand({
-      Bucket: session.bucket,
-      Key: key,
-    }),
-  );
+  const body = await getObjectReadableStream(session, key);
 
-  if (!result.Body) {
+  if (!body) {
     throw new Error("The file was empty.");
   }
 
@@ -1143,13 +1329,13 @@ async function loadCsvHeadRows(session, key, limit, formatOptions) {
   });
   const decoder = new TextDecoder("utf-8");
 
-  for await (const chunk of result.Body) {
+  for await (const chunk of body) {
     const chunkText = decoder.decode(chunk, { stream: true });
     consumeCsvText(collector, chunkText);
 
     if (collector.targetRows !== null && collector.rows.length >= collector.targetRows) {
-      if (typeof result.Body.destroy === "function") {
-        result.Body.destroy();
+      if (typeof body.destroy === "function") {
+        body.destroy();
       }
       break;
     }

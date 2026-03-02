@@ -1,6 +1,7 @@
 const state = {
-  bucket: "",
-  region: "",
+  provider: "s3",
+  targetName: "",
+  locationName: "",
   prefix: "",
   selectedKey: "",
   sessionId: "",
@@ -11,12 +12,16 @@ const state = {
   },
 };
 
-const STORAGE_KEY = "s3-browser-connection";
+const STORAGE_KEY = "multibucket-explorer-connection";
 
 const elements = {
   connectionPanel: document.querySelector("#connectionPanel"),
   connectionSummaryText: document.querySelector("#connectionSummaryText"),
   credentialsForm: document.querySelector("#credentialsForm"),
+  provider: document.querySelector("#provider"),
+  providerCards: document.querySelectorAll("[data-provider-card]"),
+  s3Fields: document.querySelector("#s3Fields"),
+  adlsFields: document.querySelector("#adlsFields"),
   connectButton: document.querySelector("#connectButton"),
   connectionStatus: document.querySelector("#connectionStatus"),
   diagnosticBox: document.querySelector("#diagnosticBox"),
@@ -37,6 +42,14 @@ elements.credentialsForm.addEventListener("submit", (event) => {
   event.preventDefault();
 });
 elements.credentialsForm.addEventListener("input", persistConnectionForm);
+elements.providerCards.forEach((card) => {
+  card.addEventListener("click", () => {
+    const provider = card.dataset.providerCard === "adls" ? "adls" : "s3";
+    elements.provider.value = provider;
+    syncProviderFields();
+    persistConnectionForm();
+  });
+});
 elements.connectButton.addEventListener("click", connectToBucket);
 elements.refreshButton.addEventListener("click", () => loadObjects(state.prefix));
 elements.clearPrefixButton.addEventListener("click", clearCurrentPrefix);
@@ -60,6 +73,7 @@ elements.previewRowOrder.addEventListener("change", () => {
 });
 
 restoreConnectionForm();
+syncProviderFields();
 setStartupDiagnostic();
 refreshConnectionSummary();
 syncPreviewModeAvailability("");
@@ -67,14 +81,17 @@ syncPreviewModeAvailability("");
 async function connectToBucket() {
   const connection = getConnectionPayload();
 
-  if (!connection.region || !connection.bucket || !connection.accessKeyId || !connection.secretAccessKey) {
-    setConnectionStatus("Fill in region, bucket, and credentials.", true);
+  const validationError = validateConnectionPayload(connection);
+
+  if (validationError) {
+    setConnectionStatus(validationError, true);
     return;
   }
 
   persistConnectionForm();
-  state.bucket = connection.bucket;
-  state.region = connection.region;
+  state.provider = connection.provider;
+  state.targetName = getConnectionTargetName(connection);
+  state.locationName = getConnectionLocationName(connection);
   state.prefix = "";
   state.selectedKey = "";
   state.sessionId = "";
@@ -86,8 +103,8 @@ async function connectToBucket() {
   syncPreviewModeAvailability("");
   renderObjectPlaceholder("Connecting...");
   resetPreview("Select a `.csv` file to preview.");
-  setConnectionStatus(`Connecting to ${connection.bucket} (${connection.region})...`);
-  setDiagnosticMessage("Calling the local backend to validate bucket access...");
+  setConnectionStatus(`Connecting to ${state.targetName} (${state.locationName})...`);
+  setDiagnosticMessage("Calling the local backend to validate storage access...");
 
   try {
     const response = await apiFetch("/api/connect", {
@@ -96,12 +113,15 @@ async function connectToBucket() {
     });
 
     state.sessionId = response.sessionId;
+    state.provider = response.provider ?? connection.provider;
+    state.targetName = response.targetName ?? state.targetName;
+    state.locationName = response.locationName ?? state.locationName;
     elements.refreshButton.disabled = false;
     await loadObjects("");
     elements.connectionPanel.open = false;
     refreshConnectionSummary();
     setDiagnosticMessage(
-      `Connection OK through the local backend.\nBucket: ${state.bucket}\nRegion: ${state.region}\nSession: ${state.sessionId}`,
+      `Connection OK through the local backend.\nProvider: ${state.provider.toUpperCase()}\nTarget: ${state.targetName}\nLocation: ${state.locationName}\nSession: ${state.sessionId}`,
     );
   } catch (error) {
     renderObjectPlaceholder("Failed to connect.");
@@ -129,7 +149,7 @@ async function loadObjects(prefix) {
     state.objectItems = response.items ?? [];
     renderObjectList();
     setConnectionStatus(
-      `${response.summary?.folders ?? 0} folder(s) and ${response.summary?.files ?? 0} file(s) loaded from ${state.bucket}.`,
+      `${response.summary?.folders ?? 0} folder(s) and ${response.summary?.files ?? 0} file(s) loaded from ${state.targetName}.`,
     );
   } catch (error) {
     renderObjectPlaceholder("Failed to list objects.");
@@ -630,7 +650,7 @@ function getErrorMessage(error) {
     return error.message;
   }
 
-  return "Unexpected error while accessing the bucket.";
+  return "Unexpected error while accessing storage.";
 }
 
 function buildDiagnosticMessage(error) {
@@ -707,10 +727,15 @@ function restoreConnectionForm() {
 
   try {
     const payload = JSON.parse(rawValue);
+    setInputValue("provider", payload.provider || "s3");
     setInputValue("region", payload.region);
     setInputValue("bucket", payload.bucket);
     setInputValue("accessKeyId", payload.accessKeyId);
     setInputValue("secretAccessKey", payload.secretAccessKey);
+    setInputValue("accountName", payload.accountName);
+    setInputValue("fileSystem", payload.fileSystem);
+    setInputValue("accountKey", payload.accountKey);
+    syncProviderFields();
     setConnectionStatus("Connection data restored from the browser.");
     refreshConnectionSummary();
   } catch {
@@ -721,7 +746,7 @@ function restoreConnectionForm() {
 function setInputValue(name, value) {
   const input = elements.credentialsForm.elements.namedItem(name);
 
-  if (input instanceof HTMLInputElement) {
+  if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement) {
     input.value = typeof value === "string" ? value : "";
   }
 }
@@ -730,11 +755,69 @@ function getConnectionPayload() {
   const formData = new FormData(elements.credentialsForm);
 
   return {
+    provider: formData.get("provider")?.toString().trim() === "adls" ? "adls" : "s3",
     region: formData.get("region")?.toString().trim() ?? "",
     bucket: formData.get("bucket")?.toString().trim() ?? "",
     accessKeyId: formData.get("accessKeyId")?.toString().trim() ?? "",
     secretAccessKey: formData.get("secretAccessKey")?.toString().trim() ?? "",
+    accountName: formData.get("accountName")?.toString().trim() ?? "",
+    fileSystem: formData.get("fileSystem")?.toString().trim() ?? "",
+    accountKey: formData.get("accountKey")?.toString().trim() ?? "",
   };
+}
+
+function validateConnectionPayload(connection) {
+  if (connection.provider === "adls") {
+    if (!connection.accountName || !connection.fileSystem || !connection.accountKey) {
+      return "Fill in account name, container name, and access key.";
+    }
+
+    return "";
+  }
+
+  if (!connection.region || !connection.bucket || !connection.accessKeyId || !connection.secretAccessKey) {
+    return "Fill in region, bucket, and credentials.";
+  }
+
+  return "";
+}
+
+function getConnectionTargetName(connection) {
+  return connection.provider === "adls" ? connection.fileSystem : connection.bucket;
+}
+
+function getConnectionLocationName(connection) {
+  return connection.provider === "adls" ? connection.accountName : connection.region;
+}
+
+function syncProviderFields() {
+  const provider = elements.provider.value === "adls" ? "adls" : "s3";
+  const useAdls = provider === "adls";
+
+  elements.providerCards.forEach((card) => {
+    const isActive = card.dataset.providerCard === provider;
+    card.classList.toggle("is-active", isActive);
+    card.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+
+  elements.s3Fields.hidden = useAdls;
+  elements.adlsFields.hidden = !useAdls;
+  elements.s3Fields.setAttribute("aria-hidden", useAdls ? "true" : "false");
+  elements.adlsFields.setAttribute("aria-hidden", useAdls ? "false" : "true");
+
+  setFieldRequired(["region", "bucket", "accessKeyId", "secretAccessKey"], !useAdls);
+  setFieldRequired(["accountName", "fileSystem", "accountKey"], useAdls);
+  refreshConnectionSummary();
+}
+
+function setFieldRequired(names, required) {
+  names.forEach((name) => {
+    const input = elements.credentialsForm.elements.namedItem(name);
+
+    if (input instanceof HTMLInputElement) {
+      input.required = required;
+    }
+  });
 }
 
 function getPreviewRowLimit() {
@@ -800,12 +883,17 @@ function refreshConnectionSummary() {
   const connection = getConnectionPayload();
   const parts = [];
 
-  if (connection.bucket) {
-    parts.push(connection.bucket);
+  parts.push(connection.provider.toUpperCase());
+
+  const targetName = getConnectionTargetName(connection);
+  const locationName = getConnectionLocationName(connection);
+
+  if (targetName) {
+    parts.push(targetName);
   }
 
-  if (connection.region) {
-    parts.push(connection.region);
+  if (locationName) {
+    parts.push(locationName);
   }
 
   elements.connectionSummaryText.textContent = parts.length

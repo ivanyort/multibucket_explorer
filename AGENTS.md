@@ -1,21 +1,27 @@
 # Purpose
-This project is a local web explorer for S3 buckets, with a Node.js backend serving the UI and acting as an AWS proxy. The main flow is:
+This project is a local web explorer for object and hierarchical cloud storage, with a Node.js backend serving the UI and acting as a storage proxy. The main flow is:
 
-1. receive AWS credentials and bucket details from the frontend
+1. receive storage credentials and target details from the frontend
 2. create a temporary local session in the backend
-3. list prefixes and objects in the bucket
+3. list prefixes, folders, and files
 4. preview supported files
-5. download files and remove all objects under a prefix
+5. download files and remove all objects or paths under a prefix
 
 # Stack And Structure
-- `server.js`: Node HTTP server, `/api/*` endpoints, in-memory session handling, and S3 access
+- `server.js`: Node HTTP server, `/api/*` endpoints, in-memory session handling, and storage-provider access
 - `app.js`: UI logic, local state, backend calls, and rendering
 - `index.html`: page structure
 - `styles.css`: interface styling
 - `start.sh`: local bootstrap script with automatic `npm install` when `node_modules` is missing
 - `samples/`: sample files used for local development
 
-The project uses plain ESM JavaScript, no frontend framework, and no Express on the backend. Keep that simplicity unless explicitly asked to change it.
+The project uses plain ESM JavaScript and no frontend framework. Keep that simplicity unless explicitly asked to change it.
+
+# Supported Providers
+- AWS S3
+- Azure Data Lake Storage Gen2 via the DFS endpoint
+
+Until instructed otherwise, the ADLS path should remain based on shared key authentication with `account name + container name + access key`.
 
 # Commands
 - install dependencies: `npm install`
@@ -36,28 +42,31 @@ By default the application runs at `http://localhost:8086`.
 9. When closing out work with a commit, run `git push` by default unless the user explicitly asks not to push or there is a technical constraint that blocks it.
 
 # Backend Rules
-1. All S3 access must continue to go through the backend. Do not move AWS access directly into the browser.
+1. All storage access must continue to go through the backend. Do not move provider SDK access directly into the browser.
 2. Treat route inputs and query string values as untrusted. Validate `sessionId`, `prefix`, `key`, preview limits, and preview modes.
 3. When changing session behavior, preserve in-memory expiration and review credential exposure risks.
-4. Changes to the destructive `/api/delete-prefix` endpoint require extra care. Never allow deleting the bucket root.
+4. Changes to the destructive `/api/delete-prefix` endpoint require extra care. Never allow deleting the storage root.
 5. Prefer useful error messages without exposing secrets, keys, or unnecessary stack traces.
+6. Provider-specific behavior should be isolated behind storage helper functions or provider abstractions rather than spread through unrelated preview code.
 
 # Frontend Rules
 1. Keep the interface in English unless the user explicitly requests localization.
 2. Preserve the current local-app experience: connection form, object browser, and preview panel.
 3. Avoid frameworks, bundlers, or build steps if the problem can be solved within the current HTML/CSS/JS setup.
 4. When adding controls, wire state, visual feedback, and error handling consistently with the rest of `app.js`.
+5. Provider selection must remain explicit in the UI when behavior or required credentials differ across backends.
 
 # Security And Sensitive Data
-1. AWS credentials are entered through the UI and are currently persisted in `localStorage`. Any change in this area must consider security impact and be documented.
-2. Never log `secretAccessKey` in logs, error messages, state dumps, or documentation.
-3. Do not commit real credentials, private buckets, or customer-sensitive data.
-4. If testing against real AWS is necessary, prefer minimally invasive validation and clearly confirm any destructive action.
+1. Storage credentials are entered through the UI and are currently persisted in `localStorage`. Any change in this area must consider security impact and be documented.
+2. Never log secrets such as AWS secret keys or Azure access keys in logs, error messages, state dumps, or documentation.
+3. Do not commit real credentials, private buckets, private file systems, or customer-sensitive data.
+4. If testing against real cloud storage is necessary, prefer minimally invasive validation and clearly confirm any destructive action.
 
 # Validation
 1. There is no automated test suite in the repository today, so manually validate the changed flow whenever possible.
 2. For UI changes, verify at least: connect, list objects, navigate folders, preview, and download.
 3. For deletion changes, validate first with controlled prefixes and never assume the behavior is safe without executing the flow.
+4. When changing provider support, validate both S3 and ADLS paths unless the task is explicitly provider-specific.
 
 # Persistent Decisions
 1. This file should contain only durable project guidance.

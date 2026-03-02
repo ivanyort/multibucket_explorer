@@ -31,7 +31,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -195,9 +196,84 @@ input {
   color: var(--text);
 }
 
-input:focus {
+select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 13px 14px;
+  background: var(--surface-strong);
+  color: var(--text);
+}
+
+input:focus,
+select:focus {
   outline: 2px solid rgba(181, 84, 45, 0.2);
   border-color: rgba(181, 84, 45, 0.5);
+}
+
+.provider-fields {
+  margin: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.provider-fields-header {
+  margin-bottom: 14px;
+}
+
+.provider-fields-copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.provider-fields-grid {
+  margin-top: 0;
+}
+
+.provider-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.provider-card {
+  display: grid;
+  gap: 8px;
+  text-align: left;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(247, 239, 228, 0.74));
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.provider-card strong {
+  font-size: 1rem;
+}
+
+.provider-card span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.provider-card.is-active {
+  border-color: rgba(181, 84, 45, 0.45);
+  background:
+    linear-gradient(180deg, rgba(255, 245, 238, 0.96), rgba(236, 216, 198, 0.9));
+  box-shadow:
+    0 12px 28px rgba(181, 84, 45, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.provider-card:focus-visible {
+  outline: 2px solid rgba(181, 84, 45, 0.28);
+  outline-offset: 2px;
 }
 
 .primary-button,

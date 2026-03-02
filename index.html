@@ -25,7 +25,7 @@
         <summary class="connection-summary">
           <div>
             <p class="panel-kicker">Connection</p>
-            <h2>AWS Access</h2>
+            <h2>Storage Access</h2>
           </div>
           <div id="connectionSummaryText" class="connection-summary-text muted">
             Connection settings
@@ -39,33 +39,96 @@
           </div>
 
           <form id="credentialsForm" class="credentials-grid" autocomplete="off">
-            <label>
-              Region
-              <input id="region" name="region" placeholder="us-east-1" required />
-            </label>
-            <label>
-              Bucket
-              <input id="bucket" name="bucket" placeholder="meu-bucket" required />
-            </label>
-            <label>
-              Access Key ID
-              <input
-                id="accessKeyId"
-                name="accessKeyId"
-                placeholder="AKIA..."
-                required
-              />
-            </label>
-            <label>
-              Secret Access Key
-              <input
-                id="secretAccessKey"
-                name="secretAccessKey"
-                type="password"
-                placeholder="********"
-                required
-              />
-            </label>
+            <input id="provider" name="provider" type="hidden" value="s3" />
+
+            <div class="span-2">
+              <p class="panel-kicker">Providers</p>
+              <div class="provider-card-grid" role="radiogroup" aria-label="Storage provider">
+                <button
+                  type="button"
+                  class="provider-card is-active"
+                  data-provider-card="s3"
+                  aria-pressed="true"
+                >
+                  <strong>S3</strong>
+                  <span>AWS buckets with region and access keys.</span>
+                </button>
+                <button
+                  type="button"
+                  class="provider-card"
+                  data-provider-card="adls"
+                  aria-pressed="false"
+                >
+                  <strong>ADLS</strong>
+                  <span>Azure Data Lake Storage Gen2 with account and container name.</span>
+                </button>
+              </div>
+            </div>
+
+            <section id="s3Fields" class="span-2 provider-fields" aria-label="S3 connection settings">
+              <div class="provider-fields-header">
+                <p class="panel-kicker">S3 Connection</p>
+                <p class="provider-fields-copy">Use AWS bucket credentials for this connection.</p>
+              </div>
+              <div class="credentials-grid provider-fields-grid">
+              <label>
+                Region
+                <input id="region" name="region" placeholder="us-east-1" />
+              </label>
+              <label>
+                Bucket
+                <input id="bucket" name="bucket" placeholder="my-bucket" />
+              </label>
+              <label>
+                Access Key ID
+                <input
+                  id="accessKeyId"
+                  name="accessKeyId"
+                  placeholder="AKIA..."
+                />
+              </label>
+              <label>
+                Secret Access Key
+                <input
+                  id="secretAccessKey"
+                  name="secretAccessKey"
+                  type="password"
+                  placeholder="********"
+                />
+              </label>
+              </div>
+            </section>
+
+            <section
+              id="adlsFields"
+              class="span-2 provider-fields"
+              aria-label="ADLS connection settings"
+              hidden
+            >
+              <div class="provider-fields-header">
+                <p class="panel-kicker">ADLS Connection</p>
+                <p class="provider-fields-copy">Use Azure Data Lake Storage Gen2 account credentials and container name.</p>
+              </div>
+              <div class="credentials-grid provider-fields-grid">
+              <label>
+                Account Name
+                <input id="accountName" name="accountName" placeholder="myaccount" />
+              </label>
+              <label>
+                Container Name
+                <input id="fileSystem" name="fileSystem" placeholder="my-filesystem" />
+              </label>
+              <label>
+                Access Key
+                <input
+                  id="accountKey"
+                  name="accountKey"
+                  type="password"
+                  placeholder="********"
+                />
+              </label>
+              </div>
+            </section>
           </form>
 
           <p id="connectionStatus" class="status-text muted">
@@ -82,7 +145,7 @@
         <div class="panel browser-panel">
           <div class="panel-header">
             <div>
-              <p class="panel-kicker">Bucket Browser</p>
+              <p class="panel-kicker">Object Browser</p>
               <h2>Objects</h2>
             </div>
             <button id="upButton" class="ghost-button" disabled>Up one level</button>
@@ -100,7 +163,7 @@
           </div>
 
           <div id="objectList" class="object-list empty-state">
-            Connect to list bucket objects.
+            Connect to list storage objects.
           </div>
         </div>
 
