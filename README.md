@@ -1,56 +1,56 @@
 # MultiBucket Explorer
 
-Aplicação web com backend local para:
+Web application with a local backend for:
 
-- navegar por prefixos de um bucket AWS S3
-- listar pastas e arquivos
-- pré-visualizar arquivos CSV, JSON e Parquet
-- baixar arquivos via proxy local
+- browsing prefixes in an AWS S3 bucket
+- listing folders and files
+- previewing CSV, JSON, and Parquet files
+- downloading files through a local proxy
 
-## Como executar
+## Running
 
-Instale as dependências:
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-Suba o servidor:
+Start the server:
 
 ```bash
 npm start
 ```
 
-Por padrão a aplicação sobe em `http://localhost:8086`.
+By default the application runs at `http://localhost:8086`.
 
-## Como funciona
+## How It Works
 
-- o navegador fala apenas com o servidor local
-- o servidor local acessa a AWS usando o SDK
-- o bucket S3 não precisa responder ao navegador diretamente
+- the browser talks only to the local server
+- the local server accesses AWS through the SDK
+- the S3 bucket does not need to respond directly to the browser
 
-Isso elimina o problema de CORS entre browser e S3 nesse fluxo.
+This avoids CORS issues between the browser and S3 in this flow.
 
-## Campos de conexão
+## Connection Fields
 
-Preencha na interface:
+Fill these fields in the interface:
 
 - `Region`
 - `Bucket`
 - `Access Key ID`
 - `Secret Access Key`
 
-Os campos ficam persistidos no `localStorage` do navegador, incluindo a `Secret Access Key`.
+These fields are persisted in browser `localStorage`, including the `Secret Access Key`.
 
-## Permissões AWS
+## AWS Permissions
 
-As credenciais precisam permitir pelo menos:
+The credentials must allow at least:
 
-- `s3:ListBucket` no bucket
-- `s3:GetObject` nos objetos
+- `s3:ListBucket` on the bucket
+- `s3:GetObject` on the objects
 
-## Observações
+## Notes
 
-- o backend mantém uma sessão em memória por 12 horas após conectar
-- esta solução é adequada para uso local/interno
-- para produção, o ideal é não enviar credenciais pelo frontend e usar autenticação do lado servidor
+- the backend keeps an in-memory session for 12 hours after connecting
+- this solution is intended for local or internal use
+- for production, the preferred approach is to avoid sending credentials through the frontend and use server-side authentication

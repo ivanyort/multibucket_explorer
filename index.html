@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -24,23 +24,23 @@
       <details id="connectionPanel" class="panel credentials-panel" open>
         <summary class="connection-summary">
           <div>
-            <p class="panel-kicker">Conexão</p>
-            <h2>Acesso AWS</h2>
+            <p class="panel-kicker">Connection</p>
+            <h2>AWS Access</h2>
           </div>
           <div id="connectionSummaryText" class="connection-summary-text muted">
-            Configuração da conexão
+            Connection settings
           </div>
         </summary>
 
         <div class="connection-panel-body">
           <div class="panel-header">
             <div></div>
-            <button id="connectButton" class="primary-button">Conectar</button>
+            <button id="connectButton" class="primary-button">Connect</button>
           </div>
 
           <form id="credentialsForm" class="credentials-grid" autocomplete="off">
             <label>
-              Região
+              Region
               <input id="region" name="region" placeholder="us-east-1" required />
             </label>
             <label>
@@ -69,10 +69,10 @@
           </form>
 
           <p id="connectionStatus" class="status-text muted">
-            Informe as credenciais e clique em conectar.
+            Enter credentials and click connect.
           </p>
           <div id="diagnosticBox" class="diagnostic-box muted">
-            Dica: execute o servidor Node local e abra a aplicação por
+            Tip: run the local Node server and open the application at
             `http://localhost:8086`.
           </div>
         </div>
@@ -83,24 +83,24 @@
           <div class="panel-header">
             <div>
               <p class="panel-kicker">Bucket Browser</p>
-              <h2>Objetos</h2>
+              <h2>Objects</h2>
             </div>
-            <button id="upButton" class="ghost-button" disabled>Voltar pasta</button>
+            <button id="upButton" class="ghost-button" disabled>Up one level</button>
           </div>
 
           <div class="toolbar">
             <div>
-              <span class="toolbar-label">Prefixo atual</span>
+              <span class="toolbar-label">Current prefix</span>
               <code id="currentPrefix">/</code>
             </div>
             <div class="toolbar-actions">
-              <button id="refreshButton" class="ghost-button" disabled>Atualizar</button>
-              <button id="clearPrefixButton" class="danger-button" disabled>Limpar pasta</button>
+              <button id="refreshButton" class="ghost-button" disabled>Refresh</button>
+              <button id="clearPrefixButton" class="danger-button" disabled>Clear prefix</button>
             </div>
           </div>
 
           <div id="objectList" class="object-list empty-state">
-            Conecte-se para listar os objetos do bucket.
+            Connect to list bucket objects.
           </div>
         </div>
 
@@ -108,45 +108,45 @@
           <div class="panel-header">
             <div>
               <p class="panel-kicker">File Preview</p>
-              <h2>Pré-visualização</h2>
+              <h2>Preview</h2>
             </div>
             <div class="preview-actions">
               <label class="preview-limit-control">
-                <span>Visualização</span>
+                <span>View</span>
                 <select id="previewMode">
-                  <option value="table" selected>Tabela</option>
+                  <option value="table" selected>Table</option>
                   <option value="raw">Raw</option>
                 </select>
               </label>
               <label class="preview-limit-control">
-                <span>Linhas</span>
+                <span>Rows</span>
                 <select id="previewRowLimit">
                   <option value="10" selected>10</option>
                   <option value="25">25</option>
                   <option value="50">50</option>
                   <option value="100">100</option>
-                  <option value="all">Todas</option>
+                  <option value="all">All</option>
                 </select>
               </label>
               <label class="preview-limit-control">
-                <span>Ordem</span>
+                <span>Order</span>
                 <select id="previewRowOrder">
                   <option value="normal" selected>Normal</option>
-                  <option value="reverse">Último primeiro</option>
+                  <option value="reverse">Newest first</option>
                 </select>
               </label>
               <button id="downloadButton" class="ghost-button" disabled>
-                Baixar arquivo
+                Download file
               </button>
             </div>
           </div>
 
           <div id="previewMeta" class="preview-meta muted">
-            Selecione um arquivo `.csv`, `.json`, `.parquet` ou `.gz` compatível para visualizar.
+            Select a compatible `.csv`, `.json`, `.parquet`, or `.gz` file to preview.
           </div>
 
           <div id="previewTableWrap" class="preview-table-wrap empty-state">
-            Nenhum CSV selecionado.
+            No file selected.
           </div>
         </div>
       </section>

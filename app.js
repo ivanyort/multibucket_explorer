@@ -68,7 +68,7 @@ async function connectToBucket() {
   const connection = getConnectionPayload();
 
   if (!connection.region || !connection.bucket || !connection.accessKeyId || !connection.secretAccessKey) {
-    setConnectionStatus("Preencha região, bucket e credenciais.", true);
+    setConnectionStatus("Fill in region, bucket, and credentials.", true);
     return;
   }
 
@@ -84,10 +84,10 @@ async function connectToBucket() {
   elements.upButton.disabled = true;
   elements.downloadButton.disabled = true;
   syncPreviewModeAvailability("");
-  renderObjectPlaceholder("Conectando...");
-  resetPreview("Selecione um arquivo `.csv` para visualizar.");
-  setConnectionStatus(`Conectando em ${connection.bucket} (${connection.region})...`);
-  setDiagnosticMessage("Chamando o backend local para validar acesso ao bucket...");
+  renderObjectPlaceholder("Connecting...");
+  resetPreview("Select a `.csv` file to preview.");
+  setConnectionStatus(`Connecting to ${connection.bucket} (${connection.region})...`);
+  setDiagnosticMessage("Calling the local backend to validate bucket access...");
 
   try {
     const response = await apiFetch("/api/connect", {
@@ -101,10 +101,10 @@ async function connectToBucket() {
     elements.connectionPanel.open = false;
     refreshConnectionSummary();
     setDiagnosticMessage(
-      `Conexão OK via backend local.\nBucket: ${state.bucket}\nRegião: ${state.region}\nSessão: ${state.sessionId}`,
+      `Connection OK through the local backend.\nBucket: ${state.bucket}\nRegion: ${state.region}\nSession: ${state.sessionId}`,
     );
   } catch (error) {
-    renderObjectPlaceholder("Falha ao conectar.");
+    renderObjectPlaceholder("Failed to connect.");
     setConnectionStatus(getErrorMessage(error), true);
     setDiagnosticMessage(buildDiagnosticMessage(error));
   }
@@ -119,8 +119,8 @@ async function loadObjects(prefix) {
   elements.currentPrefix.textContent = prefix ? `/${prefix}` : "/";
   elements.upButton.disabled = !prefix;
   elements.clearPrefixButton.disabled = !prefix;
-  renderObjectPlaceholder("Carregando objetos...");
-  resetPreview("Selecione um arquivo `.csv`, `.json`, `.parquet` ou `.gz` compatível para visualizar.");
+  renderObjectPlaceholder("Loading objects...");
+  resetPreview("Select a compatible `.csv`, `.json`, `.parquet`, or `.gz` file to preview.");
 
   try {
     const response = await apiFetch(
@@ -129,10 +129,10 @@ async function loadObjects(prefix) {
     state.objectItems = response.items ?? [];
     renderObjectList();
     setConnectionStatus(
-      `${response.summary?.folders ?? 0} pasta(s) e ${response.summary?.files ?? 0} arquivo(s) carregados de ${state.bucket}.`,
+      `${response.summary?.folders ?? 0} folder(s) and ${response.summary?.files ?? 0} file(s) loaded from ${state.bucket}.`,
     );
   } catch (error) {
-    renderObjectPlaceholder("Falha ao listar objetos.");
+    renderObjectPlaceholder("Failed to list objects.");
     setConnectionStatus(getErrorMessage(error), true);
     setDiagnosticMessage(buildDiagnosticMessage(error));
   }
@@ -140,7 +140,7 @@ async function loadObjects(prefix) {
 
 function renderObjectList() {
   if (!state.objectItems.length) {
-    renderObjectPlaceholder("Nenhum item encontrado neste prefixo.");
+    renderObjectPlaceholder("No items found in this prefix.");
     return;
   }
 
@@ -156,10 +156,10 @@ function renderObjectList() {
   const headerRow = document.createElement("tr");
 
   [
-    { key: "name", label: "Nome" },
-    { key: "type", label: "Tipo" },
-    { key: "size", label: "Tamanho" },
-    { key: "lastModified", label: "Data" },
+    { key: "name", label: "Name" },
+    { key: "type", label: "Type" },
+    { key: "size", label: "Size" },
+    { key: "lastModified", label: "Date" },
   ].forEach((column) => {
     const th = document.createElement("th");
     const button = document.createElement("button");
@@ -191,7 +191,7 @@ function renderObjectList() {
     nameCell.appendChild(nameWrap);
 
     const typeCell = document.createElement("td");
-    typeCell.textContent = item.type === "folder" ? "Pasta" : "Arquivo";
+    typeCell.textContent = item.type === "folder" ? "Folder" : "File";
 
     const sizeCell = document.createElement("td");
     sizeCell.textContent = item.type === "folder" ? "—" : formatBytes(item.size);
@@ -200,7 +200,7 @@ function renderObjectList() {
     dateCell.textContent =
       item.type === "folder" || !item.lastModified
         ? "—"
-        : new Date(item.lastModified).toLocaleString("pt-BR");
+        : new Date(item.lastModified).toLocaleString("en-US");
 
     row.append(nameCell, typeCell, sizeCell, dateCell);
     row.addEventListener("click", () => handleObjectSelection(item));
@@ -233,17 +233,17 @@ async function previewObject(key) {
 
   if (!isPreviewableFile(key)) {
     resetPreview(
-      `Formato não suportado para preview: ${key}`,
+      `Unsupported preview format: ${key}`,
       false,
-      "Selecione um arquivo .csv, .json, .jsonl, .ndjson, .parquet, .parq ou versões .gz desses formatos.",
+      "Select a .csv, .json, .jsonl, .ndjson, .parquet, .parq, or matching .gz file.",
     );
     return;
   }
 
   syncPreviewModeAvailability(key);
-  elements.previewMeta.textContent = `Carregando preview de ${key}...`;
+  elements.previewMeta.textContent = `Loading preview for ${key}...`;
   elements.previewTableWrap.className = "preview-table-wrap empty-state";
-  elements.previewTableWrap.textContent = "Lendo arquivo...";
+  elements.previewTableWrap.textContent = "Reading file...";
 
   try {
     const rowLimit = getPreviewRowLimit();
@@ -266,22 +266,22 @@ async function previewObject(key) {
     const dfmSuffix =
       response.previewFormat === "csv" || response.previewFormat === "csv.gz"
         ? response.dfmKey
-          ? ` · DFM: ${response.dfmKey} (${response.metadataColumns?.length ?? 0} colunas)`
-          : " · DFM não encontrado"
+          ? ` · DFM: ${response.dfmKey} (${response.metadataColumns?.length ?? 0} columns)`
+          : " · DFM not found"
         : "";
-    const modeSuffix = response.previewMode === "raw" ? " · modo raw" : "";
-    const formatSuffix = response.previewFormat ? ` · formato ${response.previewFormat}` : "";
-    const orderLabel = getPreviewRowOrder() === "reverse" ? " · ordem reversa" : "";
+    const modeSuffix = response.previewMode === "raw" ? " · raw mode" : "";
+    const formatSuffix = response.previewFormat ? ` · format ${response.previewFormat}` : "";
+    const orderLabel = getPreviewRowOrder() === "reverse" ? " · reverse order" : "";
     elements.previewMeta.textContent =
-      `${key} · mostrando ${response.lineCount ?? 0} linha(s) de amostra${orderLabel}${modeSuffix}${formatSuffix}${dfmSuffix}`;
+      `${key} · showing ${response.lineCount ?? 0} sample row(s)${orderLabel}${modeSuffix}${formatSuffix}${dfmSuffix}`;
   } catch (error) {
-    resetPreview(getErrorMessage(error), true, "Falha ao carregar preview.");
+    resetPreview(getErrorMessage(error), true, "Failed to load preview.");
   }
 }
 
 function renderPreviewTable(preview) {
   if (!preview.headerRow.length) {
-    resetPreview("Arquivo vazio.", false, "O arquivo nao possui linhas para exibir.");
+    resetPreview("Empty file.", false, "The file has no rows to display.");
     return;
   }
 
@@ -292,7 +292,7 @@ function renderPreviewTable(preview) {
 
   preview.headerRow.forEach((column, index) => {
     const th = document.createElement("th");
-    th.textContent = column || `coluna_${index + 1}`;
+    th.textContent = column || `column_${index + 1}`;
     headerTr.appendChild(th);
   });
 
@@ -357,7 +357,7 @@ function buildPreviewModel(rows, metadataColumns = [], rowOrder = "normal") {
 
   if (looksLikeHeader) {
     return {
-      headerRow: normalizeRowLength(firstRow, maxColumns).map((value, index) => value || `coluna_${index + 1}`),
+      headerRow: normalizeRowLength(firstRow, maxColumns).map((value, index) => value || `column_${index + 1}`),
       bodyRows: otherRows.map((row) => normalizeRowLength(row, maxColumns)),
     };
   }
@@ -369,11 +369,11 @@ function buildPreviewModel(rows, metadataColumns = [], rowOrder = "normal") {
 }
 
 function createGeneratedHeader(columnCount) {
-  return Array.from({ length: columnCount }, (_, index) => `coluna_${index + 1}`);
+  return Array.from({ length: columnCount }, (_, index) => `column_${index + 1}`);
 }
 
 function normalizeHeaderRow(headerRow, columnCount) {
-  return Array.from({ length: columnCount }, (_, index) => headerRow[index] || `coluna_${index + 1}`);
+  return Array.from({ length: columnCount }, (_, index) => headerRow[index] || `column_${index + 1}`);
 }
 
 function normalizeRowLength(row, columnCount) {
@@ -385,7 +385,7 @@ function resetPreview(message, isError = false, bodyMessage) {
   elements.previewMeta.textContent = message;
   elements.previewTableWrap.className = "preview-table-wrap empty-state";
   elements.previewTableWrap.textContent =
-    bodyMessage ?? (isError ? "Falha ao carregar preview." : "Nenhum arquivo selecionado.");
+    bodyMessage ?? (isError ? "Failed to load preview." : "No file selected.");
 }
 
 function renderObjectPlaceholder(message) {
@@ -435,7 +435,7 @@ function sortObjectItems(items, sort) {
         );
       case "name":
       default:
-        return left.name.localeCompare(right.name, "pt-BR", { numeric: true }) * direction;
+        return left.name.localeCompare(right.name, "en", { numeric: true }) * direction;
     }
   });
 }
@@ -478,15 +478,15 @@ function getErrorMessage(error) {
     return error.message;
   }
 
-  return "Erro inesperado ao acessar o bucket.";
+  return "Unexpected error while accessing the bucket.";
 }
 
 function buildDiagnosticMessage(error) {
   if (error instanceof Error) {
-    return `Erro retornado pelo backend local:\n${error.message}`;
+    return `Error returned by the local backend:\n${error.message}`;
   }
 
-  return "Falha sem detalhes adicionais.";
+  return "Failure without additional details.";
 }
 
 async function clearCurrentPrefix() {
@@ -495,7 +495,7 @@ async function clearCurrentPrefix() {
   }
 
   const confirmation = window.prompt(
-    `Digite exatamente o prefixo abaixo para apagar todos os objetos recursivamente:\n${state.prefix}`,
+    `Type the prefix below exactly to delete all objects recursively:\n${state.prefix}`,
     "",
   );
 
@@ -504,12 +504,12 @@ async function clearCurrentPrefix() {
   }
 
   if (confirmation.trim() !== state.prefix) {
-    setConnectionStatus("Confirmação inválida. Nenhum objeto foi apagado.", true);
+    setConnectionStatus("Invalid confirmation. No objects were deleted.", true);
     return;
   }
 
   elements.clearPrefixButton.disabled = true;
-  setConnectionStatus(`Apagando todos os objetos em ${state.prefix}...`);
+  setConnectionStatus(`Deleting all objects under ${state.prefix}...`);
 
   try {
     const response = await apiFetch("/api/delete-prefix", {
@@ -522,9 +522,9 @@ async function clearCurrentPrefix() {
 
     state.selectedKey = "";
     elements.downloadButton.disabled = true;
-    resetPreview("Selecione um arquivo `.csv` para visualizar.");
+    resetPreview("Select a `.csv` file to preview.");
     setConnectionStatus(
-      `${response.deletedCount ?? 0} objeto(s) apagado(s) de ${state.prefix}.`,
+      `${response.deletedCount ?? 0} object(s) deleted from ${state.prefix}.`,
     );
     await loadObjects(state.prefix);
   } catch (error) {
@@ -536,7 +536,7 @@ async function clearCurrentPrefix() {
 
 function setStartupDiagnostic() {
   setDiagnosticMessage(
-    "Frontend configurado para usar a API local.\nSuba o servidor Node e abra a aplicação por http://localhost:8086.",
+    "Frontend configured to use the local API.\nStart the Node server and open the application at http://localhost:8086.",
   );
 }
 
@@ -559,7 +559,7 @@ function restoreConnectionForm() {
     setInputValue("bucket", payload.bucket);
     setInputValue("accessKeyId", payload.accessKeyId);
     setInputValue("secretAccessKey", payload.secretAccessKey);
-    setConnectionStatus("Dados de conexão restaurados do navegador.");
+    setConnectionStatus("Connection data restored from the browser.");
     refreshConnectionSummary();
   } catch {
     window.localStorage.removeItem(STORAGE_KEY);
@@ -650,7 +650,7 @@ function refreshConnectionSummary() {
 
   elements.connectionSummaryText.textContent = parts.length
     ? parts.join(" · ")
-    : "Configuração da conexão";
+    : "Connection settings";
 }
 
 async function apiFetch(url, init = {}) {
@@ -673,7 +673,7 @@ async function apiFetch(url, init = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(payload?.error || `Falha HTTP ${response.status}`);
+    throw new Error(payload?.error || `HTTP failure ${response.status}`);
   }
 
   return payload;

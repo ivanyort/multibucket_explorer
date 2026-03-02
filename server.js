@@ -62,14 +62,14 @@ const server = createServer(async (request, response) => {
       return;
     }
 
-    sendJson(response, 404, { error: "Rota não encontrada." });
+    sendJson(response, 404, { error: "Route not found." });
   } catch (error) {
     sendJson(response, 500, { error: getErrorMessage(error) });
   }
 });
 
 server.listen(PORT, () => {
-  console.log(`MultiBucket Explorer disponível em http://localhost:${PORT}`);
+  console.log(`MultiBucket Explorer available at http://localhost:${PORT}`);
 });
 
 async function handleConnect(request, response) {
@@ -145,7 +145,7 @@ async function handlePreview(url, response) {
   const session = getSession(url.searchParams.get("sessionId"));
 
   if (!key) {
-    throw new Error("Parâmetro key é obrigatório.");
+    throw new Error("The key parameter is required.");
   }
 
   const previewData = await loadPreviewData(session, key, limit, order, mode);
@@ -167,7 +167,7 @@ async function handleDownload(url, response) {
   const session = getSession(url.searchParams.get("sessionId"));
 
   if (!key) {
-    throw new Error("Parâmetro key é obrigatório.");
+    throw new Error("The key parameter is required.");
   }
 
   const result = await session.client.send(
@@ -204,7 +204,7 @@ async function handleDeletePrefix(request, response) {
   const prefix = typeof body.prefix === "string" ? body.prefix.trim() : "";
 
   if (!prefix) {
-    throw new Error("Por segurança, a limpeza da raiz não é permitida.");
+    throw new Error("For safety, deleting the bucket root is not allowed.");
   }
 
   let continuationToken;
@@ -249,7 +249,7 @@ async function serveStatic(requestPath, response) {
   const resolvedPath = path.resolve(__dirname, `.${safePath}`);
 
   if (!resolvedPath.startsWith(__dirname)) {
-    sendJson(response, 403, { error: "Acesso negado." });
+    sendJson(response, 403, { error: "Access denied." });
     return;
   }
 
@@ -257,12 +257,12 @@ async function serveStatic(requestPath, response) {
   try {
     fileStat = await stat(resolvedPath);
   } catch {
-    sendJson(response, 404, { error: "Arquivo não encontrado." });
+    sendJson(response, 404, { error: "File not found." });
     return;
   }
 
   if (!fileStat.isFile()) {
-    sendJson(response, 404, { error: "Arquivo não encontrado." });
+    sendJson(response, 404, { error: "File not found." });
     return;
   }
 
@@ -287,18 +287,18 @@ function createS3Client(connection) {
 
 function getSession(sessionId) {
   if (!sessionId) {
-    throw new Error("Sessão não informada.");
+    throw new Error("Session not provided.");
   }
 
   const session = sessions.get(sessionId);
 
   if (!session) {
-    throw new Error("Sessão inválida ou expirada. Conecte novamente.");
+    throw new Error("Invalid or expired session. Connect again.");
   }
 
   if (Date.now() - session.createdAt > SESSION_TTL_MS) {
     sessions.delete(sessionId);
-    throw new Error("Sessão expirada. Conecte novamente.");
+    throw new Error("Session expired. Connect again.");
   }
 
   return session;
@@ -330,7 +330,7 @@ function readJsonBody(request) {
       try {
         resolve(body ? JSON.parse(body) : {});
       } catch {
-        reject(new Error("JSON inválido no corpo da requisição."));
+        reject(new Error("Invalid JSON in request body."));
       }
     });
 
@@ -350,7 +350,7 @@ function normalizeConnection(body) {
 
 function validateConnection(connection) {
   if (!connection.region || !connection.bucket || !connection.accessKeyId || !connection.secretAccessKey) {
-    throw new Error("Preencha região, bucket e credenciais.");
+    throw new Error("Fill in region, bucket, and credentials.");
   }
 }
 
@@ -369,7 +369,7 @@ function getErrorMessage(error) {
     }
   }
 
-  return "Erro interno do servidor.";
+  return "Internal server error.";
 }
 
 function parsePreviewLimit(value) {
@@ -409,7 +409,7 @@ async function loadPreviewRows(session, key, limit, order, formatOptions) {
     const tailText = await loadCsvTailText(session, key, limit, formatOptions.recordDelimiter);
 
     if (!tailText) {
-      throw new Error("O arquivo retornou vazio.");
+      throw new Error("The file was empty.");
     }
 
     return parseCsv(tailText, null, {
@@ -433,7 +433,7 @@ async function loadPreviewRows(session, key, limit, order, formatOptions) {
   const csvText = await result.Body?.transformToString();
 
   if (!csvText) {
-    throw new Error("O arquivo retornou vazio.");
+    throw new Error("The file was empty.");
   }
 
   return parseCsv(csvText, limit, {
@@ -510,7 +510,7 @@ async function loadPreviewData(session, key, limit, order, mode) {
     };
   }
 
-  throw new Error("Formato não suportado para preview.");
+  throw new Error("Unsupported preview format.");
 }
 
 async function loadDfmMetadata(session, csvKey) {
@@ -543,7 +543,7 @@ function extractMetadataColumns(dfmMetadata) {
 
   return [...columns]
     .sort((left, right) => (left.ordinal ?? 0) - (right.ordinal ?? 0))
-    .map((column, index) => column?.name || `coluna_${index + 1}`);
+    .map((column, index) => column?.name || `column_${index + 1}`);
 }
 
 function replaceExtension(key, newExtension) {
@@ -654,7 +654,7 @@ async function loadObjectText(session, key, gzip = false) {
   }
 
   if (!text) {
-    throw new Error("O arquivo retornou vazio.");
+    throw new Error("The file was empty.");
   }
 
   return text;
@@ -670,7 +670,7 @@ async function loadObjectBuffer(session, key, gzip = false) {
   const bytes = await response.Body?.transformToByteArray();
 
   if (!bytes?.length) {
-    throw new Error("O arquivo retornou vazio.");
+    throw new Error("The file was empty.");
   }
 
   return gzip ? gunzipSync(Buffer.from(bytes)) : Buffer.from(bytes);
@@ -702,7 +702,7 @@ async function loadJsonPreviewRecords(session, key, limit, order, gzip = false, 
   let records = [];
 
   if (!trimmed) {
-    throw new Error("O arquivo retornou vazio.");
+    throw new Error("The file was empty.");
   }
 
   try {
@@ -744,7 +744,7 @@ async function loadJsonRawPreview(session, key, limit, order, gzip = false, exte
   const trimmed = text.trim();
 
   if (!trimmed) {
-    throw new Error("O arquivo retornou vazio.");
+    throw new Error("The file was empty.");
   }
 
   if (isLineDelimitedJson) {
@@ -783,7 +783,7 @@ async function tryLoadGzipDelimitedLines(session, key, limit, order) {
   );
 
   if (!response.Body) {
-      throw new Error("O arquivo retornou vazio.");
+      throw new Error("The file was empty.");
   }
 
   const source = response.Body instanceof Readable ? response.Body : Readable.from(response.Body);
@@ -959,7 +959,7 @@ function normalizePreviewRecord(record) {
   }
 
   if (Array.isArray(record)) {
-    return Object.fromEntries(record.map((value, index) => [`coluna_${index + 1}`, value]));
+    return Object.fromEntries(record.map((value, index) => [`column_${index + 1}`, value]));
   }
 
   return { value: record };
@@ -1030,7 +1030,7 @@ async function loadDelimitedHeadRecords(session, key, limit) {
   );
 
   if (!result.Body) {
-    throw new Error("O arquivo retornou vazio.");
+    throw new Error("The file was empty.");
   }
 
   const decoder = new TextDecoder("utf-8");
@@ -1136,7 +1136,7 @@ async function loadCsvHeadRows(session, key, limit, formatOptions) {
   );
 
   if (!result.Body) {
-    throw new Error("O arquivo retornou vazio.");
+    throw new Error("The file was empty.");
   }
 
   const collector = createCsvCollector(limit, {
@@ -1162,7 +1162,7 @@ async function loadCsvHeadRows(session, key, limit, formatOptions) {
   finalizeCsvCollector(collector);
 
   if (!collector.rows.length) {
-    throw new Error("O arquivo retornou vazio.");
+    throw new Error("The file was empty.");
   }
 
   return buildCsvResult(collector);

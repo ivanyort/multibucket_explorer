@@ -1,62 +1,63 @@
-# Objetivo
-Este projeto e um explorador web local para buckets S3, com backend Node.js servindo a interface e atuando como proxy para AWS. O fluxo principal e:
+# Purpose
+This project is a local web explorer for S3 buckets, with a Node.js backend serving the UI and acting as an AWS proxy. The main flow is:
 
-1. receber credenciais AWS e dados do bucket pelo frontend
-2. criar uma sessao local temporaria no backend
-3. listar prefixos e objetos do bucket
-4. fazer preview de arquivos suportados
-5. baixar arquivos e remover todos os objetos de um prefixo
+1. receive AWS credentials and bucket details from the frontend
+2. create a temporary local session in the backend
+3. list prefixes and objects in the bucket
+4. preview supported files
+5. download files and remove all objects under a prefix
 
-# Stack e estrutura
-- `server.js`: servidor HTTP Node, endpoints `/api/*`, sessao em memoria e acesso ao S3
-- `app.js`: logica da interface, estado local, chamadas ao backend e renderizacao
-- `index.html`: estrutura da pagina
-- `styles.css`: estilos da interface
-- `start.sh`: bootstrap local com `npm install` automatico se faltar `node_modules`
-- `samples/`: arquivos de amostra usados para desenvolvimento local
+# Stack And Structure
+- `server.js`: Node HTTP server, `/api/*` endpoints, in-memory session handling, and S3 access
+- `app.js`: UI logic, local state, backend calls, and rendering
+- `index.html`: page structure
+- `styles.css`: interface styling
+- `start.sh`: local bootstrap script with automatic `npm install` when `node_modules` is missing
+- `samples/`: sample files used for local development
 
-O projeto usa JavaScript ESM puro, sem framework frontend e sem Express no backend. Mantenha essa simplicidade, salvo instrucao explicita em contrario.
+The project uses plain ESM JavaScript, no frontend framework, and no Express on the backend. Keep that simplicity unless explicitly asked to change it.
 
-# Comandos
-- instalar dependencias: `npm install`
-- subir o servidor: `npm start`
-- fluxo padrao local: `./start.sh`
+# Commands
+- install dependencies: `npm install`
+- start the server: `npm start`
+- standard local flow: `./start.sh`
 
-Por padrao a aplicacao sobe em `http://localhost:8086`.
+By default the application runs at `http://localhost:8086`.
 
-# Regras de desenvolvimento
-1. Antes de alterar comportamento, leia `README.md`, `server.js` e `app.js` para preservar o fluxo atual.
-2. Sempre que concluir uma entrega, avalie explicitamente se `AGENTS.md` precisa ser atualizado para preservar memoria de longo prazo do projeto.
-3. Sempre que concluir uma mudanca relevante, atualize `README.md` e este `AGENTS.md` se houver nova convencao, comando, risco operacional ou decisao de arquitetura.
-4. Evite adicionar dependencias novas sem necessidade clara. O projeto hoje e pequeno e intencionalmente direto.
-5. Preserve compatibilidade com Node em modo ESM e com execucao local simples via `npm start`.
-6. Se criar novos scripts operacionais, documente o uso no `README.md`.
+# Development Rules
+1. Before changing behavior, read `README.md`, `server.js`, and `app.js` to preserve the current flow.
+2. After every delivery, explicitly evaluate whether `AGENTS.md` should be updated to preserve long-term project memory.
+3. After any relevant change, update `README.md` and this `AGENTS.md` if there is a new convention, command, operational risk, or architectural decision.
+4. The entire project, including documentation and user-facing text, must remain in English unless the user explicitly requests another language.
+5. Avoid adding new dependencies without a clear need. The project is intentionally small and direct.
+6. Preserve compatibility with Node running in ESM mode and with simple local execution through `npm start`.
+7. If you add new operational scripts, document their usage in `README.md`.
 
-# Regras para backend
-1. Toda chamada ao S3 deve continuar passando pelo backend. Nao mover acesso AWS direto para o navegador.
-2. Trate entradas de rota e query string como nao confiaveis. Valide `sessionId`, `prefix`, `key`, limites e modos de preview.
-3. Ao mexer em sessoes, preserve a expiracao em memoria e revise riscos de vazamento de credenciais.
-4. Mudancas no endpoint destrutivo `/api/delete-prefix` exigem cuidado extra. Nunca permitir limpeza da raiz do bucket.
-5. Em respostas de erro, prefira mensagens uteis sem expor segredos, chaves ou stack traces desnecessarios.
+# Backend Rules
+1. All S3 access must continue to go through the backend. Do not move AWS access directly into the browser.
+2. Treat route inputs and query string values as untrusted. Validate `sessionId`, `prefix`, `key`, preview limits, and preview modes.
+3. When changing session behavior, preserve in-memory expiration and review credential exposure risks.
+4. Changes to the destructive `/api/delete-prefix` endpoint require extra care. Never allow deleting the bucket root.
+5. Prefer useful error messages without exposing secrets, keys, or unnecessary stack traces.
 
-# Regras para frontend
-1. Preserve a interface em portugues, a menos que o usuario peça internacionalizacao.
-2. Mantenha a experiencia atual de app local: formulario de conexao, browser de objetos e painel de preview.
-3. Evite frameworks, bundlers ou etapas de build se o problema puder ser resolvido no HTML/CSS/JS atual.
-4. Ao adicionar controles novos, conecte estado, feedback visual e tratamento de erro de forma consistente com o restante do `app.js`.
+# Frontend Rules
+1. Keep the interface in English unless the user explicitly requests localization.
+2. Preserve the current local-app experience: connection form, object browser, and preview panel.
+3. Avoid frameworks, bundlers, or build steps if the problem can be solved within the current HTML/CSS/JS setup.
+4. When adding controls, wire state, visual feedback, and error handling consistently with the rest of `app.js`.
 
-# Seguranca e dados sensiveis
-1. As credenciais AWS sao informadas pela interface e hoje ficam persistidas no `localStorage`. Qualquer mudanca nessa area deve considerar impacto de seguranca e ser documentada.
-2. Nunca registrar `secretAccessKey` em logs, mensagens de erro, dumps de estado ou documentacao.
-3. Nao commitar credenciais reais, buckets privados ou dados sensiveis de clientes.
-4. Se for necessario testar com AWS real, prefira validacoes minimamente invasivas e confirme claramente qualquer acao destrutiva.
+# Security And Sensitive Data
+1. AWS credentials are entered through the UI and are currently persisted in `localStorage`. Any change in this area must consider security impact and be documented.
+2. Never log `secretAccessKey` in logs, error messages, state dumps, or documentation.
+3. Do not commit real credentials, private buckets, or customer-sensitive data.
+4. If testing against real AWS is necessary, prefer minimally invasive validation and clearly confirm any destructive action.
 
-# Validacao
-1. Como nao ha suite de testes automatizados no repositorio hoje, valide manualmente o fluxo alterado sempre que possivel.
-2. Para mudancas de UI, verifique ao menos: conectar, listar objetos, navegar em pastas, preview e download.
-3. Para mudancas em delecao, valide primeiro com prefixos controlados e nunca assuma comportamento seguro sem executar o fluxo.
+# Validation
+1. There is no automated test suite in the repository today, so manually validate the changed flow whenever possible.
+2. For UI changes, verify at least: connect, list objects, navigate folders, preview, and download.
+3. For deletion changes, validate first with controlled prefixes and never assume the behavior is safe without executing the flow.
 
-# Decisoes persistentes
-1. Este arquivo deve registrar apenas diretrizes duraveis do projeto.
-2. Detalhes temporarios de tarefa ou experimentos nao devem ficar aqui.
-3. Se uma decisao mudar o modo de executar, desenvolver ou operar o app, registre a decisao neste arquivo.
+# Persistent Decisions
+1. This file should contain only durable project guidance.
+2. Temporary task notes or experiments should not live here.
+3. If a decision changes how the app should be run, developed, or operated, record it in this file.
