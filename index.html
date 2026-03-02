@@ -240,17 +240,42 @@
               <p class="panel-kicker">Object Browser</p>
               <h2>Objects</h2>
             </div>
-            <button id="upButton" class="ghost-button" disabled>Up one level</button>
           </div>
 
           <div class="toolbar">
             <div>
               <span class="toolbar-label">Current prefix</span>
-              <code id="currentPrefix">/</code>
+              <nav id="currentPrefix" class="current-prefix" aria-label="Current prefix">/</nav>
             </div>
             <div class="toolbar-actions">
-              <button id="refreshButton" class="ghost-button" disabled>Refresh</button>
-              <button id="clearPrefixButton" class="danger-button" disabled>Clear prefix</button>
+              <button
+                id="refreshButton"
+                class="ghost-button icon-button"
+                type="button"
+                aria-label="Refresh"
+                title="Refresh"
+                disabled
+              >
+                <span aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M12 5.25a6.75 6.75 0 1 0 6.53 8.47 1.125 1.125 0 0 1 2.18.56A9 9 0 1 1 18.4 6.47V4.88a1.125 1.125 0 1 1 2.25 0V9a1.125 1.125 0 0 1-1.125 1.125h-4.13a1.125 1.125 0 1 1 0-2.25h1.42A6.72 6.72 0 0 0 12 5.25"></path>
+                  </svg>
+                </span>
+              </button>
+              <button
+                id="clearPrefixButton"
+                class="danger-button icon-button"
+                type="button"
+                aria-label="Clear prefix"
+                title="Clear prefix"
+                disabled
+              >
+                <span aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M9 3.75A2.25 2.25 0 0 0 6.75 6v.75H4.88a1.125 1.125 0 1 0 0 2.25h.55l.78 9.14a2.25 2.25 0 0 0 2.24 2.06h7.1a2.25 2.25 0 0 0 2.24-2.06l.78-9.14h.55a1.125 1.125 0 1 0 0-2.25h-1.88V6A2.25 2.25 0 0 0 15 3.75zm6 3H9V6h6zM10.88 10.5A1.125 1.125 0 0 1 12 11.63v4.5a1.125 1.125 0 1 1-2.25 0v-4.5A1.125 1.125 0 0 1 10.88 10.5m3.38 0a1.125 1.125 0 0 1 1.12 1.13v4.5a1.125 1.125 0 1 1-2.25 0v-4.5a1.125 1.125 0 0 1 1.13-1.13"></path>
+                  </svg>
+                </span>
+              </button>
             </div>
           </div>
 
@@ -306,6 +331,51 @@
         </div>
       </section>
     </main>
+
+    <div
+      id="confirmModal"
+      class="modal-shell"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirmModalTitle"
+      aria-describedby="confirmModalBody"
+      hidden
+    >
+      <div class="modal-backdrop" data-modal-close></div>
+      <div class="modal-card" role="document">
+        <p class="panel-kicker">Destructive Action</p>
+        <h2 id="confirmModalTitle">Delete prefix</h2>
+        <p id="confirmModalBody" class="modal-copy">
+          Are you absolutely sure you want to delete all files under this prefix?
+        </p>
+        <code id="confirmModalPrefix" class="modal-prefix"></code>
+        <div class="modal-actions">
+          <button id="confirmModalCancel" class="ghost-button" type="button">Cancel</button>
+          <button id="confirmModalConfirm" class="danger-button" type="button">Delete files</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="deleteProgressModal"
+      class="modal-shell"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="deleteProgressTitle"
+      aria-describedby="deleteProgressBody"
+      hidden
+    >
+      <div class="modal-backdrop"></div>
+      <div class="modal-card modal-card-compact" role="document">
+        <div class="progress-indicator" aria-hidden="true"></div>
+        <p class="panel-kicker">Delete In Progress</p>
+        <h2 id="deleteProgressTitle">Deleting files</h2>
+        <p id="deleteProgressBody" class="modal-copy">
+          The selected prefix is being deleted. This can take a while when many files are involved.
+        </p>
+        <code id="deleteProgressPrefix" class="modal-prefix"></code>
+      </div>
+    </div>
 
     <script type="module" src="./app.js"></script>
   </body>

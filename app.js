@@ -31,13 +31,18 @@ const elements = {
   currentPrefix: document.querySelector("#currentPrefix"),
   refreshButton: document.querySelector("#refreshButton"),
   clearPrefixButton: document.querySelector("#clearPrefixButton"),
-  upButton: document.querySelector("#upButton"),
   previewMeta: document.querySelector("#previewMeta"),
   previewTableWrap: document.querySelector("#previewTableWrap"),
   previewMode: document.querySelector("#previewMode"),
   previewRowLimit: document.querySelector("#previewRowLimit"),
   previewRowOrder: document.querySelector("#previewRowOrder"),
   downloadButton: document.querySelector("#downloadButton"),
+  confirmModal: document.querySelector("#confirmModal"),
+  confirmModalPrefix: document.querySelector("#confirmModalPrefix"),
+  confirmModalCancel: document.querySelector("#confirmModalCancel"),
+  confirmModalConfirm: document.querySelector("#confirmModalConfirm"),
+  deleteProgressModal: document.querySelector("#deleteProgressModal"),
+  deleteProgressPrefix: document.querySelector("#deleteProgressPrefix"),
 };
 
 elements.credentialsForm.addEventListener("submit", (event) => {
@@ -61,7 +66,6 @@ elements.providerCards.forEach((card) => {
 elements.connectButton.addEventListener("click", connectToBucket);
 elements.refreshButton.addEventListener("click", () => loadObjects(state.prefix));
 elements.clearPrefixButton.addEventListener("click", clearCurrentPrefix);
-elements.upButton.addEventListener("click", goUpOneLevel);
 elements.downloadButton.addEventListener("click", downloadSelectedObject);
 elements.previewMode.addEventListener("change", () => {
   syncPreviewModeAvailability(state.selectedKey);
@@ -106,7 +110,6 @@ async function connectToBucket() {
 
   elements.refreshButton.disabled = true;
   elements.clearPrefixButton.disabled = true;
-  elements.upButton.disabled = true;
   elements.downloadButton.disabled = true;
   syncPreviewModeAvailability("");
   renderObjectPlaceholder("Connecting...");
@@ -144,8 +147,7 @@ async function loadObjects(prefix) {
   }
 
   state.prefix = prefix;
-  elements.currentPrefix.textContent = prefix ? `/${prefix}` : "/";
-  elements.upButton.disabled = !prefix;
+  renderCurrentPrefix();
   elements.clearPrefixButton.disabled = !prefix;
   renderObjectPlaceholder("Loading objects...");
   resetPreview("Select a compatible `.csv`, `.json`, `.dfm`, `.parquet`, or `.gz` file to preview.");
@@ -164,6 +166,47 @@ async function loadObjects(prefix) {
     setConnectionStatus(getErrorMessage(error), true);
     setDiagnosticMessage(buildDiagnosticMessage(error));
   }
+}
+
+function renderCurrentPrefix() {
+  elements.currentPrefix.innerHTML = "";
+
+  const rootButton = document.createElement("button");
+  rootButton.type = "button";
+  rootButton.className = "prefix-crumb";
+  rootButton.textContent = "/";
+  rootButton.disabled = !state.prefix;
+  rootButton.setAttribute("aria-current", state.prefix ? "false" : "page");
+  rootButton.addEventListener("click", () => loadObjects(""));
+  elements.currentPrefix.appendChild(rootButton);
+
+  if (!state.prefix) {
+    return;
+  }
+
+  const segments = state.prefix.split("/").filter(Boolean);
+  let nextPrefix = "";
+
+  segments.forEach((segment, index) => {
+    if (index > 0) {
+      const separator = document.createElement("span");
+      separator.className = "prefix-separator";
+      separator.textContent = "/";
+      separator.setAttribute("aria-hidden", "true");
+      elements.currentPrefix.appendChild(separator);
+    }
+
+    nextPrefix = `${nextPrefix}${segment}/`;
+    const targetPrefix = nextPrefix;
+
+    const crumb = document.createElement("button");
+    crumb.type = "button";
+    crumb.className = "prefix-crumb";
+    crumb.textContent = segment;
+    crumb.setAttribute("aria-current", index === segments.length - 1 ? "page" : "false");
+    crumb.addEventListener("click", () => loadObjects(targetPrefix));
+    elements.currentPrefix.appendChild(crumb);
+  });
 }
 
 function renderObjectList() {
@@ -630,18 +673,6 @@ function setDiagnosticMessage(message) {
   elements.diagnosticBox.textContent = message;
 }
 
-function goUpOneLevel() {
-  if (!state.prefix) {
-    return;
-  }
-
-  const trimmed = state.prefix.endsWith("/") ? state.prefix.slice(0, -1) : state.prefix;
-  const parts = trimmed.split("/").filter(Boolean);
-  parts.pop();
-  const nextPrefix = parts.length ? `${parts.join("/")}/` : "";
-  loadObjects(nextPrefix);
-}
-
 function formatBytes(bytes) {
   if (!bytes) {
     return "0 B";
@@ -674,21 +705,15 @@ async function clearCurrentPrefix() {
     return;
   }
 
-  const confirmation = window.prompt(
-    `Type the prefix below exactly to delete all objects recursively:\n${state.prefix}`,
-    "",
-  );
+  const confirmation = await confirmPrefixDeletion(state.prefix);
 
-  if (confirmation === null) {
-    return;
-  }
-
-  if (confirmation.trim() !== state.prefix) {
-    setConnectionStatus("Invalid confirmation. No objects were deleted.", true);
+  if (!confirmation) {
+    setConnectionStatus("Prefix deletion cancelled.");
     return;
   }
 
   elements.clearPrefixButton.disabled = true;
+  showDeleteProgress(state.prefix);
   setConnectionStatus(`Deleting all objects under ${state.prefix}...`);
 
   try {
@@ -711,7 +736,63 @@ async function clearCurrentPrefix() {
     setConnectionStatus(getErrorMessage(error), true);
     setDiagnosticMessage(buildDiagnosticMessage(error));
     elements.clearPrefixButton.disabled = false;
+  } finally {
+    hideDeleteProgress();
   }
+}
+
+function confirmPrefixDeletion(prefix) {
+  return new Promise((resolve) => {
+    const previousActiveElement = document.activeElement;
+
+    const close = (confirmed) => {
+      elements.confirmModal.hidden = true;
+      document.body.style.overflow = "";
+      elements.confirmModal.removeEventListener("click", handleShellClick);
+      document.removeEventListener("keydown", handleKeydown);
+      elements.confirmModalCancel.removeEventListener("click", handleCancel);
+      elements.confirmModalConfirm.removeEventListener("click", handleConfirm);
+      if (previousActiveElement instanceof HTMLElement) {
+        previousActiveElement.focus();
+      }
+      resolve(confirmed);
+    };
+
+    const handleCancel = () => close(false);
+    const handleConfirm = () => close(true);
+    const handleShellClick = (event) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.hasAttribute("data-modal-close")) {
+        close(false);
+      }
+    };
+    const handleKeydown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close(false);
+      }
+    };
+
+    elements.confirmModalPrefix.textContent = prefix;
+    elements.confirmModal.hidden = false;
+    document.body.style.overflow = "hidden";
+    elements.confirmModal.addEventListener("click", handleShellClick);
+    document.addEventListener("keydown", handleKeydown);
+    elements.confirmModalCancel.addEventListener("click", handleCancel);
+    elements.confirmModalConfirm.addEventListener("click", handleConfirm);
+    elements.confirmModalCancel.focus();
+  });
+}
+
+function showDeleteProgress(prefix) {
+  elements.deleteProgressPrefix.textContent = prefix;
+  elements.deleteProgressModal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function hideDeleteProgress() {
+  elements.deleteProgressModal.hidden = true;
+  document.body.style.overflow = "";
 }
 
 function setStartupDiagnostic() {

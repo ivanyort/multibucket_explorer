@@ -63,6 +63,8 @@ By default the application runs at `http://localhost:8086`.
 4. When adding controls, wire state, visual feedback, and error handling consistently with the rest of `app.js`.
 5. Provider selection must remain explicit in the UI when behavior or required credentials differ across backends.
 6. Each provider should have its own visible connection block in the UI; users should not have to infer which fields belong to which backend.
+7. Destructive actions in the UI should prefer first-class confirmation modals over browser-native dialogs, and the default focused action must be the safe non-destructive option.
+8. Long-running destructive actions should show explicit in-progress feedback in the UI even when the backend only provides completion status.
 
 # Security And Sensitive Data
 1. Storage credentials are entered through the UI and are currently persisted in `localStorage`. All provider-specific connection fields, credentials, secrets, textarea content, and toggles must remain persistable unless the behavior is intentionally redesigned. Any change in this area must consider security impact and be documented.
