@@ -33,7 +33,7 @@ By default the application runs at `http://localhost:8086`.
 6. Preserve compatibility with Node running in ESM mode and with simple local execution through `npm start`.
 7. If you add new operational scripts, document their usage in `README.md`.
 8. When creating commits, always include new files that are part of the delivery unless the user explicitly asks to exclude them.
-9. When closing out work with a commit, run `git pull --ff-only` as the default safe sync step unless local in-progress changes or another technical constraint make that unsafe.
+9. When closing out work with a commit, run `git push` by default unless the user explicitly asks not to push or there is a technical constraint that blocks it.
 
 # Backend Rules
 1. All S3 access must continue to go through the backend. Do not move AWS access directly into the browser.
