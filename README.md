@@ -9,7 +9,7 @@ Web application with a local backend for:
 - listing folders and files
 - previewing CSV, JSON, DFM, and Parquet files
 - downloading files through a local proxy
-- switching the frontend language between English, Brazilian Portuguese, and Spanish
+- switching the frontend language between English, Brazilian Portuguese, Spanish, and Italian
 
 ## Running
 

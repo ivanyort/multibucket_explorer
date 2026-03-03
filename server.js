@@ -94,6 +94,26 @@ const SERVER_TRANSLATIONS = {
     unsupported_preview_format: "Formato de vista previa no compatible.",
     parquet_preview_failed: "Error al leer la vista previa de Parquet: {message}",
   },
+  it: {
+    route_not_found: "Percorso non trovato.",
+    internal_server_error: "Errore interno del server.",
+    key_required: "Il parametro key e obbligatorio.",
+    delete_root_forbidden: "Per sicurezza, non e consentito eliminare la radice dello storage.",
+    access_denied: "Accesso negato.",
+    file_not_found: "File non trovato.",
+    file_empty: "Il file e vuoto.",
+    session_not_provided: "Sessione non fornita.",
+    session_invalid: "Sessione non valida o scaduta. Connettiti di nuovo.",
+    session_expired: "Sessione scaduta. Connettiti di nuovo.",
+    invalid_json_body: "JSON non valido nel corpo della richiesta.",
+    fill_adls: "Compila nome account, file system e account key.",
+    fill_gcs: "Compila bucket e service account JSON.",
+    invalid_service_account_json: "Il service account JSON deve essere un JSON valido.",
+    fill_minio: "Compila endpoint, bucket, access key ID e secret access key.",
+    fill_s3: "Compila regione, bucket e credenziali.",
+    unsupported_preview_format: "Formato di anteprima non supportato.",
+    parquet_preview_failed: "Errore durante la lettura dell'anteprima Parquet: {message}",
+  },
 };
 
 class LocalizedError extends Error {
@@ -354,6 +374,10 @@ function normalizeLocale(value) {
 
   if (value.startsWith("es")) {
     return "es";
+  }
+
+  if (value.startsWith("it")) {
+    return "it";
   }
 
   return "en";

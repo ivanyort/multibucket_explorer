@@ -15,11 +15,12 @@ const state = {
 
 const STORAGE_KEY = "multibucket-explorer-connection";
 const LANGUAGE_STORAGE_KEY = "multibucket-explorer-language";
-const SUPPORTED_LANGUAGES = ["en", "pt-BR", "es"];
+const SUPPORTED_LANGUAGES = ["en", "pt-BR", "es", "it"];
 const DATE_LOCALES = {
   en: "en-US",
   "pt-BR": "pt-BR",
   es: "es-ES",
+  it: "it-IT",
 };
 const translations = {
   en: {
@@ -225,6 +226,72 @@ const translations = {
       fillS3: "Completa región, bucket y credenciales.",
     },
     table: { name: "Nombre", type: "Tipo", size: "Tamaño", date: "Fecha", column: "columna_{index}" },
+  },
+  it: {
+    language: { label: "Lingua" },
+    connection: { kicker: "Connessione", title: "Accesso allo Storage", settings: "Impostazioni della connessione", connect: "Connetti" },
+    providers: {
+      kicker: "Provider", ariaLabel: "Provider di storage",
+      s3: "Bucket AWS con regione e chiavi di accesso.",
+      adls: "Azure Data Lake Storage Gen2 con account e nome del contenitore.",
+      gcs: "Google Cloud Storage con bucket e JSON del service account.",
+      minio: "Storage compatibile con S3 con endpoint personalizzato e chiavi di accesso.",
+    },
+    s3: { ariaLabel: "Impostazioni di connessione S3", kicker: "Connessione S3", copy: "Usa le credenziali del bucket AWS per questa connessione." },
+    adls: { ariaLabel: "Impostazioni di connessione ADLS", kicker: "Connessione ADLS", copy: "Usa le credenziali dell'account Azure Data Lake Storage Gen2 e il nome del contenitore." },
+    gcs: { ariaLabel: "Impostazioni di connessione GCS", kicker: "Connessione GCS", copy: "Usa un bucket Google Cloud Storage e una chiave JSON del service account." },
+    minio: { ariaLabel: "Impostazioni di connessione MinIO", kicker: "Connessione MinIO", copy: "Usa un endpoint MinIO personalizzato con chiavi compatibili con S3.", ignoreTlsErrors: "Ignora gli errori del certificato HTTPS per questa connessione MinIO" },
+    fields: {
+      region: "Regione", bucket: "Bucket", accessKeyId: "Access Key ID", secretAccessKey: "Secret Access Key",
+      accountName: "Nome account", containerName: "Nome contenitore", accessKey: "Access Key",
+      bucketOrUrl: "Bucket o URL", projectId: "Project ID (compilato automaticamente dal JSON quando presente)",
+      serviceAccountJson: "Service Account JSON", endpoint: "Endpoint",
+    },
+    placeholders: {
+      region: "us-east-1", bucket: "mio-bucket", accessKeyId: "AKIA...", secretAccessKey: "********",
+      accountName: "mioaccount", fileSystem: "mio-contenitore", gcsBucket: "gs://mio-bucket o mio-bucket",
+      projectId: "mio-progetto", serviceAccountJson: '{"type":"service_account", ...}', endpoint: "http://localhost:9000",
+      minioAccessKeyId: "minioadmin",
+    },
+    browser: {
+      kicker: "Esploratore Oggetti", title: "Oggetti", currentPrefix: "Prefisso corrente", refresh: "Aggiorna",
+      clearPrefix: "Cancella prefisso", connectToList: "Connettiti per elencare gli oggetti dello storage.",
+      noItems: "Nessun elemento trovato in questo prefisso.", loading: "Caricamento oggetti...", failed: "Errore durante l'elenco degli oggetti.",
+      folder: "Cartella", file: "File",
+    },
+    preview: {
+      kicker: "Anteprima File", title: "Anteprima", view: "Vista", table: "Tabella", raw: "Raw", rows: "Righe", all: "Tutte",
+      order: "Ordine", normal: "Normale", reverse: "Più recenti prima", download: "Scarica file",
+      selectCompatible: "Seleziona un file compatibile `.csv`, `.json`, `.dfm`, `.parquet` o `.gz` da visualizzare.",
+      noFileSelected: "Nessun file selezionato.", reading: "Lettura file...", loadingFor: "Caricamento anteprima di {key}...",
+      unsupportedFormat: "Formato di anteprima non supportato: {key}",
+      unsupportedBody: "Seleziona un file .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq o un .gz corrispondente.",
+      emptyFile: "File vuoto.", emptyBody: "Il file non contiene righe da mostrare.", failed: "Errore durante il caricamento dell'anteprima.",
+      rawModeSuffix: "modalità raw", formatSuffix: "formato {format}", reverseOrder: "ordine inverso",
+      showingRows: "{key} · visualizzazione di {count} righe di esempio{orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
+      dfmFound: " · DFM: {dfmKey} ({count} colonne)", dfmNotFound: " · DFM non trovato",
+    },
+    delete: {
+      confirmKicker: "Azione Distruttiva", confirmTitle: "Elimina prefisso",
+      confirmBody: "Sei assolutamente sicuro di voler eliminare tutti i file sotto questo prefisso?",
+      confirmAction: "Elimina file", progressKicker: "Eliminazione in corso", progressTitle: "Eliminazione file",
+      progressBody: "Il prefisso selezionato è in fase di eliminazione. L'operazione può richiedere tempo se coinvolge molti file.",
+      cancelled: "Eliminazione del prefisso annullata.", deleting: "Eliminazione di tutti gli oggetti sotto {prefix}...", deleted: "{count} oggetto/i eliminato/i da {prefix}.",
+    },
+    common: { cancel: "Annulla" },
+    messages: {
+      enterCredentials: "Inserisci le credenziali e fai clic su connetti.", startupDiagnostic: "Frontend configurato per usare l'API locale.\nAvvia il server Node e apri l'applicazione su http://localhost:8086.",
+      connecting: "Connessione...", connectingTo: "Connessione a {target} ({location})...", validateAccess: "Chiamata al backend locale per validare l'accesso allo storage...",
+      connectionOk: "Connessione OK tramite il backend locale.\nProvider: {provider}\nDestinazione: {target}\nPosizione: {location}\nSessione: {session}",
+      failedToConnect: "Connessione non riuscita.", restored: "Dati di connessione ripristinati dal browser.",
+      loadedSummary: "{folders} cartella/e e {files} file caricati da {target}.",
+      unexpectedStorageError: "Errore imprevisto durante l'accesso allo storage.", backendError: "Errore restituito dal backend locale:\n{message}",
+      noFailureDetails: "Errore senza dettagli aggiuntivi.",
+      fillAdls: "Compila nome account, nome contenitore e access key.", fillGcs: "Compila bucket e service account JSON.",
+      invalidServiceAccountJson: "Il service account JSON deve essere un JSON valido.", fillMinio: "Compila endpoint, bucket, access key ID e secret access key.",
+      fillS3: "Compila regione, bucket e credenziali.",
+    },
+    table: { name: "Nome", type: "Tipo", size: "Dimensione", date: "Data", column: "colonna_{index}" },
   },
 };
 

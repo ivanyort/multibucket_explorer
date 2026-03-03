@@ -67,7 +67,7 @@ By default the application runs at `http://localhost:8086`.
 6. Each provider should have its own visible connection block in the UI; users should not have to infer which fields belong to which backend.
 7. Destructive actions in the UI should prefer first-class confirmation modals over browser-native dialogs, and the default focused action must be the safe non-destructive option.
 8. Long-running destructive actions should show explicit in-progress feedback in the UI even when the backend only provides completion status.
-9. The frontend must remain multilingual with English as the default plus Brazilian Portuguese (`pt-BR`) and Spanish (`es`) for user-facing UI text and frontend-generated messages.
+9. The frontend must remain multilingual with English as the default plus Brazilian Portuguese (`pt-BR`), Spanish (`es`), and Italian (`it`) for user-facing UI text and frontend-generated messages.
 10. Backend error responses surfaced in the frontend must follow the same language set when they originate from application-controlled validation or guardrails.
 
 # Security And Sensitive Data
