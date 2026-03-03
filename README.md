@@ -27,6 +27,26 @@ npm start
 
 By default the application runs at `http://localhost:8086`.
 
+## Docker
+
+Build the image:
+
+```bash
+docker build -t multibucket-explorer .
+```
+
+Run the container:
+
+```bash
+docker run --rm -p 8086:8086 multibucket-explorer
+```
+
+If you want a different port inside the container, set `PORT` explicitly:
+
+```bash
+docker run --rm -p 8090:8090 -e PORT=8090 multibucket-explorer
+```
+
 ## How It Works
 
 - the browser talks only to the local server

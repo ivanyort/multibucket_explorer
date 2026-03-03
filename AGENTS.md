@@ -34,6 +34,8 @@ For MinIO, ignoring HTTPS certificate validation must remain an explicit per-con
 - install dependencies: `npm install`
 - start the server: `npm start`
 - standard local flow: `./start.sh`
+- build container image: `docker build -t multibucket-explorer .`
+- run container: `docker run --rm -p 8086:8086 multibucket-explorer`
 
 By default the application runs at `http://localhost:8086`.
 
