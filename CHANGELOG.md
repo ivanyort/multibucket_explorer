@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.4.1](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.4.1) - 2026-03-11
+
+### Changes
+- docs(changelog): expand recent release details (c31c6fa)
+- chore(changelog): update for v0.4.0 [skip ci] (81747e5)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.4.0...v0.4.1)
+
+
 ## [v0.4.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.4.0) - 2026-03-11
 
 ### Changes
