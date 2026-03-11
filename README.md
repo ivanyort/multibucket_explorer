@@ -65,6 +65,35 @@ If you want a different port inside the container, set `PORT` explicitly:
 docker run --rm -p 8090:8090 -e PORT=8090 multibucket-explorer
 ```
 
+## Docker Hub Publishing
+
+The repository includes a GitHub Actions workflow at `.github/workflows/publish-docker.yml` that automatically calculates the next semantic version, creates the Git tag, and publishes the image to Docker Hub whenever code is pushed to `main`.
+
+Configure these GitHub repository secrets before using it:
+
+- `DOCKERHUB_USERNAME`
+- `DOCKERHUB_TOKEN`
+
+By default the workflow publishes to:
+
+```text
+DOCKERHUB_USERNAME/multibucket-explorer
+```
+
+Version bump rules:
+
+- commits with `BREAKING CHANGE` or `type!:` trigger a major bump
+- commits starting with `feat:` trigger a minor bump
+- all other commits trigger a patch bump
+
+Examples:
+
+- `feat(preview): add orc support` -> minor
+- `fix(docker): install java runtime` -> patch
+- `feat(api)!: change session contract` -> major
+
+The workflow tags and publishes the resulting version as both `X.Y.Z` and `vX.Y.Z`, and also refreshes `latest`.
+
 ## How It Works
 
 - the browser talks only to the local server

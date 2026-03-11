@@ -39,6 +39,7 @@ For MinIO, ignoring HTTPS certificate validation must remain an explicit per-con
 - build container image: `docker build -t multibucket-explorer .`
 - run container: `docker run --rm -p 8086:8086 multibucket-explorer`
 - run container in read-only mode for destructive actions: `docker run --rm -p 8086:8086 -e DISABLE_DESTRUCTIVE_OPERATIONS=true multibucket-explorer`
+- publish Docker Hub image automatically from `main` after configuring `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` GitHub secrets; semantic versioning is derived from commit messages (`BREAKING CHANGE`/`!` = major, `feat:` = minor, otherwise patch)
 
 By default the application runs at `http://localhost:8086`.
 
