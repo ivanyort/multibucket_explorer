@@ -66,10 +66,10 @@ const translations = {
     preview: {
       kicker: "File Preview", title: "Preview", view: "View", table: "Table", raw: "Raw", rows: "Rows", all: "All",
       order: "Order", normal: "Normal", reverse: "Newest first", download: "Download file",
-      selectCompatible: "Select a compatible `.csv`, `.json`, `.dfm`, `.parquet`, `.orc`, `.gz`, or `.snappy` file to preview.",
+      selectCompatible: "Select a compatible `.csv`, `.json`, `.dfm`, `.parquet`, `.avro`, `.orc`, `.gz`, or `.snappy` file to preview.",
       noFileSelected: "No file selected.", reading: "Reading file...", loadingFor: "Loading preview for {key}...",
       unsupportedFormat: "Unsupported preview format: {key}",
-      unsupportedBody: "Select a .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .orc, or matching .gz/.snappy file.",
+      unsupportedBody: "Select a .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .avro, .orc, or matching .gz/.snappy file.",
       emptyFile: "Empty file.", emptyBody: "The file has no rows to display.", failed: "Failed to load preview.",
       rawModeSuffix: "raw mode", formatSuffix: "format {format}", reverseOrder: "reverse order",
       showingRows: "{key} · showing {count} sample row(s){orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
@@ -138,10 +138,10 @@ const translations = {
     preview: {
       kicker: "Pré-visualização de Arquivo", title: "Prévia", view: "Visualização", table: "Tabela", raw: "Bruto", rows: "Linhas", all: "Todas",
       order: "Ordem", normal: "Normal", reverse: "Mais novos primeiro", download: "Baixar arquivo",
-      selectCompatible: "Selecione um arquivo compatível `.csv`, `.json`, `.dfm`, `.parquet`, `.orc`, `.gz` ou `.snappy` para visualizar.",
+      selectCompatible: "Selecione um arquivo compatível `.csv`, `.json`, `.dfm`, `.parquet`, `.avro`, `.orc`, `.gz` ou `.snappy` para visualizar.",
       noFileSelected: "Nenhum arquivo selecionado.", reading: "Lendo arquivo...", loadingFor: "Carregando prévia de {key}...",
       unsupportedFormat: "Formato de prévia não suportado: {key}",
-      unsupportedBody: "Selecione um arquivo .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .orc ou .gz/.snappy correspondente.",
+      unsupportedBody: "Selecione um arquivo .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .avro, .orc ou .gz/.snappy correspondente.",
       emptyFile: "Arquivo vazio.", emptyBody: "O arquivo não tem linhas para exibir.", failed: "Falha ao carregar a prévia.",
       rawModeSuffix: "modo bruto", formatSuffix: "formato {format}", reverseOrder: "ordem reversa",
       showingRows: "{key} · exibindo {count} linha(s) de amostra{orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
@@ -210,10 +210,10 @@ const translations = {
     preview: {
       kicker: "Vista Previa de Archivo", title: "Vista previa", view: "Vista", table: "Tabla", raw: "Raw", rows: "Filas", all: "Todas",
       order: "Orden", normal: "Normal", reverse: "Más nuevos primero", download: "Descargar archivo",
-      selectCompatible: "Selecciona un archivo compatible `.csv`, `.json`, `.dfm`, `.parquet`, `.orc`, `.gz` o `.snappy` para previsualizar.",
+      selectCompatible: "Selecciona un archivo compatible `.csv`, `.json`, `.dfm`, `.parquet`, `.avro`, `.orc`, `.gz` o `.snappy` para previsualizar.",
       noFileSelected: "Ningún archivo seleccionado.", reading: "Leyendo archivo...", loadingFor: "Cargando vista previa de {key}...",
       unsupportedFormat: "Formato de vista previa no compatible: {key}",
-      unsupportedBody: "Selecciona un archivo .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .orc o un .gz/.snappy correspondiente.",
+      unsupportedBody: "Selecciona un archivo .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .avro, .orc o un .gz/.snappy correspondiente.",
       emptyFile: "Archivo vacío.", emptyBody: "El archivo no tiene filas para mostrar.", failed: "Error al cargar la vista previa.",
       rawModeSuffix: "modo raw", formatSuffix: "formato {format}", reverseOrder: "orden inverso",
       showingRows: "{key} · mostrando {count} fila(s) de muestra{orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
@@ -282,10 +282,10 @@ const translations = {
     preview: {
       kicker: "Anteprima File", title: "Anteprima", view: "Vista", table: "Tabella", raw: "Raw", rows: "Righe", all: "Tutte",
       order: "Ordine", normal: "Normale", reverse: "Più recenti prima", download: "Scarica file",
-      selectCompatible: "Seleziona un file compatibile `.csv`, `.json`, `.dfm`, `.parquet`, `.orc`, `.gz` o `.snappy` da visualizzare.",
+      selectCompatible: "Seleziona un file compatibile `.csv`, `.json`, `.dfm`, `.parquet`, `.avro`, `.orc`, `.gz` o `.snappy` da visualizzare.",
       noFileSelected: "Nessun file selezionato.", reading: "Lettura file...", loadingFor: "Caricamento anteprima di {key}...",
       unsupportedFormat: "Formato di anteprima non supportato: {key}",
-      unsupportedBody: "Seleziona un file .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .orc o un .gz/.snappy corrispondente.",
+      unsupportedBody: "Seleziona un file .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .avro, .orc o un .gz/.snappy corrispondente.",
       emptyFile: "File vuoto.", emptyBody: "Il file non contiene righe da mostrare.", failed: "Errore durante il caricamento dell'anteprima.",
       rawModeSuffix: "modalità raw", formatSuffix: "formato {format}", reverseOrder: "ordine inverso",
       showingRows: "{key} · visualizzazione di {count} righe di esempio{orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
@@ -1603,6 +1603,12 @@ function isPreviewableFile(key) {
     normalizedKey.endsWith(".gzip.parq") ||
     normalizedKey.endsWith(".gz.parq") ||
     normalizedKey.endsWith(".snappy.parq") ||
+    normalizedKey.endsWith(".avro") ||
+    normalizedKey.endsWith(".avro.gz") ||
+    normalizedKey.endsWith(".avro.snappy") ||
+    normalizedKey.endsWith(".gzip.avro") ||
+    normalizedKey.endsWith(".gz.avro") ||
+    normalizedKey.endsWith(".snappy.avro") ||
     normalizedKey.endsWith(".orc") ||
     normalizedKey.endsWith(".orc.gz") ||
     normalizedKey.endsWith(".orc.snappy") ||

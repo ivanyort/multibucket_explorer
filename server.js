@@ -13,6 +13,7 @@ import { createGunzip, gunzipSync } from "node:zlib";
 import { NodeHttpHandler } from "@smithy/node-http-handler";
 import { DataLakeServiceClient, StorageSharedKeyCredential } from "@azure/storage-file-datalake";
 import { Storage as GoogleCloudStorage } from "@google-cloud/storage";
+import avro from "avsc";
 import { parquetMetadataAsync, parquetReadObjects } from "hyparquet";
 import { compressors as hyparquetCompressors } from "hyparquet-compressors";
 import snappy from "snappyjs";
@@ -39,6 +40,36 @@ const ORC_TOOLS_FILE_NAME = `orc-tools-${ORC_TOOLS_VERSION}-uber.jar`;
 const ORC_TOOLS_URL =
   `https://repo1.maven.org/maven2/org/apache/orc/orc-tools/${ORC_TOOLS_VERSION}/${ORC_TOOLS_FILE_NAME}`;
 const ORC_TOOLS_CACHE_DIR = path.join(__dirname, ".cache", "orc-tools");
+const AVRO_LONG_AS_STRING_TYPE = avro.types.LongType.__with({
+  fromBuffer(buffer) {
+    return buffer.readBigInt64LE().toString();
+  },
+  toBuffer(value) {
+    const normalized = normalizeAvroLongValue(value);
+    const buffer = Buffer.alloc(8);
+    buffer.writeBigInt64LE(normalized);
+    return buffer;
+  },
+  fromJSON(value) {
+    return normalizeAvroLongValue(value).toString();
+  },
+  toJSON(value) {
+    return normalizeAvroLongValue(value).toString();
+  },
+  isValid(value) {
+    try {
+      normalizeAvroLongValue(value);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  compare(left, right) {
+    const leftValue = normalizeAvroLongValue(left);
+    const rightValue = normalizeAvroLongValue(right);
+    return leftValue === rightValue ? 0 : leftValue < rightValue ? -1 : 1;
+  },
+});
 const sessions = new Map();
 
 const MIME_TYPES = {
@@ -69,6 +100,7 @@ const SERVER_TRANSLATIONS = {
     fill_minio: "Fill in endpoint, bucket, access key ID, and secret access key.",
     fill_s3: "Fill in region, bucket, and credentials.",
     unsupported_preview_format: "Unsupported preview format.",
+    avro_preview_failed: "Failed to read Avro preview: {message}",
     parquet_preview_failed: "Failed to read Parquet preview: {message}",
     orc_preview_failed: "Failed to read ORC preview: {message}",
     orc_java_missing: "ORC preview requires Java in PATH on the backend host.",
@@ -94,6 +126,7 @@ const SERVER_TRANSLATIONS = {
     fill_minio: "Preencha endpoint, bucket, access key ID e secret access key.",
     fill_s3: "Preencha regiao, bucket e credenciais.",
     unsupported_preview_format: "Formato de pre-visualizacao nao suportado.",
+    avro_preview_failed: "Falha ao ler a pre-visualizacao do Avro: {message}",
     parquet_preview_failed: "Falha ao ler a pre-visualizacao do Parquet: {message}",
     orc_preview_failed: "Falha ao ler a pre-visualizacao do ORC: {message}",
     orc_java_missing: "A pre-visualizacao de ORC exige Java no PATH do backend.",
@@ -119,6 +152,7 @@ const SERVER_TRANSLATIONS = {
     fill_minio: "Completa endpoint, bucket, access key ID y secret access key.",
     fill_s3: "Completa region, bucket y credenciales.",
     unsupported_preview_format: "Formato de vista previa no compatible.",
+    avro_preview_failed: "Error al leer la vista previa de Avro: {message}",
     parquet_preview_failed: "Error al leer la vista previa de Parquet: {message}",
     orc_preview_failed: "Error al leer la vista previa de ORC: {message}",
     orc_java_missing: "La vista previa de ORC requiere Java en el PATH del backend.",
@@ -144,6 +178,7 @@ const SERVER_TRANSLATIONS = {
     fill_minio: "Compila endpoint, bucket, access key ID e secret access key.",
     fill_s3: "Compila regione, bucket e credenziali.",
     unsupported_preview_format: "Formato di anteprima non supportato.",
+    avro_preview_failed: "Errore durante la lettura dell'anteprima Avro: {message}",
     parquet_preview_failed: "Errore durante la lettura dell'anteprima Parquet: {message}",
     orc_preview_failed: "Errore durante la lettura dell'anteprima ORC: {message}",
     orc_java_missing: "L'anteprima ORC richiede Java nel PATH del backend.",
@@ -1251,6 +1286,19 @@ async function loadPreviewData(session, key, limit, order, mode, locale) {
     };
   }
 
+  if (extension === ".avro") {
+    const preview = await loadAvroPreviewData(session, key, limit, order, compression, locale);
+    return {
+      rows: preview.rows,
+      metadataColumns: preview.columns,
+      dfmKey: null,
+      previewFormat: formatPreviewExtension("avro", compression),
+      previewMode: "table",
+      rawText: null,
+      lineCount: preview.rows.length,
+    };
+  }
+
   if (extension === ".orc") {
     const preview = await loadOrcPreviewData(session, key, limit, order, compression, locale);
     return {
@@ -1603,6 +1651,94 @@ async function loadParquetPreviewRecords(session, key, limit, order, compression
   }
 }
 
+async function loadAvroPreviewData(session, key, limit, order, compression = "none", locale = "en") {
+  try {
+    const fileBuffer = await readObjectBuffer(session, key, compression);
+    const preview = await collectAvroPreview(fileBuffer, limit, order);
+    const normalized = normalizePreviewRecords(preview.records);
+
+    return {
+      rows: normalized.rows,
+      columns: preview.columns.length ? preview.columns : normalized.columns,
+    };
+  } catch (error) {
+    throw new LocalizedError("avro_preview_failed", {
+      message: localizeError(locale, error),
+    });
+  }
+}
+
+function collectAvroPreview(fileBuffer, limit, order) {
+  return new Promise((resolve, reject) => {
+    const records = [];
+    let columns = [];
+    let readerType = null;
+    const decoder = new avro.streams.BlockDecoder({
+      noDecode: true,
+      codecs: createAvroCodecs(),
+    });
+
+    decoder.on("metadata", (_type, _codec, header) => {
+      const schemaBuffer = header?.meta?.["avro.schema"];
+      const schema = Buffer.isBuffer(schemaBuffer) ? JSON.parse(schemaBuffer.toString("utf-8")) : schemaBuffer;
+      readerType = createAvroType(schema);
+      columns = extractAvroColumns(readerType);
+    });
+
+    decoder.on("data", (recordBuffer) => {
+      const record = readerType ? readerType.fromBuffer(recordBuffer) : recordBuffer;
+
+      if (order === "reverse" && limit !== null) {
+        if (records.length === limit) {
+          records.shift();
+        }
+        records.push(record);
+        return;
+      }
+
+      records.push(record);
+    });
+
+    decoder.on("end", () => {
+      resolve({
+        records: order === "reverse" ? records.reverse() : limit === null ? records : records.slice(0, limit),
+        columns,
+      });
+    });
+
+    decoder.on("error", reject);
+    decoder.end(fileBuffer);
+  });
+}
+
+function createAvroCodecs() {
+  return {
+    ...avro.streams.BlockDecoder.getDefaultCodecs(),
+    snappy(buffer, callback) {
+      try {
+        if (buffer.length < 4) {
+          throw new Error("Invalid Avro Snappy block.");
+        }
+
+        const compressed = buffer.subarray(0, buffer.length - 4);
+        callback(null, Buffer.from(snappy.uncompress(compressed)));
+      } catch (error) {
+        callback(error);
+      }
+    },
+  };
+}
+
+function extractAvroColumns(type) {
+  if (typeof type?.getFields !== "function") {
+    return [];
+  }
+
+  return type.getFields()
+    .map((field) => field?.getName?.() ?? "")
+    .filter((name) => typeof name === "string" && name.length);
+}
+
 async function loadOrcPreviewData(session, key, limit, order, compression = "none", locale = "en") {
   let tempDir;
 
@@ -1918,6 +2054,26 @@ function countRawPreviewLines(rawText) {
   return rawText.split(/\r?\n/).length;
 }
 
+function normalizeAvroLongValue(value) {
+  if (typeof value === "bigint") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    if (!Number.isInteger(value)) {
+      throw new Error("Avro long values must be integers.");
+    }
+
+    return BigInt(value);
+  }
+
+  if (typeof value === "string" && /^-?\d+$/.test(value.trim())) {
+    return BigInt(value.trim());
+  }
+
+  throw new Error("Invalid Avro long value.");
+}
+
 function normalizePreviewRecords(records) {
   const normalizedRecords = records.map((record) => normalizePreviewRecord(record));
   const columns = [];
@@ -1936,6 +2092,27 @@ function normalizePreviewRecords(records) {
       (columns.length ? columns : ["value"]).map((column) => stringifyPreviewValue(record[column])),
     ),
   };
+}
+
+function createAvroType(schema) {
+  return avro.Type.forSchema(schema, {
+    typeHook(currentSchema) {
+      if (currentSchema === "long") {
+        return AVRO_LONG_AS_STRING_TYPE;
+      }
+
+      if (
+        currentSchema &&
+        typeof currentSchema === "object" &&
+        !Array.isArray(currentSchema) &&
+        currentSchema.type === "long"
+      ) {
+        return AVRO_LONG_AS_STRING_TYPE;
+      }
+
+      return undefined;
+    },
+  });
 }
 
 function normalizePreviewRecord(record) {
@@ -1997,6 +2174,18 @@ function stripCompressionSuffix(key) {
   }
 
   if (normalizedKey.endsWith(".snappy.parq")) {
+    return key;
+  }
+
+  if (normalizedKey.endsWith(".gzip.avro")) {
+    return key;
+  }
+
+  if (normalizedKey.endsWith(".gz.avro")) {
+    return key;
+  }
+
+  if (normalizedKey.endsWith(".snappy.avro")) {
     return key;
   }
 

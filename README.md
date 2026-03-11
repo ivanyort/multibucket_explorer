@@ -7,8 +7,7 @@ Web application with a local backend for:
 - browsing prefixes in Google Cloud Storage buckets
 - browsing prefixes in MinIO buckets
 - listing folders and files
-- previewing CSV, JSON, DFM, Parquet, and ORC files, including `.gz` and `.snappy` compressed variants
-- previewing ORC files
+- previewing CSV, JSON, DFM, Parquet, Avro, and ORC files, including `.gz` and `.snappy` compressed variants
 - downloading files through a local proxy
 - deleting a specific file from the current listing
 - switching the frontend language between English, Brazilian Portuguese, Spanish, and Italian
@@ -89,7 +88,7 @@ Version bump rules:
 
 Examples:
 
-- `feat(preview): add orc support` -> minor
+- `feat(preview): add avro support` -> minor
 - `fix(docker): install java runtime` -> patch
 - `feat(api)!: change session contract` -> major
 
@@ -171,6 +170,7 @@ If a MinIO deployment uses a self-signed or otherwise untrusted HTTPS certificat
 - all connection fields are persisted in browser `localStorage`, including credentials, secret fields, textarea content, and provider-specific toggles
 - the backend keeps an in-memory session for 12 hours after connecting
 - preview compression support now includes both `.gz` and `.snappy` variants for supported previewable formats
+- Avro preview reads Avro Object Container Files in the backend, including files using the Avro `snappy` codec
 - ORC preview uses Apache ORC's Java tooling in the backend and downloads a cached jar on first ORC preview if it is not already available locally
 - setting `DISABLE_DESTRUCTIVE_OPERATIONS=true` disables prefix deletion and single-file deletion server-side and hides delete controls in the UI
 - this solution is intended for local or internal use

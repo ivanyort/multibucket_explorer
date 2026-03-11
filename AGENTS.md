@@ -17,6 +17,7 @@ This project is a local web explorer for object and hierarchical cloud storage, 
 - `samples/`: sample files used for local development
 
 The project uses plain ESM JavaScript and no frontend framework. Keep that simplicity unless explicitly asked to change it.
+Avro preview is handled in the backend for Avro Object Container Files, including files that use the Avro `snappy` codec.
 ORC preview now relies on Java being available on the backend host and caches the Apache ORC tools jar under `.cache/orc-tools/` on first use.
 The Docker image must include a Java runtime so ORC preview works in containerized runs too.
 When built by GitHub Actions for release publishing, the Docker image must receive `APP_VERSION` so the header version matches the published Docker tag.
