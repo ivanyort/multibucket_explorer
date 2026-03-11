@@ -51,6 +51,8 @@ Run the container:
 docker run --rm -p 8086:8086 multibucket-explorer
 ```
 
+The image now includes Java so ORC preview works inside Docker as well.
+
 Run the container with destructive operations disabled:
 
 ```bash

@@ -17,6 +17,7 @@ This project is a local web explorer for object and hierarchical cloud storage, 
 
 The project uses plain ESM JavaScript and no frontend framework. Keep that simplicity unless explicitly asked to change it.
 ORC preview now relies on Java being available on the backend host and caches the Apache ORC tools jar under `.cache/orc-tools/` on first use.
+The Docker image must include a Java runtime so ORC preview works in containerized runs too.
 
 # Supported Providers
 - AWS S3
