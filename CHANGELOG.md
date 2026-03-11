@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.4.2](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.4.2) - 2026-03-11
+
+### Changes
+- fix(adls): restore folder navigation and iceberg sample seeding (5d414e9)
+- chore(changelog): update for v0.4.1 [skip ci] (66e0c3f)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.4.1...v0.4.2)
+
+
 ## [v0.4.1](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.4.1) - 2026-03-11
 
 ### Changes
