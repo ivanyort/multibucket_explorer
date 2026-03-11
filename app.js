@@ -321,6 +321,7 @@ const translations = {
 };
 
 const elements = {
+  appVersionText: document.querySelector("#appVersionText"),
   connectionPanel: document.querySelector("#connectionPanel"),
   languageSelect: document.querySelector("#languageSelect"),
   connectionSummaryText: document.querySelector("#connectionSummaryText"),
@@ -408,6 +409,7 @@ elements.previewRowOrder.addEventListener("change", () => {
 restoreConnectionForm();
 syncProviderFields();
 applyLanguage();
+loadAppVersion();
 setStartupDiagnostic();
 refreshConnectionSummary();
 syncPreviewModeAvailability("");
@@ -1655,6 +1657,27 @@ function refreshConnectionSummary() {
   elements.connectionSummaryText.textContent = parts.length
     ? parts.join(" · ")
     : t("connection.settings");
+}
+
+async function loadAppVersion() {
+  if (!(elements.appVersionText instanceof HTMLElement)) {
+    return;
+  }
+
+  try {
+    const response = await apiFetch("/api/app-info");
+    const version = typeof response.version === "string" ? response.version.trim() : "";
+
+    if (!version) {
+      elements.appVersionText.hidden = true;
+      return;
+    }
+
+    elements.appVersionText.textContent = `v${version}`;
+    elements.appVersionText.hidden = false;
+  } catch {
+    elements.appVersionText.hidden = true;
+  }
 }
 
 async function apiFetch(url, init = {}) {

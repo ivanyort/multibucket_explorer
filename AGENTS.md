@@ -18,6 +18,7 @@ This project is a local web explorer for object and hierarchical cloud storage, 
 The project uses plain ESM JavaScript and no frontend framework. Keep that simplicity unless explicitly asked to change it.
 ORC preview now relies on Java being available on the backend host and caches the Apache ORC tools jar under `.cache/orc-tools/` on first use.
 The Docker image must include a Java runtime so ORC preview works in containerized runs too.
+When built by GitHub Actions for release publishing, the Docker image must receive `APP_VERSION` so the header version matches the published Docker tag.
 
 # Supported Providers
 - AWS S3
@@ -39,7 +40,7 @@ For MinIO, ignoring HTTPS certificate validation must remain an explicit per-con
 - build container image: `docker build -t multibucket-explorer .`
 - run container: `docker run --rm -p 8086:8086 multibucket-explorer`
 - run container in read-only mode for destructive actions: `docker run --rm -p 8086:8086 -e DISABLE_DESTRUCTIVE_OPERATIONS=true multibucket-explorer`
-- publish Docker Hub image automatically from `main` after configuring `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` GitHub secrets; semantic versioning is derived from commit messages (`BREAKING CHANGE`/`!` = major, `feat:` = minor, otherwise patch)
+- publish Docker Hub image automatically from `main` after configuring `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` GitHub secrets; semantic versioning is derived from commit messages (`BREAKING CHANGE`/`!` = major, `feat:` = minor, otherwise patch), and each automated tag must also create a GitHub Release with generated notes
 
 By default the application runs at `http://localhost:8086`.
 

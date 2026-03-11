@@ -67,7 +67,8 @@ docker run --rm -p 8090:8090 -e PORT=8090 multibucket-explorer
 
 ## Docker Hub Publishing
 
-The repository includes a GitHub Actions workflow at `.github/workflows/publish-docker.yml` that automatically calculates the next semantic version, creates the Git tag, and publishes the image to Docker Hub whenever code is pushed to `main`.
+The repository includes a GitHub Actions workflow at `.github/workflows/publish-docker.yml` that automatically calculates the next semantic version, creates the Git tag, creates a GitHub Release with generated release notes, and publishes the image to Docker Hub whenever code is pushed to `main`.
+The published container also injects that same calculated version into the app header through the `APP_VERSION` environment variable at image build time.
 
 Configure these GitHub repository secrets before using it:
 
@@ -92,7 +93,7 @@ Examples:
 - `fix(docker): install java runtime` -> patch
 - `feat(api)!: change session contract` -> major
 
-The workflow tags and publishes the resulting version as both `X.Y.Z` and `vX.Y.Z`, and also refreshes `latest`.
+The workflow tags and publishes the resulting version as both `X.Y.Z` and `vX.Y.Z`, creates a matching GitHub Release, and also refreshes `latest`.
 
 ## How It Works
 

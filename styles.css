@@ -93,6 +93,56 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.hero-title-block {
+  min-width: 0;
+}
+
+.hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.eyebrow span {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  opacity: 0.82;
+}
+
+.app-footer {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px 28px;
+}
+
+.footer-repo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--brand-dark);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.83rem;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  opacity: 0.8;
+}
+
+.footer-repo-link svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  fill: currentColor;
+}
+
+.footer-repo-link:hover,
+.footer-repo-link:focus-visible {
+  color: var(--brand);
+  text-decoration: underline;
+}
+
 .eyebrow,
 .panel-kicker,
 .toolbar-label {

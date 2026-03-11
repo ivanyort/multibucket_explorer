@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
-import { createReadStream, createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream, readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rename, rm, stat, writeFile } from "node:fs/promises";
 import https from "node:https";
 import { spawn } from "node:child_process";
@@ -27,6 +27,10 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const PACKAGE_VERSION = JSON.parse(readFileSync(path.join(__dirname, "package.json"), "utf-8")).version ?? "0.0.0";
+const APP_VERSION = typeof process.env.APP_VERSION === "string" && process.env.APP_VERSION.trim()
+  ? process.env.APP_VERSION.trim()
+  : PACKAGE_VERSION;
 const PORT = Number.parseInt(process.env.PORT ?? "8086", 10);
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const DESTRUCTIVE_OPERATIONS_ENABLED = !isTruthyEnv(process.env.DISABLE_DESTRUCTIVE_OPERATIONS);
@@ -171,6 +175,11 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/api/app-info") {
+      handleAppInfo(response);
+      return;
+    }
+
     if (request.method === "GET" && url.pathname === "/api/preview") {
       await handlePreview(url, response, locale);
       return;
@@ -241,6 +250,12 @@ async function handleListObjects(url, response) {
       folders: folders.length,
       files: files.length,
     },
+  });
+}
+
+function handleAppInfo(response) {
+  sendJson(response, 200, {
+    version: APP_VERSION,
   });
 }
 
