@@ -13,6 +13,7 @@ This project is a local web explorer for object and hierarchical cloud storage, 
 - `index.html`: page structure
 - `styles.css`: interface styling
 - `start.sh`: local bootstrap script with automatic `npm install` when `node_modules` is missing
+- `CHANGELOG.md`: repository release history maintained by the release workflow
 - `samples/`: sample files used for local development
 
 The project uses plain ESM JavaScript and no frontend framework. Keep that simplicity unless explicitly asked to change it.
@@ -40,7 +41,7 @@ For MinIO, ignoring HTTPS certificate validation must remain an explicit per-con
 - build container image: `docker build -t multibucket-explorer .`
 - run container: `docker run --rm -p 8086:8086 multibucket-explorer`
 - run container in read-only mode for destructive actions: `docker run --rm -p 8086:8086 -e DISABLE_DESTRUCTIVE_OPERATIONS=true multibucket-explorer`
-- publish Docker Hub image automatically from `main` after configuring `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` GitHub secrets; semantic versioning is derived from commit messages (`BREAKING CHANGE`/`!` = major, `feat:` = minor, otherwise patch), and each automated tag must also create a GitHub Release with generated notes
+- publish Docker Hub image automatically from `main` after configuring `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` GitHub secrets; semantic versioning is derived from commit messages (`BREAKING CHANGE`/`!` = major, `feat:` = minor, otherwise patch), each automated tag must also create a GitHub Release, and the workflow must prepend the new entry to `CHANGELOG.md`
 
 By default the application runs at `http://localhost:8086`.
 

@@ -8,6 +8,7 @@ on:
 
 jobs:
   publish:
+    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -85,14 +86,71 @@ jobs:
           echo "tag=$next_tag" >> "$GITHUB_OUTPUT"
           echo "created=true" >> "$GITHUB_OUTPUT"
 
+      - name: Build changelog entry
+        id: changelog
+        if: steps.version.outputs.created == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          latest_previous_tag="$(git tag --list 'v*' | sort -V | tail -n 2 | head -n 1 || true)"
+          if [ -n "$latest_previous_tag" ]; then
+            compare_url="https://github.com/${GITHUB_REPOSITORY}/compare/${latest_previous_tag}...${{ steps.version.outputs.tag }}"
+            commit_range="${latest_previous_tag}..HEAD"
+          else
+            compare_url="https://github.com/${GITHUB_REPOSITORY}/commits/${{ steps.version.outputs.tag }}"
+            commit_range="HEAD"
+          fi
+
+          release_date="$(date -u +%Y-%m-%d)"
+          notes_file="$(mktemp)"
+          {
+            echo "## [${{ steps.version.outputs.tag }}](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${{ steps.version.outputs.tag }}) - ${release_date}"
+            echo
+            echo "### Changes"
+            git log "$commit_range" --pretty=format:'- %s (%h)'
+            echo
+            echo
+            echo "[Full diff](${compare_url})"
+          } > "$notes_file"
+
+          {
+            echo "notes_file=$notes_file"
+            echo "previous_tag=$latest_previous_tag"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update changelog
+        if: steps.version.outputs.created == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          temp_changelog="$(mktemp)"
+          {
+            sed -n '1,2p' CHANGELOG.md
+            echo
+            cat "${{ steps.changelog.outputs.notes_file }}"
+            echo
+            tail -n +3 CHANGELOG.md
+          } > "$temp_changelog"
+
+          mv "$temp_changelog" CHANGELOG.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "chore(changelog): update for ${{ steps.version.outputs.tag }} [skip ci]"
+          git push origin HEAD:main
+
       - name: Create GitHub Release
+        if: steps.version.outputs.created == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release view "${{ steps.version.outputs.tag }}" >/dev/null 2>&1 || \
           gh release create "${{ steps.version.outputs.tag }}" \
             --title "${{ steps.version.outputs.tag }}" \
-            --generate-notes
+            --notes-file "${{ steps.changelog.outputs.notes_file }}"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
