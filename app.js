@@ -6,6 +6,7 @@ const state = {
   prefix: "",
   selectedKey: "",
   sessionId: "",
+  destructiveOperationsEnabled: true,
   objectItems: [],
   sort: {
     column: "name",
@@ -60,6 +61,7 @@ const translations = {
       clearPrefix: "Clear prefix", connectToList: "Connect to list storage objects.",
       noItems: "No items found in this prefix.", loading: "Loading objects...", failed: "Failed to list objects.",
       folder: "Folder", file: "File", actions: "Actions", deleteFile: "Delete file",
+      destructiveDisabled: "Delete actions are disabled by the server.",
     },
     preview: {
       kicker: "File Preview", title: "Preview", view: "View", table: "Table", raw: "Raw", rows: "Rows", all: "All",
@@ -89,6 +91,7 @@ const translations = {
       enterCredentials: "Enter credentials and click connect.", startupDiagnostic: "Frontend configured to use the local API.\nStart the Node server and open the application at http://localhost:8086.",
       connecting: "Connecting...", connectingTo: "Connecting to {target} ({location})...", validateAccess: "Calling the local backend to validate storage access...",
       connectionOk: "Connection OK through the local backend.\nProvider: {provider}\nTarget: {target}\nLocation: {location}\nSession: {session}",
+      destructiveDisabled: "Destructive operations are disabled by the server configuration.",
       failedToConnect: "Failed to connect.", restored: "Connection data restored from the browser.",
       loadedSummary: "{folders} folder(s) and {files} file(s) loaded from {target}.",
       unexpectedStorageError: "Unexpected error while accessing storage.", backendError: "Error returned by the local backend:\n{message}",
@@ -130,6 +133,7 @@ const translations = {
       clearPrefix: "Limpar prefixo", connectToList: "Conecte-se para listar os objetos do storage.",
       noItems: "Nenhum item encontrado neste prefixo.", loading: "Carregando objetos...", failed: "Falha ao listar objetos.",
       folder: "Pasta", file: "Arquivo", actions: "Ações", deleteFile: "Apagar arquivo",
+      destructiveDisabled: "As ações de exclusão estão desativadas pelo servidor.",
     },
     preview: {
       kicker: "Pré-visualização de Arquivo", title: "Prévia", view: "Visualização", table: "Tabela", raw: "Bruto", rows: "Linhas", all: "Todas",
@@ -159,6 +163,7 @@ const translations = {
       enterCredentials: "Preencha as credenciais e clique em conectar.", startupDiagnostic: "Frontend configurado para usar a API local.\nInicie o servidor Node e abra a aplicação em http://localhost:8086.",
       connecting: "Conectando...", connectingTo: "Conectando a {target} ({location})...", validateAccess: "Chamando o backend local para validar o acesso ao storage...",
       connectionOk: "Conexão OK pelo backend local.\nProvedor: {provider}\nDestino: {target}\nLocalização: {location}\nSessão: {session}",
+      destructiveDisabled: "As operações destrutivas estão desativadas pela configuração do servidor.",
       failedToConnect: "Falha ao conectar.", restored: "Dados de conexão restaurados do navegador.",
       loadedSummary: "{folders} pasta(s) e {files} arquivo(s) carregados de {target}.",
       unexpectedStorageError: "Erro inesperado ao acessar o storage.", backendError: "Erro retornado pelo backend local:\n{message}",
@@ -200,6 +205,7 @@ const translations = {
       clearPrefix: "Borrar prefijo", connectToList: "Conéctate para listar los objetos del storage.",
       noItems: "No se encontraron elementos en este prefijo.", loading: "Cargando objetos...", failed: "Error al listar objetos.",
       folder: "Carpeta", file: "Archivo", actions: "Acciones", deleteFile: "Borrar archivo",
+      destructiveDisabled: "Las acciones de borrado están deshabilitadas por el servidor.",
     },
     preview: {
       kicker: "Vista Previa de Archivo", title: "Vista previa", view: "Vista", table: "Tabla", raw: "Raw", rows: "Filas", all: "Todas",
@@ -229,6 +235,7 @@ const translations = {
       enterCredentials: "Ingresa las credenciales y haz clic en conectar.", startupDiagnostic: "Frontend configurado para usar la API local.\nInicia el servidor Node y abre la aplicación en http://localhost:8086.",
       connecting: "Conectando...", connectingTo: "Conectando a {target} ({location})...", validateAccess: "Llamando al backend local para validar el acceso al storage...",
       connectionOk: "Conexión OK a través del backend local.\nProveedor: {provider}\nDestino: {target}\nUbicación: {location}\nSesión: {session}",
+      destructiveDisabled: "Las operaciones destructivas están deshabilitadas por la configuración del servidor.",
       failedToConnect: "Error al conectar.", restored: "Datos de conexión restaurados desde el navegador.",
       loadedSummary: "{folders} carpeta(s) y {files} archivo(s) cargados desde {target}.",
       unexpectedStorageError: "Error inesperado al acceder al storage.", backendError: "Error devuelto por el backend local:\n{message}",
@@ -270,6 +277,7 @@ const translations = {
       clearPrefix: "Cancella prefisso", connectToList: "Connettiti per elencare gli oggetti dello storage.",
       noItems: "Nessun elemento trovato in questo prefisso.", loading: "Caricamento oggetti...", failed: "Errore durante l'elenco degli oggetti.",
       folder: "Cartella", file: "File", actions: "Azioni", deleteFile: "Elimina file",
+      destructiveDisabled: "Le azioni di eliminazione sono disabilitate dal server.",
     },
     preview: {
       kicker: "Anteprima File", title: "Anteprima", view: "Vista", table: "Tabella", raw: "Raw", rows: "Righe", all: "Tutte",
@@ -299,6 +307,7 @@ const translations = {
       enterCredentials: "Inserisci le credenziali e fai clic su connetti.", startupDiagnostic: "Frontend configurato per usare l'API locale.\nAvvia il server Node e apri l'applicazione su http://localhost:8086.",
       connecting: "Connessione...", connectingTo: "Connessione a {target} ({location})...", validateAccess: "Chiamata al backend locale per validare l'accesso allo storage...",
       connectionOk: "Connessione OK tramite il backend locale.\nProvider: {provider}\nDestinazione: {target}\nPosizione: {location}\nSessione: {session}",
+      destructiveDisabled: "Le operazioni distruttive sono disabilitate dalla configurazione del server.",
       failedToConnect: "Connessione non riuscita.", restored: "Dati di connessione ripristinati dal browser.",
       loadedSummary: "{folders} cartella/e e {files} file caricati da {target}.",
       unexpectedStorageError: "Errore imprevisto durante l'accesso allo storage.", backendError: "Errore restituito dal backend locale:\n{message}",
@@ -466,6 +475,7 @@ function applyLanguage() {
   if (state.objectItems.length) {
     renderObjectList();
   }
+  syncDestructiveControls();
   if (state.selectedKey && state.sessionId) {
     previewObject(state.selectedKey);
   }
@@ -508,7 +518,9 @@ async function connectToBucket() {
     state.provider = response.provider ?? connection.provider;
     state.targetName = response.targetName ?? state.targetName;
     state.locationName = response.locationName ?? state.locationName;
+    state.destructiveOperationsEnabled = response.destructiveOperationsEnabled !== false;
     elements.refreshButton.disabled = false;
+    syncDestructiveControls();
     await loadObjects("");
     elements.connectionPanel.open = false;
     refreshConnectionSummary();
@@ -520,6 +532,9 @@ async function connectToBucket() {
         session: state.sessionId,
       }),
     );
+    if (!state.destructiveOperationsEnabled) {
+      setDiagnosticMessage(`${elements.diagnosticBox.textContent}\n\n${t("messages.destructiveDisabled")}`);
+    }
   } catch (error) {
     renderObjectPlaceholder(t("messages.failedToConnect"));
     setConnectionStatus(getErrorMessage(error), true);
@@ -534,7 +549,7 @@ async function loadObjects(prefix) {
 
   state.prefix = prefix;
   renderCurrentPrefix();
-  elements.clearPrefixButton.disabled = !prefix;
+  syncDestructiveControls();
   renderObjectPlaceholder(t("browser.loading"));
   resetPreview(t("preview.selectCompatible"));
 
@@ -670,7 +685,7 @@ function renderObjectList() {
 
     const actionsCell = document.createElement("td");
     actionsCell.className = "object-actions-cell";
-    if (item.type === "file") {
+    if (item.type === "file" && state.destructiveOperationsEnabled) {
       const deleteButton = document.createElement("button");
       deleteButton.type = "button";
       deleteButton.className = "ghost-button danger-ghost-button row-action-button";
@@ -1123,6 +1138,11 @@ async function clearCurrentPrefix() {
     return;
   }
 
+  if (!state.destructiveOperationsEnabled) {
+    setConnectionStatus(t("messages.destructiveDisabled"), true);
+    return;
+  }
+
   const confirmation = await confirmDeletion({
     title: t("delete.confirmTitle"),
     body: t("delete.confirmBody"),
@@ -1170,6 +1190,11 @@ async function clearCurrentPrefix() {
 
 async function deleteObjectFile(key) {
   if (!state.sessionId || !key) {
+    return;
+  }
+
+  if (!state.destructiveOperationsEnabled) {
+    setConnectionStatus(t("messages.destructiveDisabled"), true);
     return;
   }
 
@@ -1275,6 +1300,12 @@ function showDeleteProgress({ title, body, target }) {
 function hideDeleteProgress() {
   elements.deleteProgressModal.hidden = true;
   document.body.style.overflow = "";
+}
+
+function syncDestructiveControls() {
+  const canDeletePrefix = state.destructiveOperationsEnabled && Boolean(state.prefix) && Boolean(state.sessionId);
+  elements.clearPrefixButton.disabled = !canDeletePrefix;
+  elements.clearPrefixButton.hidden = !state.destructiveOperationsEnabled;
 }
 
 function setStartupDiagnostic() {

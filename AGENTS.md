@@ -36,6 +36,7 @@ For MinIO, ignoring HTTPS certificate validation must remain an explicit per-con
 - standard local flow: `./start.sh`
 - build container image: `docker build -t multibucket-explorer .`
 - run container: `docker run --rm -p 8086:8086 multibucket-explorer`
+- run container in read-only mode for destructive actions: `docker run --rm -p 8086:8086 -e DISABLE_DESTRUCTIVE_OPERATIONS=true multibucket-explorer`
 
 By default the application runs at `http://localhost:8086`.
 
@@ -55,8 +56,9 @@ By default the application runs at `http://localhost:8086`.
 2. Treat route inputs and query string values as untrusted. Validate `sessionId`, `prefix`, `key`, preview limits, and preview modes.
 3. When changing session behavior, preserve in-memory expiration and review credential exposure risks.
 4. Changes to the destructive `/api/delete-prefix` endpoint require extra care. Never allow deleting the storage root.
-5. Prefer useful error messages without exposing secrets, keys, or unnecessary stack traces.
-6. Provider-specific behavior should be isolated behind storage helper functions or provider abstractions rather than spread through unrelated preview code.
+5. When `DISABLE_DESTRUCTIVE_OPERATIONS=true` is set, all destructive endpoints must remain blocked server-side regardless of frontend state.
+6. Prefer useful error messages without exposing secrets, keys, or unnecessary stack traces.
+7. Provider-specific behavior should be isolated behind storage helper functions or provider abstractions rather than spread through unrelated preview code.
 
 # Frontend Rules
 1. Keep the interface in English unless the user explicitly requests localization.
@@ -69,6 +71,7 @@ By default the application runs at `http://localhost:8086`.
 8. Long-running destructive actions should show explicit in-progress feedback in the UI even when the backend only provides completion status.
 9. The frontend must remain multilingual with English as the default plus Brazilian Portuguese (`pt-BR`), Spanish (`es`), and Italian (`it`) for user-facing UI text and frontend-generated messages.
 10. Backend error responses surfaced in the frontend must follow the same language set when they originate from application-controlled validation or guardrails.
+11. When destructive operations are disabled by server configuration, the UI should hide or disable delete affordances instead of inviting an action that will always fail.
 
 # Security And Sensitive Data
 1. Storage credentials are entered through the UI and are currently persisted in `localStorage`. All provider-specific connection fields, credentials, secrets, textarea content, and toggles must remain persistable unless the behavior is intentionally redesigned. Any change in this area must consider security impact and be documented.
@@ -86,3 +89,4 @@ By default the application runs at `http://localhost:8086`.
 1. This file should contain only durable project guidance.
 2. Temporary task notes or experiments should not live here.
 3. If a decision changes how the app should be run, developed, or operated, record it in this file.
+4. `DISABLE_DESTRUCTIVE_OPERATIONS=true` is the runtime switch for read-only delete behavior and must block both prefix deletion and single-file deletion.

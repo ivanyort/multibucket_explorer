@@ -28,6 +28,12 @@ npm start
 
 By default the application runs at `http://localhost:8086`.
 
+To start in read-only mode for destructive operations, set `DISABLE_DESTRUCTIVE_OPERATIONS=true`:
+
+```bash
+DISABLE_DESTRUCTIVE_OPERATIONS=true npm start
+```
+
 ## Docker
 
 Build the image:
@@ -40,6 +46,12 @@ Run the container:
 
 ```bash
 docker run --rm -p 8086:8086 multibucket-explorer
+```
+
+Run the container with destructive operations disabled:
+
+```bash
+docker run --rm -p 8086:8086 -e DISABLE_DESTRUCTIVE_OPERATIONS=true multibucket-explorer
 ```
 
 If you want a different port inside the container, set `PORT` explicitly:
@@ -121,5 +133,6 @@ If a MinIO deployment uses a self-signed or otherwise untrusted HTTPS certificat
 
 - all connection fields are persisted in browser `localStorage`, including credentials, secret fields, textarea content, and provider-specific toggles
 - the backend keeps an in-memory session for 12 hours after connecting
+- setting `DISABLE_DESTRUCTIVE_OPERATIONS=true` disables prefix deletion and single-file deletion server-side and hides delete controls in the UI
 - this solution is intended for local or internal use
 - for production, the preferred approach is to avoid sending credentials through the frontend and use server-side authentication

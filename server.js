@@ -25,6 +25,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PORT = Number.parseInt(process.env.PORT ?? "8086", 10);
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const DESTRUCTIVE_OPERATIONS_ENABLED = !isTruthyEnv(process.env.DISABLE_DESTRUCTIVE_OPERATIONS);
 const sessions = new Map();
 
 const MIME_TYPES = {
@@ -41,6 +42,7 @@ const SERVER_TRANSLATIONS = {
     key_required: "The key parameter is required.",
     delete_root_forbidden: "For safety, deleting the storage root is not allowed.",
     delete_file_target_invalid: "Deleting a single file requires a file key, not a folder or root.",
+    destructive_operations_disabled: "Destructive operations are disabled by the server configuration.",
     access_denied: "Access denied.",
     file_not_found: "File not found.",
     file_empty: "The file was empty.",
@@ -62,6 +64,7 @@ const SERVER_TRANSLATIONS = {
     key_required: "O parametro key e obrigatorio.",
     delete_root_forbidden: "Por seguranca, nao e permitido apagar a raiz do storage.",
     delete_file_target_invalid: "Apagar um arquivo individual exige a chave de um arquivo, nao de uma pasta ou da raiz.",
+    destructive_operations_disabled: "As operacoes destrutivas estao desativadas pela configuracao do servidor.",
     access_denied: "Acesso negado.",
     file_not_found: "Arquivo nao encontrado.",
     file_empty: "O arquivo esta vazio.",
@@ -83,6 +86,7 @@ const SERVER_TRANSLATIONS = {
     key_required: "El parametro key es obligatorio.",
     delete_root_forbidden: "Por seguridad, no se permite borrar la raiz del storage.",
     delete_file_target_invalid: "Borrar un archivo individual requiere la clave de un archivo, no de una carpeta ni de la raiz.",
+    destructive_operations_disabled: "Las operaciones destructivas estan deshabilitadas por la configuracion del servidor.",
     access_denied: "Acceso denegado.",
     file_not_found: "Archivo no encontrado.",
     file_empty: "El archivo esta vacio.",
@@ -104,6 +108,7 @@ const SERVER_TRANSLATIONS = {
     key_required: "Il parametro key e obbligatorio.",
     delete_root_forbidden: "Per sicurezza, non e consentito eliminare la radice dello storage.",
     delete_file_target_invalid: "Per eliminare un singolo file serve la chiave di un file, non di una cartella o della radice.",
+    destructive_operations_disabled: "Le operazioni distruttive sono disabilitate dalla configurazione del server.",
     access_denied: "Accesso negato.",
     file_not_found: "File non trovato.",
     file_empty: "Il file e vuoto.",
@@ -200,6 +205,7 @@ async function handleConnect(request, response) {
     provider: connection.provider,
     targetName: getConnectionTargetName(connection),
     locationName: getConnectionLocationName(connection),
+    destructiveOperationsEnabled: DESTRUCTIVE_OPERATIONS_ENABLED,
   });
 }
 
@@ -273,6 +279,7 @@ async function handleDownload(url, response) {
 }
 
 async function handleDeletePrefix(request, response) {
+  ensureDestructiveOperationsEnabled();
   const body = await readJsonBody(request);
   const session = getSession(typeof body.sessionId === "string" ? body.sessionId : "");
   const prefix = typeof body.prefix === "string" ? body.prefix.trim() : "";
@@ -290,6 +297,7 @@ async function handleDeletePrefix(request, response) {
 }
 
 async function handleDeleteFile(request, response) {
+  ensureDestructiveOperationsEnabled();
   const body = await readJsonBody(request);
   const session = getSession(typeof body.sessionId === "string" ? body.sessionId : "");
   const key = typeof body.key === "string" ? body.key.trim() : "";
@@ -910,6 +918,20 @@ function pruneSessions() {
       sessions.delete(sessionId);
     }
   }
+}
+
+function ensureDestructiveOperationsEnabled() {
+  if (!DESTRUCTIVE_OPERATIONS_ENABLED) {
+    throw new LocalizedError("destructive_operations_disabled");
+  }
+}
+
+function isTruthyEnv(value) {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
 }
 
 function trimCurrentPrefix(key, prefix) {
