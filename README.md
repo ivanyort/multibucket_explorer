@@ -9,6 +9,7 @@ Web application with a local backend for:
 - listing folders and files
 - previewing CSV, JSON, DFM, and Parquet files
 - downloading files through a local proxy
+- deleting a specific file from the current listing
 - switching the frontend language between English, Brazilian Portuguese, Spanish, and Italian
 
 ## Running
@@ -70,6 +71,7 @@ Minimum permissions:
 
 - `s3:ListBucket` on the bucket
 - `s3:GetObject` on the objects
+- `s3:DeleteObject` if you want to delete a specific file
 - `s3:DeleteObject` if you want to use prefix deletion
 
 ### Azure Data Lake Storage Gen2
@@ -86,6 +88,7 @@ Minimum effective permissions:
 
 - list paths in the container
 - read file content
+- delete a specific file if you want to use file deletion
 - delete paths recursively if you want to use prefix deletion
 
 ### Google Cloud Storage

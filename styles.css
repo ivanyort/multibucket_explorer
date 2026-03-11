@@ -594,6 +594,7 @@ code {
 
 .object-name-cell strong {
   font-size: 0.96rem;
+  overflow-wrap: anywhere;
 }
 
 .object-icon {
@@ -629,6 +630,22 @@ code {
   font: inherit;
   color: inherit;
   cursor: pointer;
+}
+
+.object-actions-cell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.danger-ghost-button {
+  color: var(--danger);
+  border-color: rgba(159, 51, 51, 0.18);
+  background: rgba(159, 51, 51, 0.06);
+}
+
+.row-action-button {
+  padding: 8px 12px;
+  font-size: 0.85rem;
 }
 
 .preview-table-wrap {

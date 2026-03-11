@@ -13,6 +13,7 @@ import { Storage as GoogleCloudStorage } from "@google-cloud/storage";
 import { parquetMetadataAsync, parquetReadObjects } from "hyparquet";
 import { compressors as hyparquetCompressors } from "hyparquet-compressors";
 import {
+  DeleteObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
@@ -39,6 +40,7 @@ const SERVER_TRANSLATIONS = {
     internal_server_error: "Internal server error.",
     key_required: "The key parameter is required.",
     delete_root_forbidden: "For safety, deleting the storage root is not allowed.",
+    delete_file_target_invalid: "Deleting a single file requires a file key, not a folder or root.",
     access_denied: "Access denied.",
     file_not_found: "File not found.",
     file_empty: "The file was empty.",
@@ -59,6 +61,7 @@ const SERVER_TRANSLATIONS = {
     internal_server_error: "Erro interno do servidor.",
     key_required: "O parametro key e obrigatorio.",
     delete_root_forbidden: "Por seguranca, nao e permitido apagar a raiz do storage.",
+    delete_file_target_invalid: "Apagar um arquivo individual exige a chave de um arquivo, nao de uma pasta ou da raiz.",
     access_denied: "Acesso negado.",
     file_not_found: "Arquivo nao encontrado.",
     file_empty: "O arquivo esta vazio.",
@@ -79,6 +82,7 @@ const SERVER_TRANSLATIONS = {
     internal_server_error: "Error interno del servidor.",
     key_required: "El parametro key es obligatorio.",
     delete_root_forbidden: "Por seguridad, no se permite borrar la raiz del storage.",
+    delete_file_target_invalid: "Borrar un archivo individual requiere la clave de un archivo, no de una carpeta ni de la raiz.",
     access_denied: "Acceso denegado.",
     file_not_found: "Archivo no encontrado.",
     file_empty: "El archivo esta vacio.",
@@ -99,6 +103,7 @@ const SERVER_TRANSLATIONS = {
     internal_server_error: "Errore interno del server.",
     key_required: "Il parametro key e obbligatorio.",
     delete_root_forbidden: "Per sicurezza, non e consentito eliminare la radice dello storage.",
+    delete_file_target_invalid: "Per eliminare un singolo file serve la chiave di un file, non di una cartella o della radice.",
     access_denied: "Accesso negato.",
     file_not_found: "File non trovato.",
     file_empty: "Il file e vuoto.",
@@ -152,6 +157,11 @@ const server = createServer(async (request, response) => {
 
     if (request.method === "POST" && url.pathname === "/api/delete-prefix") {
       await handleDeletePrefix(request, response);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/delete-file") {
+      await handleDeleteFile(request, response);
       return;
     }
 
@@ -276,6 +286,23 @@ async function handleDeletePrefix(request, response) {
   sendJson(response, 200, {
     deletedCount,
     prefix,
+  });
+}
+
+async function handleDeleteFile(request, response) {
+  const body = await readJsonBody(request);
+  const session = getSession(typeof body.sessionId === "string" ? body.sessionId : "");
+  const key = typeof body.key === "string" ? body.key.trim() : "";
+
+  if (!key || key.endsWith("/")) {
+    throw new LocalizedError("delete_file_target_invalid");
+  }
+
+  await deleteStorageFile(session, key);
+
+  sendJson(response, 200, {
+    deletedCount: 1,
+    key,
   });
 }
 
@@ -683,6 +710,25 @@ async function deleteStoragePrefix(session, prefix) {
   } while (continuationToken);
 
   return deletedCount;
+}
+
+async function deleteStorageFile(session, key) {
+  if (session.storage.provider === "adls") {
+    await session.storage.fileSystemClient.getFileClient(key).delete();
+    return;
+  }
+
+  if (session.storage.provider === "gcs") {
+    await session.storage.bucket.file(key).delete();
+    return;
+  }
+
+  await session.storage.client.send(
+    new DeleteObjectCommand({
+      Bucket: session.storage.bucket,
+      Key: key,
+    }),
+  );
 }
 
 async function getDownloadResponse(session, key) {

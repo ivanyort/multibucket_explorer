@@ -59,7 +59,7 @@ const translations = {
       kicker: "Object Browser", title: "Objects", currentPrefix: "Current prefix", refresh: "Refresh",
       clearPrefix: "Clear prefix", connectToList: "Connect to list storage objects.",
       noItems: "No items found in this prefix.", loading: "Loading objects...", failed: "Failed to list objects.",
-      folder: "Folder", file: "File",
+      folder: "Folder", file: "File", actions: "Actions", deleteFile: "Delete file",
     },
     preview: {
       kicker: "File Preview", title: "Preview", view: "View", table: "Table", raw: "Raw", rows: "Rows", all: "All",
@@ -79,6 +79,10 @@ const translations = {
       confirmAction: "Delete files", progressKicker: "Delete In Progress", progressTitle: "Deleting files",
       progressBody: "The selected prefix is being deleted. This can take a while when many files are involved.",
       cancelled: "Prefix deletion cancelled.", deleting: "Deleting all objects under {prefix}...", deleted: "{count} object(s) deleted from {prefix}.",
+      confirmFileTitle: "Delete file", confirmFileBody: "Are you absolutely sure you want to delete this file?",
+      confirmFileAction: "Delete file", fileCancelled: "File deletion cancelled.", deletingFile: "Deleting {key}...",
+      fileDeleted: "{key} deleted.", progressFileTitle: "Deleting file",
+      progressFileBody: "The selected file is being deleted.",
     },
     common: { cancel: "Cancel" },
     messages: {
@@ -125,7 +129,7 @@ const translations = {
       kicker: "Navegador de Objetos", title: "Objetos", currentPrefix: "Prefixo atual", refresh: "Atualizar",
       clearPrefix: "Limpar prefixo", connectToList: "Conecte-se para listar os objetos do storage.",
       noItems: "Nenhum item encontrado neste prefixo.", loading: "Carregando objetos...", failed: "Falha ao listar objetos.",
-      folder: "Pasta", file: "Arquivo",
+      folder: "Pasta", file: "Arquivo", actions: "Ações", deleteFile: "Apagar arquivo",
     },
     preview: {
       kicker: "Pré-visualização de Arquivo", title: "Prévia", view: "Visualização", table: "Tabela", raw: "Bruto", rows: "Linhas", all: "Todas",
@@ -145,6 +149,10 @@ const translations = {
       confirmAction: "Apagar arquivos", progressKicker: "Exclusão em Andamento", progressTitle: "Apagando arquivos",
       progressBody: "O prefixo selecionado está sendo apagado. Isso pode demorar quando houver muitos arquivos envolvidos.",
       cancelled: "Exclusão do prefixo cancelada.", deleting: "Apagando todos os objetos sob {prefix}...", deleted: "{count} objeto(s) apagado(s) de {prefix}.",
+      confirmFileTitle: "Apagar arquivo", confirmFileBody: "Você tem certeza absoluta que deseja apagar este arquivo?",
+      confirmFileAction: "Apagar arquivo", fileCancelled: "Exclusão do arquivo cancelada.", deletingFile: "Apagando {key}...",
+      fileDeleted: "{key} apagado.", progressFileTitle: "Apagando arquivo",
+      progressFileBody: "O arquivo selecionado está sendo apagado.",
     },
     common: { cancel: "Cancelar" },
     messages: {
@@ -191,7 +199,7 @@ const translations = {
       kicker: "Explorador de Objetos", title: "Objetos", currentPrefix: "Prefijo actual", refresh: "Actualizar",
       clearPrefix: "Borrar prefijo", connectToList: "Conéctate para listar los objetos del storage.",
       noItems: "No se encontraron elementos en este prefijo.", loading: "Cargando objetos...", failed: "Error al listar objetos.",
-      folder: "Carpeta", file: "Archivo",
+      folder: "Carpeta", file: "Archivo", actions: "Acciones", deleteFile: "Borrar archivo",
     },
     preview: {
       kicker: "Vista Previa de Archivo", title: "Vista previa", view: "Vista", table: "Tabla", raw: "Raw", rows: "Filas", all: "Todas",
@@ -211,6 +219,10 @@ const translations = {
       confirmAction: "Borrar archivos", progressKicker: "Eliminación en Curso", progressTitle: "Borrando archivos",
       progressBody: "Se está borrando el prefijo seleccionado. Esto puede tardar cuando hay muchos archivos involucrados.",
       cancelled: "Eliminación del prefijo cancelada.", deleting: "Borrando todos los objetos bajo {prefix}...", deleted: "{count} objeto(s) eliminado(s) de {prefix}.",
+      confirmFileTitle: "Borrar archivo", confirmFileBody: "¿Estás absolutamente seguro de que deseas borrar este archivo?",
+      confirmFileAction: "Borrar archivo", fileCancelled: "Eliminación del archivo cancelada.", deletingFile: "Borrando {key}...",
+      fileDeleted: "{key} eliminado.", progressFileTitle: "Borrando archivo",
+      progressFileBody: "Se está borrando el archivo seleccionado.",
     },
     common: { cancel: "Cancelar" },
     messages: {
@@ -257,7 +269,7 @@ const translations = {
       kicker: "Esploratore Oggetti", title: "Oggetti", currentPrefix: "Prefisso corrente", refresh: "Aggiorna",
       clearPrefix: "Cancella prefisso", connectToList: "Connettiti per elencare gli oggetti dello storage.",
       noItems: "Nessun elemento trovato in questo prefisso.", loading: "Caricamento oggetti...", failed: "Errore durante l'elenco degli oggetti.",
-      folder: "Cartella", file: "File",
+      folder: "Cartella", file: "File", actions: "Azioni", deleteFile: "Elimina file",
     },
     preview: {
       kicker: "Anteprima File", title: "Anteprima", view: "Vista", table: "Tabella", raw: "Raw", rows: "Righe", all: "Tutte",
@@ -277,6 +289,10 @@ const translations = {
       confirmAction: "Elimina file", progressKicker: "Eliminazione in corso", progressTitle: "Eliminazione file",
       progressBody: "Il prefisso selezionato è in fase di eliminazione. L'operazione può richiedere tempo se coinvolge molti file.",
       cancelled: "Eliminazione del prefisso annullata.", deleting: "Eliminazione di tutti gli oggetti sotto {prefix}...", deleted: "{count} oggetto/i eliminato/i da {prefix}.",
+      confirmFileTitle: "Elimina file", confirmFileBody: "Sei assolutamente sicuro di voler eliminare questo file?",
+      confirmFileAction: "Elimina file", fileCancelled: "Eliminazione del file annullata.", deletingFile: "Eliminazione di {key}...",
+      fileDeleted: "{key} eliminato.", progressFileTitle: "Eliminazione file",
+      progressFileBody: "Il file selezionato è in fase di eliminazione.",
     },
     common: { cancel: "Annulla" },
     messages: {
@@ -320,10 +336,14 @@ const elements = {
   previewRowOrder: document.querySelector("#previewRowOrder"),
   downloadButton: document.querySelector("#downloadButton"),
   confirmModal: document.querySelector("#confirmModal"),
+  confirmModalTitle: document.querySelector("#confirmModalTitle"),
+  confirmModalBody: document.querySelector("#confirmModalBody"),
   confirmModalPrefix: document.querySelector("#confirmModalPrefix"),
   confirmModalCancel: document.querySelector("#confirmModalCancel"),
   confirmModalConfirm: document.querySelector("#confirmModalConfirm"),
   deleteProgressModal: document.querySelector("#deleteProgressModal"),
+  deleteProgressTitle: document.querySelector("#deleteProgressTitle"),
+  deleteProgressBody: document.querySelector("#deleteProgressBody"),
   deleteProgressPrefix: document.querySelector("#deleteProgressPrefix"),
 };
 
@@ -601,14 +621,19 @@ function renderObjectList() {
     { key: "type", label: t("table.type") },
     { key: "size", label: t("table.size") },
     { key: "lastModified", label: t("table.date") },
+    { key: "actions", label: t("browser.actions"), sortable: false },
   ].forEach((column) => {
     const th = document.createElement("th");
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "sort-button";
-    button.textContent = getSortLabel(column.label, column.key);
-    button.addEventListener("click", () => toggleSort(column.key));
-    th.appendChild(button);
+    if (column.sortable === false) {
+      th.textContent = column.label;
+    } else {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "sort-button";
+      button.textContent = getSortLabel(column.label, column.key);
+      button.addEventListener("click", () => toggleSort(column.key));
+      th.appendChild(button);
+    }
     headerRow.appendChild(th);
   });
 
@@ -643,7 +668,23 @@ function renderObjectList() {
         ? "—"
         : new Date(item.lastModified).toLocaleString(DATE_LOCALES[state.language] ?? "en-US");
 
-    row.append(nameCell, typeCell, sizeCell, dateCell);
+    const actionsCell = document.createElement("td");
+    actionsCell.className = "object-actions-cell";
+    if (item.type === "file") {
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "ghost-button danger-ghost-button row-action-button";
+      deleteButton.textContent = t("browser.deleteFile");
+      deleteButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        deleteObjectFile(item.key);
+      });
+      actionsCell.appendChild(deleteButton);
+    } else {
+      actionsCell.textContent = "—";
+    }
+
+    row.append(nameCell, typeCell, sizeCell, dateCell, actionsCell);
     row.addEventListener("click", () => handleObjectSelection(item));
     row.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
@@ -1082,7 +1123,12 @@ async function clearCurrentPrefix() {
     return;
   }
 
-  const confirmation = await confirmPrefixDeletion(state.prefix);
+  const confirmation = await confirmDeletion({
+    title: t("delete.confirmTitle"),
+    body: t("delete.confirmBody"),
+    actionLabel: t("delete.confirmAction"),
+    target: state.prefix,
+  });
 
   if (!confirmation) {
     setConnectionStatus(t("delete.cancelled"));
@@ -1090,7 +1136,11 @@ async function clearCurrentPrefix() {
   }
 
   elements.clearPrefixButton.disabled = true;
-  showDeleteProgress(state.prefix);
+  showDeleteProgress({
+    title: t("delete.progressTitle"),
+    body: t("delete.progressBody"),
+    target: state.prefix,
+  });
   setConnectionStatus(t("delete.deleting", { prefix: state.prefix }));
 
   try {
@@ -1118,7 +1168,57 @@ async function clearCurrentPrefix() {
   }
 }
 
-function confirmPrefixDeletion(prefix) {
+async function deleteObjectFile(key) {
+  if (!state.sessionId || !key) {
+    return;
+  }
+
+  const confirmation = await confirmDeletion({
+    title: t("delete.confirmFileTitle"),
+    body: t("delete.confirmFileBody"),
+    actionLabel: t("delete.confirmFileAction"),
+    target: key,
+  });
+
+  if (!confirmation) {
+    setConnectionStatus(t("delete.fileCancelled"));
+    return;
+  }
+
+  showDeleteProgress({
+    title: t("delete.progressFileTitle"),
+    body: t("delete.progressFileBody"),
+    target: key,
+  });
+  setConnectionStatus(t("delete.deletingFile", { key }));
+
+  try {
+    await apiFetch("/api/delete-file", {
+      method: "POST",
+      body: JSON.stringify({
+        sessionId: state.sessionId,
+        key,
+      }),
+    });
+
+    if (state.selectedKey === key) {
+      state.selectedKey = "";
+      elements.downloadButton.disabled = true;
+      syncPreviewModeAvailability("");
+      resetPreview(t("preview.selectCompatible"));
+    }
+
+    setConnectionStatus(t("delete.fileDeleted", { key }));
+    await loadObjects(state.prefix);
+  } catch (error) {
+    setConnectionStatus(getErrorMessage(error), true);
+    setDiagnosticMessage(buildDiagnosticMessage(error));
+  } finally {
+    hideDeleteProgress();
+  }
+}
+
+function confirmDeletion({ title, body, actionLabel, target }) {
   return new Promise((resolve) => {
     const previousActiveElement = document.activeElement;
 
@@ -1150,7 +1250,10 @@ function confirmPrefixDeletion(prefix) {
       }
     };
 
-    elements.confirmModalPrefix.textContent = prefix;
+    elements.confirmModalTitle.textContent = title;
+    elements.confirmModalBody.textContent = body;
+    elements.confirmModalConfirm.textContent = actionLabel;
+    elements.confirmModalPrefix.textContent = target;
     elements.confirmModal.hidden = false;
     document.body.style.overflow = "hidden";
     elements.confirmModal.addEventListener("click", handleShellClick);
@@ -1161,8 +1264,10 @@ function confirmPrefixDeletion(prefix) {
   });
 }
 
-function showDeleteProgress(prefix) {
-  elements.deleteProgressPrefix.textContent = prefix;
+function showDeleteProgress({ title, body, target }) {
+  elements.deleteProgressTitle.textContent = title;
+  elements.deleteProgressBody.textContent = body;
+  elements.deleteProgressPrefix.textContent = target;
   elements.deleteProgressModal.hidden = false;
   document.body.style.overflow = "hidden";
 }
