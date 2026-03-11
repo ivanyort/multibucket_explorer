@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
-import { createReadStream, createWriteStream, readFileSync } from "node:fs";
-import { mkdir, mkdtemp, rename, rm, stat, writeFile } from "node:fs/promises";
+import { createReadStream, createWriteStream, existsSync, readFileSync } from "node:fs";
+import { cp, mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import https from "node:https";
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
@@ -10,9 +10,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createGunzip, gunzipSync } from "node:zlib";
+import AdmZip from "adm-zip";
 import { NodeHttpHandler } from "@smithy/node-http-handler";
 import { DataLakeServiceClient, StorageSharedKeyCredential } from "@azure/storage-file-datalake";
 import { Storage as GoogleCloudStorage } from "@google-cloud/storage";
+import duckdb from "@duckdb/node-api";
 import avro from "avsc";
 import { parquetMetadataAsync, parquetReadObjects } from "hyparquet";
 import { compressors as hyparquetCompressors } from "hyparquet-compressors";
@@ -23,6 +25,7 @@ import {
   GetObjectCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
+  PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 
@@ -33,6 +36,8 @@ const APP_VERSION = typeof process.env.APP_VERSION === "string" && process.env.A
   ? process.env.APP_VERSION.trim()
   : PACKAGE_VERSION;
 const PORT = Number.parseInt(process.env.PORT ?? "8086", 10);
+const IS_DOCKER = detectDockerEnvironment();
+const DEV_FEATURES_ENABLED = process.env.NODE_ENV !== "production" && !IS_DOCKER;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const DESTRUCTIVE_OPERATIONS_ENABLED = !isTruthyEnv(process.env.DISABLE_DESTRUCTIVE_OPERATIONS);
 const ORC_TOOLS_VERSION = "2.3.0";
@@ -40,6 +45,21 @@ const ORC_TOOLS_FILE_NAME = `orc-tools-${ORC_TOOLS_VERSION}-uber.jar`;
 const ORC_TOOLS_URL =
   `https://repo1.maven.org/maven2/org/apache/orc/orc-tools/${ORC_TOOLS_VERSION}/${ORC_TOOLS_FILE_NAME}`;
 const ORC_TOOLS_CACHE_DIR = path.join(__dirname, ".cache", "orc-tools");
+const ICEBERG_SAMPLE_PREFIX_SUFFIX = "_sample_data/iceberg/";
+const ICEBERG_SAMPLE_ARCHIVE_URL = "https://duckdb.org/data/iceberg_data.zip";
+const ICEBERG_SAMPLE_CACHE_DIR = path.join(__dirname, ".cache", "iceberg-samples");
+const ICEBERG_SAMPLE_ARCHIVE_PATH = path.join(ICEBERG_SAMPLE_CACHE_DIR, "iceberg_data.zip");
+const ICEBERG_SAMPLE_EXTRACTED_DIR = path.join(ICEBERG_SAMPLE_CACHE_DIR, "iceberg_data");
+const ICEBERG_BASE_FIXTURE_DIR_NAME = "lineitem_iceberg";
+const ICEBERG_FIXTURE_TABLES = [
+  { name: "orders_parquet_basic", format: "parquet", notes: "Real parquet-backed Iceberg fixture copied from the official DuckDB sample." },
+  { name: "orders_avro_basic", format: "parquet", notes: "Temporary alias of the official parquet-backed Iceberg fixture until an Avro-backed Iceberg writer is available." },
+  { name: "orders_orc_basic", format: "parquet", notes: "Temporary alias of the official parquet-backed Iceberg fixture until an ORC-backed Iceberg writer is available." },
+  { name: "orders_with_position_deletes", format: "parquet", notes: "Temporary alias of the official multi-snapshot Iceberg fixture; row-level position delete generation is not emitted by DuckDB directly here." },
+  { name: "orders_with_equality_deletes", format: "parquet", notes: "Temporary alias of the official multi-snapshot Iceberg fixture; equality delete generation is not emitted by DuckDB directly here." },
+  { name: "orders_multi_snapshot", format: "parquet", notes: "Real Iceberg fixture with multiple metadata versions from the official DuckDB sample." },
+  { name: "orders_empty", format: "parquet", notes: "Temporary alias of the official parquet-backed Iceberg fixture until an empty Iceberg table generator is available." },
+];
 const AVRO_LONG_AS_STRING_TYPE = avro.types.LongType.__with({
   fromBuffer(buffer) {
     return buffer.readBigInt64LE().toString();
@@ -100,6 +120,16 @@ const SERVER_TRANSLATIONS = {
     fill_minio: "Fill in endpoint, bucket, access key ID, and secret access key.",
     fill_s3: "Fill in region, bucket, and credentials.",
     unsupported_preview_format: "Unsupported preview format.",
+    iceberg_not_detected: "The selected prefix is not an Iceberg table root.",
+    iceberg_no_snapshot: "The Iceberg table has no current snapshot.",
+    iceberg_delete_files_unsupported: "Iceberg preview does not support snapshots with active delete files yet.",
+    iceberg_data_format_unsupported: "Unsupported Iceberg data file format: {format}",
+    iceberg_preview_failed: "Failed to read Iceberg preview: {message}",
+    iceberg_seed_prefix_invalid: "The sample prefix is required.",
+    iceberg_seed_conflict: "The sample prefix already contains data. Remove {prefix} before generating fixtures again.",
+    iceberg_seed_failed: "Failed to generate Iceberg sample data: {message}",
+    iceberg_seed_warning_aliases: "Avro, ORC, delete-heavy, and empty table variants are temporary aliases of the parquet-backed sample until native fixture generation is expanded.",
+    iceberg_seed_warning_template: "The current seed tool stages the official DuckDB Iceberg sample under several table names to keep the test prefix deterministic.",
     avro_preview_failed: "Failed to read Avro preview: {message}",
     parquet_preview_failed: "Failed to read Parquet preview: {message}",
     orc_preview_failed: "Failed to read ORC preview: {message}",
@@ -126,6 +156,16 @@ const SERVER_TRANSLATIONS = {
     fill_minio: "Preencha endpoint, bucket, access key ID e secret access key.",
     fill_s3: "Preencha regiao, bucket e credenciais.",
     unsupported_preview_format: "Formato de pre-visualizacao nao suportado.",
+    iceberg_not_detected: "O prefixo selecionado nao e a raiz de uma tabela Iceberg.",
+    iceberg_no_snapshot: "A tabela Iceberg nao possui snapshot atual.",
+    iceberg_delete_files_unsupported: "A pre-visualizacao Iceberg ainda nao suporta snapshots com delete files ativos.",
+    iceberg_data_format_unsupported: "Formato de arquivo Iceberg nao suportado: {format}",
+    iceberg_preview_failed: "Falha ao ler a pre-visualizacao Iceberg: {message}",
+    iceberg_seed_prefix_invalid: "O prefixo de amostra e obrigatorio.",
+    iceberg_seed_conflict: "O prefixo de amostras ja contem dados. Remova {prefix} antes de gerar os fixtures novamente.",
+    iceberg_seed_failed: "Falha ao gerar os dados de exemplo Iceberg: {message}",
+    iceberg_seed_warning_aliases: "As variantes Avro, ORC, com deletes e vazia usam temporariamente o fixture em Parquet ate a geracao nativa desses cenarios ser ampliada.",
+    iceberg_seed_warning_template: "A ferramenta atual publica o sample oficial Iceberg do DuckDB sob varios nomes de tabela para manter o prefixo de teste deterministico.",
     avro_preview_failed: "Falha ao ler a pre-visualizacao do Avro: {message}",
     parquet_preview_failed: "Falha ao ler a pre-visualizacao do Parquet: {message}",
     orc_preview_failed: "Falha ao ler a pre-visualizacao do ORC: {message}",
@@ -152,6 +192,16 @@ const SERVER_TRANSLATIONS = {
     fill_minio: "Completa endpoint, bucket, access key ID y secret access key.",
     fill_s3: "Completa region, bucket y credenciales.",
     unsupported_preview_format: "Formato de vista previa no compatible.",
+    iceberg_not_detected: "El prefijo seleccionado no es la raiz de una tabla Iceberg.",
+    iceberg_no_snapshot: "La tabla Iceberg no tiene snapshot actual.",
+    iceberg_delete_files_unsupported: "La vista previa Iceberg todavia no admite snapshots con delete files activos.",
+    iceberg_data_format_unsupported: "Formato de archivo Iceberg no compatible: {format}",
+    iceberg_preview_failed: "Error al leer la vista previa Iceberg: {message}",
+    iceberg_seed_prefix_invalid: "El prefijo de muestras es obligatorio.",
+    iceberg_seed_conflict: "El prefijo de muestras ya contiene datos. Elimina {prefix} antes de generar los fixtures nuevamente.",
+    iceberg_seed_failed: "Error al generar los datos de ejemplo Iceberg: {message}",
+    iceberg_seed_warning_aliases: "Las variantes Avro, ORC, con deletes y vacia son alias temporales del sample respaldado por Parquet hasta ampliar la generacion nativa de fixtures.",
+    iceberg_seed_warning_template: "La herramienta actual publica el sample oficial Iceberg de DuckDB bajo varios nombres de tabla para mantener deterministico el prefijo de prueba.",
     avro_preview_failed: "Error al leer la vista previa de Avro: {message}",
     parquet_preview_failed: "Error al leer la vista previa de Parquet: {message}",
     orc_preview_failed: "Error al leer la vista previa de ORC: {message}",
@@ -178,6 +228,16 @@ const SERVER_TRANSLATIONS = {
     fill_minio: "Compila endpoint, bucket, access key ID e secret access key.",
     fill_s3: "Compila regione, bucket e credenziali.",
     unsupported_preview_format: "Formato di anteprima non supportato.",
+    iceberg_not_detected: "Il prefisso selezionato non e la radice di una tabella Iceberg.",
+    iceberg_no_snapshot: "La tabella Iceberg non ha uno snapshot corrente.",
+    iceberg_delete_files_unsupported: "L'anteprima Iceberg non supporta ancora snapshot con delete file attivi.",
+    iceberg_data_format_unsupported: "Formato file Iceberg non supportato: {format}",
+    iceberg_preview_failed: "Errore durante la lettura dell'anteprima Iceberg: {message}",
+    iceberg_seed_prefix_invalid: "Il prefisso di esempio e obbligatorio.",
+    iceberg_seed_conflict: "Il prefisso di esempio contiene gia dati. Rimuovi {prefix} prima di generare di nuovo i fixture.",
+    iceberg_seed_failed: "Errore durante la generazione dei dati di esempio Iceberg: {message}",
+    iceberg_seed_warning_aliases: "Le varianti Avro, ORC, con delete e vuota usano temporaneamente il fixture Parquet finche la generazione nativa non verra ampliata.",
+    iceberg_seed_warning_template: "Lo strumento corrente pubblica il sample Iceberg ufficiale di DuckDB con vari nomi di tabella per mantenere deterministico il prefisso di test.",
     avro_preview_failed: "Errore durante la lettura dell'anteprima Avro: {message}",
     parquet_preview_failed: "Errore durante la lettura dell'anteprima Parquet: {message}",
     orc_preview_failed: "Errore durante la lettura dell'anteprima ORC: {message}",
@@ -220,6 +280,16 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/api/iceberg/inspect") {
+      await handleIcebergInspect(url, response, locale);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/iceberg/preview") {
+      await handleIcebergPreview(url, response, locale);
+      return;
+    }
+
     if (request.method === "GET" && url.pathname === "/api/download") {
       await handleDownload(url, response);
       return;
@@ -232,6 +302,11 @@ const server = createServer(async (request, response) => {
 
     if (request.method === "POST" && url.pathname === "/api/delete-file") {
       await handleDeleteFile(request, response);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/dev/seed-iceberg") {
+      await handleSeedIceberg(request, response, locale);
       return;
     }
 
@@ -291,7 +366,27 @@ async function handleListObjects(url, response) {
 function handleAppInfo(response) {
   sendJson(response, 200, {
     version: APP_VERSION,
+    devFeatures: {
+      seedIceberg: DEV_FEATURES_ENABLED,
+    },
   });
+}
+
+function detectDockerEnvironment() {
+  if (isTruthyEnv(process.env.CODESPACES) || isTruthyEnv(process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN)) {
+    return false;
+  }
+
+  if (existsSync("/.dockerenv")) {
+    return true;
+  }
+
+  try {
+    const cgroup = readFileSync("/proc/1/cgroup", "utf-8");
+    return /docker|containerd|kubepods|podman/i.test(cgroup);
+  } catch {
+    return false;
+  }
 }
 
 async function handlePreview(url, response, locale) {
@@ -316,6 +411,71 @@ async function handlePreview(url, response, locale) {
     previewMode: previewData.previewMode,
     rawText: previewData.rawText,
     lineCount: previewData.lineCount,
+  });
+}
+
+async function handleIcebergInspect(url, response, locale) {
+  const prefix = ensureTrailingSlash(url.searchParams.get("prefix") ?? "");
+  const requestedSnapshotId = url.searchParams.get("snapshotId");
+  const session = getSession(url.searchParams.get("sessionId"));
+
+  if (!prefix) {
+    sendJson(response, 200, { isIceberg: false });
+    return;
+  }
+
+  const table = await inspectIcebergTable(session, prefix, locale, requestedSnapshotId);
+
+  if (!table) {
+    sendJson(response, 200, { isIceberg: false });
+    return;
+  }
+
+  sendJson(response, 200, {
+    isIceberg: true,
+    tablePrefix: table.tablePrefix,
+    metadataFile: table.metadataKey,
+    currentSnapshotId: table.currentSnapshotId,
+    snapshotId: table.snapshotId,
+    snapshots: table.snapshots,
+    schemaColumns: table.schemaColumns,
+    dataFileCount: table.dataFiles.length,
+    dataFormat: table.dataFormat,
+    deleteFileCount: table.deleteFileCount,
+  });
+}
+
+async function handleIcebergPreview(url, response, locale) {
+  const prefix = ensureTrailingSlash(url.searchParams.get("prefix") ?? "");
+  const limit = parsePreviewLimit(url.searchParams.get("limit"));
+  const order = parsePreviewOrder(url.searchParams.get("order"));
+  const requestedSnapshotId = url.searchParams.get("snapshotId");
+  const session = getSession(url.searchParams.get("sessionId"));
+
+  const table = await inspectIcebergTable(session, prefix, locale, requestedSnapshotId);
+
+  if (!table) {
+    throw new LocalizedError("iceberg_not_detected");
+  }
+
+  const preview = await loadIcebergPreviewData(session, table, limit, order, locale);
+
+  sendJson(response, 200, {
+    rows: preview.rows,
+    metadataColumns: preview.metadataColumns,
+    previewFormat: "iceberg",
+    previewMode: "table",
+    lineCount: preview.rows.length,
+    icebergMeta: {
+      tablePrefix: table.tablePrefix,
+      metadataFile: table.metadataKey,
+      currentSnapshotId: table.currentSnapshotId,
+      snapshotId: table.snapshotId,
+      snapshots: table.snapshots,
+      dataFileCount: table.dataFiles.length,
+      deleteFileCount: table.deleteFileCount,
+      dataFormat: table.dataFormat,
+    },
   });
 }
 
@@ -383,6 +543,14 @@ async function handleDeleteFile(request, response) {
     deletedCount: 1,
     key,
   });
+}
+
+async function handleSeedIceberg(request, response, locale) {
+  const body = await readJsonBody(request);
+  const session = getSession(typeof body.sessionId === "string" ? body.sessionId : "");
+  const targetPrefix = buildIcebergSamplePrefix(typeof body.targetPrefix === "string" ? body.targetPrefix : "");
+  const result = await seedIcebergFixtures(session, locale, targetPrefix);
+  sendJson(response, 200, result);
 }
 
 async function serveStatic(requestPath, response, locale) {
@@ -737,6 +905,30 @@ async function listStoragePaths(session, prefix, recursive = true) {
   return items;
 }
 
+function toStoragePathItem(item) {
+  if ("metadata" in item && "name" in item) {
+    return {
+      key: item.name,
+      lastModified: item.metadata?.updated ?? null,
+      type: "file",
+    };
+  }
+
+  if ("name" in item) {
+    return {
+      key: item.isDirectory ? ensureTrailingSlash(item.name) : item.name,
+      lastModified: item.lastModified ? new Date(item.lastModified).toISOString() : null,
+      type: item.isDirectory ? "folder" : "file",
+    };
+  }
+
+  return {
+    key: item.Key ?? "",
+    lastModified: item.LastModified?.toISOString?.() ?? null,
+    type: "file",
+  };
+}
+
 async function deleteStoragePrefix(session, prefix) {
   if (session.storage.provider === "adls") {
     const normalizedPrefix = normalizeAdlsDirectory(prefix);
@@ -810,6 +1002,236 @@ async function deleteStorageFile(session, key) {
   );
 }
 
+async function seedIcebergFixtures(session, locale, targetPrefix) {
+  await ensureIcebergSamplePrefixEmpty(session, targetPrefix);
+
+  let tempDir;
+
+  try {
+    const baseFixtureDir = await ensureIcebergSampleTemplate(locale);
+    tempDir = await mkdtemp(path.join(tmpdir(), "multibucket-explorer-iceberg-seed-"));
+
+    const stageRoot = path.join(tempDir, "stage");
+    const stageBasePrefixDir = path.join(stageRoot, ...targetPrefix.split("/").filter(Boolean));
+    await mkdir(stageBasePrefixDir, { recursive: true });
+
+    const createdTables = [];
+
+    for (const fixture of ICEBERG_FIXTURE_TABLES) {
+      const tableDir = path.join(stageBasePrefixDir, fixture.name);
+      await cp(baseFixtureDir, tableDir, { recursive: true });
+
+      const summary = await summarizeSeededIcebergTable(tableDir, fixture, targetPrefix);
+      createdTables.push(summary);
+    }
+
+    await uploadDirectoryToStorage(session, stageBasePrefixDir, targetPrefix);
+
+    const warnings = [
+      translateServer(locale, "iceberg_seed_warning_template"),
+      translateServer(locale, "iceberg_seed_warning_aliases"),
+    ];
+
+    return {
+      basePrefix: targetPrefix,
+      createdTables,
+      warnings,
+    };
+  } catch (error) {
+    if (error instanceof LocalizedError) {
+      throw error;
+    }
+
+    throw new LocalizedError("iceberg_seed_failed", {
+      message: localizeError(locale, error),
+    });
+  } finally {
+    if (tempDir) {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  }
+}
+
+async function ensureIcebergSamplePrefixEmpty(session, targetPrefix) {
+  const existingPaths = await listStoragePaths(session, targetPrefix, true);
+
+  if (existingPaths.length > 0) {
+    throw new LocalizedError("iceberg_seed_conflict", {
+      prefix: targetPrefix,
+    });
+  }
+}
+
+async function ensureIcebergSampleTemplate(locale) {
+  const baseFixtureDir = path.join(ICEBERG_SAMPLE_EXTRACTED_DIR, "data", "iceberg", ICEBERG_BASE_FIXTURE_DIR_NAME);
+
+  try {
+    await stat(baseFixtureDir);
+    return baseFixtureDir;
+  } catch {
+    // Cache miss.
+  }
+
+  try {
+    await mkdir(ICEBERG_SAMPLE_CACHE_DIR, { recursive: true });
+
+    try {
+      await stat(ICEBERG_SAMPLE_ARCHIVE_PATH);
+    } catch {
+      await downloadFile(ICEBERG_SAMPLE_ARCHIVE_URL, ICEBERG_SAMPLE_ARCHIVE_PATH);
+    }
+
+    await rm(ICEBERG_SAMPLE_EXTRACTED_DIR, { recursive: true, force: true });
+    const zip = new AdmZip(ICEBERG_SAMPLE_ARCHIVE_PATH);
+    zip.extractAllTo(ICEBERG_SAMPLE_EXTRACTED_DIR, true);
+
+    return baseFixtureDir;
+  } catch (error) {
+    throw new LocalizedError("iceberg_seed_failed", {
+      message: localizeError(locale, error),
+    });
+  }
+}
+
+async function summarizeSeededIcebergTable(tableDir, fixture, targetPrefix) {
+  const metadataPath = path.join(tableDir, "metadata", "v2.metadata.json");
+  const metadata = JSON.parse(await readFile(metadataPath, "utf-8"));
+  const currentSnapshotId = metadata["current-snapshot-id"] ?? null;
+  const rowCount = await countSeedRowsWithDuckDb(path.join(tableDir, "data", "*.parquet"));
+  const fileCount = (await listLocalFiles(tableDir)).length;
+
+  return {
+    name: fixture.name,
+    prefix: `${targetPrefix}${fixture.name}/`,
+    currentSnapshotId: currentSnapshotId === null ? null : String(currentSnapshotId),
+    format: fixture.format,
+    notes: fixture.notes,
+    fileCount,
+    rowCount,
+  };
+}
+
+function buildIcebergSamplePrefix(prefix) {
+  const normalizedPrefix = typeof prefix === "string" ? prefix.trim() : "";
+
+  if (!normalizedPrefix || /^\/+$/.test(normalizedPrefix)) {
+    throw new LocalizedError("iceberg_seed_prefix_invalid");
+  }
+
+  return ensureTrailingSlash(normalizedPrefix);
+}
+
+async function countSeedRowsWithDuckDb(parquetGlobPath) {
+  const instance = await duckdb.DuckDBInstance.create(":memory:");
+  const connection = await instance.connect();
+  const normalizedGlob = parquetGlobPath.replace(/\\/g, "/").replace(/'/g, "''");
+
+  try {
+    const reader = await connection.runAndReadAll(
+      `SELECT COUNT(*)::BIGINT AS row_count FROM read_parquet('${normalizedGlob}')`,
+    );
+    const rows = reader.getRowObjectsJson();
+    const rowCountValue = rows[0]?.row_count ?? 0;
+    return Number.parseInt(String(rowCountValue), 10) || 0;
+  } finally {
+    connection.closeSync?.();
+  }
+}
+
+async function uploadDirectoryToStorage(session, localRootDir, remotePrefix) {
+  const files = await listLocalFiles(localRootDir);
+
+  for (const filePath of files) {
+    const relativePath = path.relative(localRootDir, filePath).split(path.sep).join("/");
+    const key = `${remotePrefix}${relativePath}`;
+    const buffer = await readFile(filePath);
+    await putStorageObject(session, key, buffer, getContentTypeForKey(key));
+  }
+}
+
+async function listLocalFiles(rootDir) {
+  const entries = await readdir(rootDir, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) {
+      continue;
+    }
+
+    const fullPath = path.join(rootDir, entry.name);
+
+    if (entry.isDirectory()) {
+      files.push(...(await listLocalFiles(fullPath)));
+      continue;
+    }
+
+    if (entry.isFile()) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
+async function putStorageObject(session, key, buffer, contentType = "application/octet-stream") {
+  if (session.storage.provider === "adls") {
+    await ensureAdlsParentDirectories(session.storage.fileSystemClient, key);
+    const fileClient = session.storage.fileSystemClient.getFileClient(key);
+    await fileClient.uploadData(buffer, {
+      overwrite: true,
+      blobHTTPHeaders: {
+        blobContentType: contentType,
+      },
+    });
+    return;
+  }
+
+  if (session.storage.provider === "gcs") {
+    await session.storage.bucket.file(key).save(buffer, {
+      contentType,
+      resumable: false,
+    });
+    return;
+  }
+
+  await session.storage.client.send(
+    new PutObjectCommand({
+      Bucket: session.storage.bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+    }),
+  );
+}
+
+async function ensureAdlsParentDirectories(fileSystemClient, key) {
+  const parentSegments = key.split("/").slice(0, -1);
+  let currentPath = "";
+
+  for (const segment of parentSegments) {
+    if (!segment) {
+      continue;
+    }
+
+    currentPath = currentPath ? `${currentPath}/${segment}` : segment;
+    await fileSystemClient.getDirectoryClient(currentPath).createIfNotExists();
+  }
+}
+
+function getContentTypeForKey(key) {
+  const extension = path.extname(key).toLowerCase();
+  const contentTypes = {
+    ".avro": "application/avro",
+    ".json": "application/json; charset=utf-8",
+    ".md": "text/markdown; charset=utf-8",
+    ".parquet": "application/octet-stream",
+    ".text": "text/plain; charset=utf-8",
+    ".txt": "text/plain; charset=utf-8",
+  };
+
+  return contentTypes[extension] ?? "application/octet-stream";
+}
+
 async function getDownloadResponse(session, key) {
   if (session.storage.provider === "adls") {
     const fileClient = session.storage.fileSystemClient.getFileClient(key);
@@ -844,6 +1266,238 @@ async function getDownloadResponse(session, key) {
     contentLength: response.ContentLength,
     body: response.Body,
   };
+}
+
+async function inspectIcebergTable(session, prefix, locale = "en", requestedSnapshotId = null) {
+  try {
+    const metadataPrefix = `${prefix}metadata/`;
+    const metadataPaths = await listStoragePaths(session, metadataPrefix, true);
+    const metadataFiles = metadataPaths
+      .map((item) => toStoragePathItem(item))
+      .filter((item) => item.type === "file" && item.key.toLowerCase().endsWith(".metadata.json"));
+
+    if (!metadataFiles.length) {
+      return null;
+    }
+
+    const metadataFile = pickLatestIcebergMetadataFile(metadataFiles);
+    const metadata = JSON.parse(await readObjectText(session, metadataFile.key));
+    const currentSnapshotId = metadata["current-snapshot-id"] ?? null;
+    const snapshotId = requestedSnapshotId ?? currentSnapshotId;
+
+    if (snapshotId === null || snapshotId === undefined) {
+      throw new LocalizedError("iceberg_no_snapshot");
+    }
+
+    const snapshots = extractIcebergSnapshots(metadata, currentSnapshotId);
+    const currentSnapshot = (metadata.snapshots ?? []).find((snapshot) => String(snapshot["snapshot-id"]) === String(snapshotId));
+
+    if (!currentSnapshot) {
+      throw new LocalizedError("iceberg_no_snapshot");
+    }
+
+    const deleteFileCount = Number(currentSnapshot?.summary?.["total-delete-files"] ?? 0);
+    const manifestListPath = resolveIcebergStorageKey(prefix, currentSnapshot["manifest-list"], "metadata");
+    const manifestListRecords = await loadAvroRecords(session, manifestListPath, null, "normal", locale);
+    const dataManifestPaths = manifestListRecords
+      .filter((record) => Number(record?.content ?? 0) === 0)
+      .map((record) => resolveIcebergStorageKey(prefix, record?.manifest_path, "metadata"))
+      .filter(Boolean);
+
+    const dataFiles = [];
+
+    for (const manifestPath of dataManifestPaths) {
+      const manifestEntries = await loadAvroRecords(session, manifestPath, null, "normal", locale);
+
+      for (const entry of manifestEntries) {
+        if (Number(entry?.status ?? 0) === 2) {
+          continue;
+        }
+
+        const dataFile = entry?.data_file;
+
+        if (!dataFile || Number(dataFile.content ?? 0) !== 0) {
+          continue;
+        }
+
+        dataFiles.push({
+          key: resolveIcebergStorageKey(prefix, dataFile.file_path, "data"),
+          format: String(dataFile.file_format ?? "").toLowerCase(),
+        });
+      }
+    }
+
+    const schemaColumns = extractIcebergSchemaColumns(metadata);
+    const dataFormat = summarizeIcebergDataFormats(dataFiles);
+
+    return {
+      tablePrefix: prefix,
+      metadataKey: metadataFile.key,
+      metadata,
+      currentSnapshotId: currentSnapshotId === null || currentSnapshotId === undefined ? null : String(currentSnapshotId),
+      snapshotId: String(snapshotId),
+      snapshots,
+      schemaColumns,
+      dataFiles,
+      dataFormat,
+      deleteFileCount,
+    };
+  } catch (error) {
+    if (error instanceof LocalizedError) {
+      throw error;
+    }
+
+    throw new LocalizedError("iceberg_preview_failed", {
+      message: localizeError(locale, error),
+    });
+  }
+}
+
+function pickLatestIcebergMetadataFile(metadataFiles) {
+  return [...metadataFiles].sort((left, right) => {
+    const leftVersion = extractIcebergMetadataVersion(left.key);
+    const rightVersion = extractIcebergMetadataVersion(right.key);
+
+    if (leftVersion !== rightVersion) {
+      return rightVersion - leftVersion;
+    }
+
+    return new Date(right.lastModified ?? 0).getTime() - new Date(left.lastModified ?? 0).getTime();
+  })[0];
+}
+
+function extractIcebergMetadataVersion(key) {
+  const match = path.basename(key).match(/(?:^v|^)(\d+)\.metadata\.json$/i);
+  return match ? Number.parseInt(match[1], 10) : -1;
+}
+
+function extractIcebergSchemaColumns(metadata) {
+  const currentSchemaId = metadata["current-schema-id"];
+  const schema = (metadata.schemas ?? []).find((item) => Number(item["schema-id"]) === Number(currentSchemaId))
+    ?? metadata.schema
+    ?? null;
+
+  return Array.isArray(schema?.fields)
+    ? schema.fields.map((field) => String(field?.name ?? "")).filter(Boolean)
+    : [];
+}
+
+function extractIcebergSnapshots(metadata, currentSnapshotId) {
+  return [...(metadata.snapshots ?? [])]
+    .map((snapshot) => ({
+      snapshotId: String(snapshot?.["snapshot-id"] ?? ""),
+      committedAt: Number(snapshot?.["timestamp-ms"] ?? 0) || null,
+      operation: String(snapshot?.summary?.operation ?? snapshot?.operation ?? ""),
+      isCurrent: String(snapshot?.["snapshot-id"] ?? "") === String(currentSnapshotId ?? ""),
+    }))
+    .filter((snapshot) => snapshot.snapshotId)
+    .sort((left, right) => {
+      if ((right.committedAt ?? 0) !== (left.committedAt ?? 0)) {
+        return (right.committedAt ?? 0) - (left.committedAt ?? 0);
+      }
+
+      return right.snapshotId.localeCompare(left.snapshotId, "en", { numeric: true });
+    });
+}
+
+function summarizeIcebergDataFormats(dataFiles) {
+  const formats = [...new Set(dataFiles.map((file) => file.format).filter(Boolean))];
+
+  if (!formats.length) {
+    return "unknown";
+  }
+
+  return formats.join(", ");
+}
+
+async function loadIcebergPreviewData(session, table, limit, order, locale = "en") {
+  if (table.deleteFileCount > 0) {
+    throw new LocalizedError("iceberg_delete_files_unsupported");
+  }
+
+  try {
+    const effectiveFiles = order === "reverse" ? [...table.dataFiles].reverse() : table.dataFiles;
+    const records = [];
+
+    for (const file of effectiveFiles) {
+      const remaining = limit === null ? null : Math.max(limit - records.length, 0);
+
+      if (remaining === 0) {
+        break;
+      }
+
+      const fileRecords = await loadIcebergDataFileRecords(session, file.key, file.format, remaining, order, locale);
+      records.push(...fileRecords);
+    }
+
+    const normalized = normalizePreviewRecords(records);
+
+    return {
+      rows: normalized.rows,
+      metadataColumns: table.schemaColumns.length ? table.schemaColumns : normalized.columns,
+    };
+  } catch (error) {
+    if (error instanceof LocalizedError) {
+      throw error;
+    }
+
+    throw new LocalizedError("iceberg_preview_failed", {
+      message: localizeError(locale, error),
+    });
+  }
+}
+
+async function loadIcebergDataFileRecords(session, key, format, limit, order, locale = "en") {
+  if (format === "parquet") {
+    return loadParquetPreviewRecords(session, key, limit, order, "none", locale);
+  }
+
+  if (format === "avro") {
+    return loadAvroRecords(session, key, limit, order, locale);
+  }
+
+  if (format === "orc") {
+    return loadOrcPreviewRecords(session, key, limit, order, "none", locale);
+  }
+
+  throw new LocalizedError("iceberg_data_format_unsupported", {
+    format: format || "unknown",
+  });
+}
+
+function resolveIcebergStorageKey(tablePrefix, sourcePath, segmentHint = "") {
+  if (typeof sourcePath !== "string" || !sourcePath.trim()) {
+    return "";
+  }
+
+  const trimmedPath = sourcePath.trim().replace(/\\/g, "/");
+
+  if (trimmedPath.startsWith(tablePrefix)) {
+    return trimmedPath;
+  }
+
+  const uriMatch = trimmedPath.match(/^[a-z]+:\/\/[^/]+\/(.+)$/i);
+
+  if (uriMatch?.[1]) {
+    return uriMatch[1];
+  }
+
+  if (trimmedPath.startsWith("./")) {
+    const relativePath = trimmedPath.slice(2);
+    const relativeSegments = relativePath.split("/").filter(Boolean);
+    if (relativeSegments.length > 1) {
+      return `${tablePrefix}${relativeSegments.slice(1).join("/")}`;
+    }
+  }
+
+  const marker = segmentHint ? `/${segmentHint}/` : null;
+  const markerIndex = marker ? trimmedPath.lastIndexOf(marker) : -1;
+
+  if (markerIndex >= 0) {
+    return `${tablePrefix}${trimmedPath.slice(markerIndex + 1)}`;
+  }
+
+  return `${tablePrefix}${path.basename(trimmedPath)}`;
 }
 
 function normalizeAdlsDirectory(prefix) {
@@ -1272,6 +1926,19 @@ async function loadPreviewData(session, key, limit, order, mode, locale) {
     };
   }
 
+  if (extension === ".md" || extension === ".txt") {
+    const rawText = await loadTextRawPreview(session, key, limit, order, compression);
+    return {
+      rows: [],
+      metadataColumns: [],
+      dfmKey: null,
+      previewFormat: formatPreviewExtension(extension.slice(1), compression),
+      previewMode: "raw",
+      rawText,
+      lineCount: countRawPreviewLines(rawText),
+    };
+  }
+
   if (extension === ".parquet" || extension === ".parq") {
     const records = await loadParquetPreviewRecords(session, key, limit, order, compression, locale);
     const normalized = normalizePreviewRecords(records);
@@ -1523,6 +2190,22 @@ async function loadJsonRawPreview(session, key, limit, order, compression = "non
   }
 }
 
+async function loadTextRawPreview(session, key, limit, order, compression = "none") {
+  const text = await readObjectText(session, key, compression);
+
+  if (!text.trim()) {
+    throw new LocalizedError("file_empty");
+  }
+
+  if (limit === null) {
+    return text;
+  }
+
+  const lines = text.split(/\r?\n/);
+  const sliced = order === "reverse" ? lines.slice(-limit) : lines.slice(0, limit);
+  return sliced.join("\n");
+}
+
 function formatRawJsonLines(lines) {
   return lines
     .map((line) => {
@@ -1653,14 +2336,29 @@ async function loadParquetPreviewRecords(session, key, limit, order, compression
 
 async function loadAvroPreviewData(session, key, limit, order, compression = "none", locale = "en") {
   try {
-    const fileBuffer = await readObjectBuffer(session, key, compression);
-    const preview = await collectAvroPreview(fileBuffer, limit, order);
+    const preview = await loadAvroRecordsWithColumns(session, key, limit, order, compression, locale);
     const normalized = normalizePreviewRecords(preview.records);
 
     return {
       rows: normalized.rows,
       columns: preview.columns.length ? preview.columns : normalized.columns,
     };
+  } catch (error) {
+    throw new LocalizedError("avro_preview_failed", {
+      message: localizeError(locale, error),
+    });
+  }
+}
+
+async function loadAvroRecords(session, key, limit, order, locale = "en") {
+  const preview = await loadAvroRecordsWithColumns(session, key, limit, order, "none", locale);
+  return preview.records;
+}
+
+async function loadAvroRecordsWithColumns(session, key, limit, order, compression = "none", locale = "en") {
+  try {
+    const fileBuffer = await readObjectBuffer(session, key, compression);
+    return await collectAvroPreview(fileBuffer, limit, order);
   } catch (error) {
     throw new LocalizedError("avro_preview_failed", {
       message: localizeError(locale, error),
@@ -1759,6 +2457,32 @@ async function loadOrcPreviewData(session, key, limit, order, compression = "non
       columns: columns.length ? columns : normalized.columns,
       order,
     };
+  } catch (error) {
+    if (error instanceof LocalizedError) {
+      throw error;
+    }
+
+    throw new LocalizedError("orc_preview_failed", {
+      message: localizeError(locale, error),
+    });
+  } finally {
+    if (tempDir) {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  }
+}
+
+async function loadOrcPreviewRecords(session, key, limit, order, compression = "none", locale = "en") {
+  let tempDir;
+
+  try {
+    const jarPath = await ensureOrcToolsJar(locale);
+    tempDir = await mkdtemp(path.join(tmpdir(), "multibucket-explorer-orc-"));
+    const tempFilePath = path.join(tempDir, buildOrcTempFileName(key));
+    const buffer = await readObjectBuffer(session, key, compression);
+
+    await writeFile(tempFilePath, buffer);
+    return await loadOrcRows(jarPath, tempFilePath, limit, order, locale);
   } catch (error) {
     if (error instanceof LocalizedError) {
       throw error;

@@ -17,6 +17,10 @@ This project is a local web explorer for object and hierarchical cloud storage, 
 - `samples/`: sample files used for local development
 
 The project uses plain ESM JavaScript and no frontend framework. Keep that simplicity unless explicitly asked to change it.
+Folders that contain `metadata/*.metadata.json` should be treated as Iceberg table roots by the frontend and previewed through backend snapshot inspection instead of raw file listing.
+When a prefix is in Iceberg mode, the preview toolbar should expose the table snapshots available in metadata so the user can switch the sampled snapshot explicitly.
+Temporary Iceberg sample seeding writes only under `<current-prefix>/_sample_data/iceberg/` in the connected storage target and stages the fixture files locally in the backend before upload.
+The temporary Iceberg sample seed UI must remain disabled when the backend is running inside Docker or with `NODE_ENV=production`; it is a local development-only feature.
 Avro preview is handled in the backend for Avro Object Container Files, including files that use the Avro `snappy` codec.
 ORC preview now relies on Java being available on the backend host and caches the Apache ORC tools jar under `.cache/orc-tools/` on first use.
 The Docker image must include a Java runtime so ORC preview works in containerized runs too.

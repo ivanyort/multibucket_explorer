@@ -6,6 +6,11 @@ const state = {
   prefix: "",
   selectedKey: "",
   sessionId: "",
+  browseMode: "raw",
+  icebergTable: null,
+  icebergAvailable: false,
+  icebergSnapshotId: "",
+  seedIcebergEnabled: false,
   destructiveOperationsEnabled: true,
   objectItems: [],
   sort: {
@@ -62,17 +67,21 @@ const translations = {
       noItems: "No items found in this prefix.", loading: "Loading objects...", failed: "Failed to list objects.",
       folder: "Folder", file: "File", actions: "Actions", deleteFile: "Delete file",
       destructiveDisabled: "Delete actions are disabled by the server.",
+      openIceberg: "Open as Iceberg",
+      openFolders: "View folders",
+      icebergSummary: "Iceberg table detected. Latest snapshot: {snapshotId}. Data files: {dataFileCount}. Format: {dataFormat}.",
     },
     preview: {
       kicker: "File Preview", title: "Preview", view: "View", table: "Table", raw: "Raw", rows: "Rows", all: "All",
-      order: "Order", normal: "Normal", reverse: "Newest first", download: "Download file",
-      selectCompatible: "Select a compatible `.csv`, `.json`, `.dfm`, `.parquet`, `.avro`, `.orc`, `.gz`, or `.snappy` file to preview.",
+      order: "Order", normal: "Normal", reverse: "Newest first", snapshot: "Snapshot", download: "Download file",
+      selectCompatible: "Select a compatible `.csv`, `.json`, `.dfm`, `.md`, `.txt`, `.parquet`, `.avro`, `.orc`, `.gz`, or `.snappy` file to preview.",
       noFileSelected: "No file selected.", reading: "Reading file...", loadingFor: "Loading preview for {key}...",
       unsupportedFormat: "Unsupported preview format: {key}",
-      unsupportedBody: "Select a .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .avro, .orc, or matching .gz/.snappy file.",
+      unsupportedBody: "Select a .csv, .json, .jsonl, .ndjson, .dfm, .md, .txt, .parquet, .parq, .avro, .orc, or matching .gz/.snappy file.",
       emptyFile: "Empty file.", emptyBody: "The file has no rows to display.", failed: "Failed to load preview.",
       rawModeSuffix: "raw mode", formatSuffix: "format {format}", reverseOrder: "reverse order",
       showingRows: "{key} · showing {count} sample row(s){orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
+      snapshotSuffix: " · snapshot {snapshotId}",
       dfmFound: " · DFM: {dfmKey} ({count} columns)", dfmNotFound: " · DFM not found",
     },
     delete: {
@@ -86,7 +95,17 @@ const translations = {
       fileDeleted: "{key} deleted.", progressFileTitle: "Deleting file",
       progressFileBody: "The selected file is being deleted.",
     },
-    common: { cancel: "Cancel" },
+    seed: {
+      button: "Create Iceberg samples", kicker: "Sample Data", confirmTitle: "Create Iceberg sample tables",
+      confirmBody: "This will create development Iceberg fixtures in the connected storage target under a fixed prefix.",
+      confirmAction: "Create samples", progressTitle: "Creating sample tables",
+      progressBody: "The backend is preparing sample Iceberg tables and uploading them to the connected storage target.",
+      resultTitle: "Sample tables created", resultBody: "The Iceberg sample tables are now available in the connected storage target.",
+      navigateAction: "Open sample prefix", createdTablesTitle: "Created tables", warningsTitle: "Warnings",
+      generating: "Creating Iceberg sample tables under {prefix}...", generatedStatus: "Iceberg sample tables created under {prefix}.",
+      prefixRequired: "Seed prefix is required.",
+    },
+    common: { cancel: "Cancel", close: "Close" },
     messages: {
       enterCredentials: "Enter credentials and click connect.", startupDiagnostic: "Frontend configured to use the local API.\nStart the Node server and open the application at http://localhost:8086.",
       connecting: "Connecting...", connectingTo: "Connecting to {target} ({location})...", validateAccess: "Calling the local backend to validate storage access...",
@@ -134,17 +153,21 @@ const translations = {
       noItems: "Nenhum item encontrado neste prefixo.", loading: "Carregando objetos...", failed: "Falha ao listar objetos.",
       folder: "Pasta", file: "Arquivo", actions: "Ações", deleteFile: "Apagar arquivo",
       destructiveDisabled: "As ações de exclusão estão desativadas pelo servidor.",
+      openIceberg: "Abrir como Iceberg",
+      openFolders: "Ver pastas",
+      icebergSummary: "Tabela Iceberg detectada. Snapshot atual: {snapshotId}. Arquivos de dados: {dataFileCount}. Formato: {dataFormat}.",
     },
     preview: {
       kicker: "Pré-visualização de Arquivo", title: "Prévia", view: "Visualização", table: "Tabela", raw: "Bruto", rows: "Linhas", all: "Todas",
-      order: "Ordem", normal: "Normal", reverse: "Mais novos primeiro", download: "Baixar arquivo",
-      selectCompatible: "Selecione um arquivo compatível `.csv`, `.json`, `.dfm`, `.parquet`, `.avro`, `.orc`, `.gz` ou `.snappy` para visualizar.",
+      order: "Ordem", normal: "Normal", reverse: "Mais novos primeiro", snapshot: "Snapshot", download: "Baixar arquivo",
+      selectCompatible: "Selecione um arquivo compatível `.csv`, `.json`, `.dfm`, `.md`, `.txt`, `.parquet`, `.avro`, `.orc`, `.gz` ou `.snappy` para visualizar.",
       noFileSelected: "Nenhum arquivo selecionado.", reading: "Lendo arquivo...", loadingFor: "Carregando prévia de {key}...",
       unsupportedFormat: "Formato de prévia não suportado: {key}",
-      unsupportedBody: "Selecione um arquivo .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .avro, .orc ou .gz/.snappy correspondente.",
+      unsupportedBody: "Selecione um arquivo .csv, .json, .jsonl, .ndjson, .dfm, .md, .txt, .parquet, .parq, .avro, .orc ou .gz/.snappy correspondente.",
       emptyFile: "Arquivo vazio.", emptyBody: "O arquivo não tem linhas para exibir.", failed: "Falha ao carregar a prévia.",
       rawModeSuffix: "modo bruto", formatSuffix: "formato {format}", reverseOrder: "ordem reversa",
       showingRows: "{key} · exibindo {count} linha(s) de amostra{orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
+      snapshotSuffix: " · snapshot {snapshotId}",
       dfmFound: " · DFM: {dfmKey} ({count} colunas)", dfmNotFound: " · DFM não encontrado",
     },
     delete: {
@@ -158,7 +181,17 @@ const translations = {
       fileDeleted: "{key} apagado.", progressFileTitle: "Apagando arquivo",
       progressFileBody: "O arquivo selecionado está sendo apagado.",
     },
-    common: { cancel: "Cancelar" },
+    seed: {
+      button: "Criar amostras Iceberg", kicker: "Dados de Exemplo", confirmTitle: "Criar tabelas Iceberg de exemplo",
+      confirmBody: "Isso criará fixtures Iceberg de desenvolvimento no destino conectado usando um prefixo fixo.",
+      confirmAction: "Criar amostras", progressTitle: "Criando tabelas de exemplo",
+      progressBody: "O backend está preparando tabelas Iceberg de exemplo e enviando tudo para o storage conectado.",
+      resultTitle: "Tabelas de exemplo criadas", resultBody: "As tabelas Iceberg de exemplo já estão disponíveis no storage conectado.",
+      navigateAction: "Abrir prefixo de amostras", createdTablesTitle: "Tabelas criadas", warningsTitle: "Avisos",
+      generating: "Criando tabelas Iceberg de exemplo em {prefix}...", generatedStatus: "Tabelas Iceberg de exemplo criadas em {prefix}.",
+      prefixRequired: "O prefixo de seed e obrigatorio.",
+    },
+    common: { cancel: "Cancelar", close: "Fechar" },
     messages: {
       enterCredentials: "Preencha as credenciais e clique em conectar.", startupDiagnostic: "Frontend configurado para usar a API local.\nInicie o servidor Node e abra a aplicação em http://localhost:8086.",
       connecting: "Conectando...", connectingTo: "Conectando a {target} ({location})...", validateAccess: "Chamando o backend local para validar o acesso ao storage...",
@@ -206,17 +239,21 @@ const translations = {
       noItems: "No se encontraron elementos en este prefijo.", loading: "Cargando objetos...", failed: "Error al listar objetos.",
       folder: "Carpeta", file: "Archivo", actions: "Acciones", deleteFile: "Borrar archivo",
       destructiveDisabled: "Las acciones de borrado están deshabilitadas por el servidor.",
+      openIceberg: "Abrir como Iceberg",
+      openFolders: "Ver carpetas",
+      icebergSummary: "Tabla Iceberg detectada. Snapshot actual: {snapshotId}. Archivos de datos: {dataFileCount}. Formato: {dataFormat}.",
     },
     preview: {
       kicker: "Vista Previa de Archivo", title: "Vista previa", view: "Vista", table: "Tabla", raw: "Raw", rows: "Filas", all: "Todas",
-      order: "Orden", normal: "Normal", reverse: "Más nuevos primero", download: "Descargar archivo",
-      selectCompatible: "Selecciona un archivo compatible `.csv`, `.json`, `.dfm`, `.parquet`, `.avro`, `.orc`, `.gz` o `.snappy` para previsualizar.",
+      order: "Orden", normal: "Normal", reverse: "Más nuevos primero", snapshot: "Snapshot", download: "Descargar archivo",
+      selectCompatible: "Selecciona un archivo compatible `.csv`, `.json`, `.dfm`, `.md`, `.txt`, `.parquet`, `.avro`, `.orc`, `.gz` o `.snappy` para previsualizar.",
       noFileSelected: "Ningún archivo seleccionado.", reading: "Leyendo archivo...", loadingFor: "Cargando vista previa de {key}...",
       unsupportedFormat: "Formato de vista previa no compatible: {key}",
-      unsupportedBody: "Selecciona un archivo .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .avro, .orc o un .gz/.snappy correspondiente.",
+      unsupportedBody: "Selecciona un archivo .csv, .json, .jsonl, .ndjson, .dfm, .md, .txt, .parquet, .parq, .avro, .orc o un .gz/.snappy correspondiente.",
       emptyFile: "Archivo vacío.", emptyBody: "El archivo no tiene filas para mostrar.", failed: "Error al cargar la vista previa.",
       rawModeSuffix: "modo raw", formatSuffix: "formato {format}", reverseOrder: "orden inverso",
       showingRows: "{key} · mostrando {count} fila(s) de muestra{orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
+      snapshotSuffix: " · snapshot {snapshotId}",
       dfmFound: " · DFM: {dfmKey} ({count} columnas)", dfmNotFound: " · DFM no encontrado",
     },
     delete: {
@@ -230,7 +267,17 @@ const translations = {
       fileDeleted: "{key} eliminado.", progressFileTitle: "Borrando archivo",
       progressFileBody: "Se está borrando el archivo seleccionado.",
     },
-    common: { cancel: "Cancelar" },
+    seed: {
+      button: "Crear muestras Iceberg", kicker: "Datos de Muestra", confirmTitle: "Crear tablas Iceberg de ejemplo",
+      confirmBody: "Esto creará fixtures Iceberg de desarrollo en el destino conectado bajo un prefijo fijo.",
+      confirmAction: "Crear muestras", progressTitle: "Creando tablas de ejemplo",
+      progressBody: "El backend está preparando tablas Iceberg de ejemplo y cargándolas en el storage conectado.",
+      resultTitle: "Tablas de ejemplo creadas", resultBody: "Las tablas Iceberg de ejemplo ya están disponibles en el storage conectado.",
+      navigateAction: "Abrir prefijo de muestras", createdTablesTitle: "Tablas creadas", warningsTitle: "Avisos",
+      generating: "Creando tablas Iceberg de ejemplo en {prefix}...", generatedStatus: "Tablas Iceberg de ejemplo creadas en {prefix}.",
+      prefixRequired: "El prefijo de seed es obligatorio.",
+    },
+    common: { cancel: "Cancelar", close: "Cerrar" },
     messages: {
       enterCredentials: "Ingresa las credenciales y haz clic en conectar.", startupDiagnostic: "Frontend configurado para usar la API local.\nInicia el servidor Node y abre la aplicación en http://localhost:8086.",
       connecting: "Conectando...", connectingTo: "Conectando a {target} ({location})...", validateAccess: "Llamando al backend local para validar el acceso al storage...",
@@ -278,17 +325,21 @@ const translations = {
       noItems: "Nessun elemento trovato in questo prefisso.", loading: "Caricamento oggetti...", failed: "Errore durante l'elenco degli oggetti.",
       folder: "Cartella", file: "File", actions: "Azioni", deleteFile: "Elimina file",
       destructiveDisabled: "Le azioni di eliminazione sono disabilitate dal server.",
+      openIceberg: "Apri come Iceberg",
+      openFolders: "Vedi cartelle",
+      icebergSummary: "Tabella Iceberg rilevata. Snapshot corrente: {snapshotId}. File dati: {dataFileCount}. Formato: {dataFormat}.",
     },
     preview: {
       kicker: "Anteprima File", title: "Anteprima", view: "Vista", table: "Tabella", raw: "Raw", rows: "Righe", all: "Tutte",
-      order: "Ordine", normal: "Normale", reverse: "Più recenti prima", download: "Scarica file",
-      selectCompatible: "Seleziona un file compatibile `.csv`, `.json`, `.dfm`, `.parquet`, `.avro`, `.orc`, `.gz` o `.snappy` da visualizzare.",
+      order: "Ordine", normal: "Normale", reverse: "Più recenti prima", snapshot: "Snapshot", download: "Scarica file",
+      selectCompatible: "Seleziona un file compatibile `.csv`, `.json`, `.dfm`, `.md`, `.txt`, `.parquet`, `.avro`, `.orc`, `.gz` o `.snappy` da visualizzare.",
       noFileSelected: "Nessun file selezionato.", reading: "Lettura file...", loadingFor: "Caricamento anteprima di {key}...",
       unsupportedFormat: "Formato di anteprima non supportato: {key}",
-      unsupportedBody: "Seleziona un file .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .avro, .orc o un .gz/.snappy corrispondente.",
+      unsupportedBody: "Seleziona un file .csv, .json, .jsonl, .ndjson, .dfm, .md, .txt, .parquet, .parq, .avro, .orc o un .gz/.snappy corrispondente.",
       emptyFile: "File vuoto.", emptyBody: "Il file non contiene righe da mostrare.", failed: "Errore durante il caricamento dell'anteprima.",
       rawModeSuffix: "modalità raw", formatSuffix: "formato {format}", reverseOrder: "ordine inverso",
       showingRows: "{key} · visualizzazione di {count} righe di esempio{orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
+      snapshotSuffix: " · snapshot {snapshotId}",
       dfmFound: " · DFM: {dfmKey} ({count} colonne)", dfmNotFound: " · DFM non trovato",
     },
     delete: {
@@ -302,7 +353,17 @@ const translations = {
       fileDeleted: "{key} eliminato.", progressFileTitle: "Eliminazione file",
       progressFileBody: "Il file selezionato è in fase di eliminazione.",
     },
-    common: { cancel: "Annulla" },
+    seed: {
+      button: "Crea campioni Iceberg", kicker: "Dati di Esempio", confirmTitle: "Crea tabelle Iceberg di esempio",
+      confirmBody: "Questo creerà fixture Iceberg di sviluppo nella destinazione connessa usando un prefisso fisso.",
+      confirmAction: "Crea campioni", progressTitle: "Creazione tabelle di esempio",
+      progressBody: "Il backend sta preparando tabelle Iceberg di esempio e le sta caricando nello storage connesso.",
+      resultTitle: "Tabelle di esempio create", resultBody: "Le tabelle Iceberg di esempio sono ora disponibili nello storage connesso.",
+      navigateAction: "Apri prefisso campioni", createdTablesTitle: "Tabelle create", warningsTitle: "Avvisi",
+      generating: "Creazione delle tabelle Iceberg di esempio in {prefix}...", generatedStatus: "Tabelle Iceberg di esempio create in {prefix}.",
+      prefixRequired: "Il prefisso di seed e obbligatorio.",
+    },
+    common: { cancel: "Annulla", close: "Chiudi" },
     messages: {
       enterCredentials: "Inserisci le credenziali e fai clic su connetti.", startupDiagnostic: "Frontend configurato per usare l'API locale.\nAvvia il server Node e apri l'applicazione su http://localhost:8086.",
       connecting: "Connessione...", connectingTo: "Connessione a {target} ({location})...", validateAccess: "Chiamata al backend locale per validare l'accesso allo storage...",
@@ -337,6 +398,8 @@ const elements = {
   diagnosticBox: document.querySelector("#diagnosticBox"),
   objectList: document.querySelector("#objectList"),
   currentPrefix: document.querySelector("#currentPrefix"),
+  toggleIcebergModeButton: document.querySelector("#toggleIcebergModeButton"),
+  seedIcebergButton: document.querySelector("#seedIcebergButton"),
   refreshButton: document.querySelector("#refreshButton"),
   clearPrefixButton: document.querySelector("#clearPrefixButton"),
   previewMeta: document.querySelector("#previewMeta"),
@@ -344,6 +407,8 @@ const elements = {
   previewMode: document.querySelector("#previewMode"),
   previewRowLimit: document.querySelector("#previewRowLimit"),
   previewRowOrder: document.querySelector("#previewRowOrder"),
+  icebergSnapshotControl: document.querySelector("#icebergSnapshotControl"),
+  icebergSnapshotSelect: document.querySelector("#icebergSnapshotSelect"),
   downloadButton: document.querySelector("#downloadButton"),
   confirmModal: document.querySelector("#confirmModal"),
   confirmModalTitle: document.querySelector("#confirmModalTitle"),
@@ -351,6 +416,24 @@ const elements = {
   confirmModalPrefix: document.querySelector("#confirmModalPrefix"),
   confirmModalCancel: document.querySelector("#confirmModalCancel"),
   confirmModalConfirm: document.querySelector("#confirmModalConfirm"),
+  seedConfirmModal: document.querySelector("#seedConfirmModal"),
+  seedConfirmTitle: document.querySelector("#seedConfirmTitle"),
+  seedConfirmBody: document.querySelector("#seedConfirmBody"),
+  seedConfirmPrefix: document.querySelector("#seedConfirmPrefix"),
+  seedConfirmCancel: document.querySelector("#seedConfirmCancel"),
+  seedConfirmConfirm: document.querySelector("#seedConfirmConfirm"),
+  seedProgressModal: document.querySelector("#seedProgressModal"),
+  seedProgressTitle: document.querySelector("#seedProgressTitle"),
+  seedProgressBody: document.querySelector("#seedProgressBody"),
+  seedProgressPrefix: document.querySelector("#seedProgressPrefix"),
+  seedResultModal: document.querySelector("#seedResultModal"),
+  seedResultTitle: document.querySelector("#seedResultTitle"),
+  seedResultBody: document.querySelector("#seedResultBody"),
+  seedResultPrefix: document.querySelector("#seedResultPrefix"),
+  seedResultTables: document.querySelector("#seedResultTables"),
+  seedResultWarnings: document.querySelector("#seedResultWarnings"),
+  seedResultClose: document.querySelector("#seedResultClose"),
+  seedResultNavigate: document.querySelector("#seedResultNavigate"),
   deleteProgressModal: document.querySelector("#deleteProgressModal"),
   deleteProgressTitle: document.querySelector("#deleteProgressTitle"),
   deleteProgressBody: document.querySelector("#deleteProgressBody"),
@@ -386,23 +469,37 @@ elements.providerCards.forEach((card) => {
   });
 });
 elements.connectButton.addEventListener("click", connectToBucket);
+elements.toggleIcebergModeButton.addEventListener("click", toggleIcebergMode);
+elements.seedIcebergButton.addEventListener("click", seedIcebergFixtures);
 elements.refreshButton.addEventListener("click", () => loadObjects(state.prefix));
 elements.clearPrefixButton.addEventListener("click", clearCurrentPrefix);
 elements.downloadButton.addEventListener("click", downloadSelectedObject);
 elements.previewMode.addEventListener("change", () => {
   syncPreviewModeAvailability(state.selectedKey);
-  if (state.selectedKey) {
+  if (state.browseMode === "iceberg" && state.icebergTable) {
+    previewIcebergTable();
+  } else if (state.selectedKey) {
     previewObject(state.selectedKey);
   }
 });
 elements.previewRowLimit.addEventListener("change", () => {
-  if (state.selectedKey) {
+  if (state.browseMode === "iceberg" && state.icebergTable) {
+    previewIcebergTable();
+  } else if (state.selectedKey) {
     previewObject(state.selectedKey);
   }
 });
 elements.previewRowOrder.addEventListener("change", () => {
-  if (state.selectedKey) {
+  if (state.browseMode === "iceberg" && state.icebergTable) {
+    previewIcebergTable();
+  } else if (state.selectedKey) {
     previewObject(state.selectedKey);
+  }
+});
+elements.icebergSnapshotSelect.addEventListener("change", () => {
+  state.icebergSnapshotId = elements.icebergSnapshotSelect.value;
+  if (state.browseMode === "iceberg" && state.icebergTable) {
+    previewIcebergTable();
   }
 });
 
@@ -413,6 +510,7 @@ loadAppVersion();
 setStartupDiagnostic();
 refreshConnectionSummary();
 syncPreviewModeAvailability("");
+syncSeedControls();
 
 function restoreLanguage() {
   const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
@@ -474,6 +572,8 @@ function applyLanguage() {
     resetPreview(t("preview.selectCompatible"), false, t("preview.noFileSelected"));
   }
   renderCurrentPrefix();
+  syncIcebergModeToggle();
+  syncIcebergSnapshotControl();
   if (state.objectItems.length) {
     renderObjectList();
   }
@@ -499,10 +599,15 @@ async function connectToBucket() {
   state.locationName = getConnectionLocationName(connection);
   state.prefix = "";
   state.selectedKey = "";
+  state.browseMode = "raw";
+  state.icebergTable = null;
+  state.icebergAvailable = false;
+  state.icebergSnapshotId = "";
   state.sessionId = "";
 
   elements.refreshButton.disabled = true;
   elements.clearPrefixButton.disabled = true;
+  syncSeedControls();
   elements.downloadButton.disabled = true;
   syncPreviewModeAvailability("");
   renderObjectPlaceholder(t("messages.connecting"));
@@ -523,6 +628,7 @@ async function connectToBucket() {
     state.destructiveOperationsEnabled = response.destructiveOperationsEnabled !== false;
     elements.refreshButton.disabled = false;
     syncDestructiveControls();
+    syncSeedControls();
     await loadObjects("");
     elements.connectionPanel.open = false;
     refreshConnectionSummary();
@@ -541,6 +647,7 @@ async function connectToBucket() {
     renderObjectPlaceholder(t("messages.failedToConnect"));
     setConnectionStatus(getErrorMessage(error), true);
     setDiagnosticMessage(buildDiagnosticMessage(error));
+    syncSeedControls();
   }
 }
 
@@ -550,7 +657,13 @@ async function loadObjects(prefix) {
   }
 
   state.prefix = prefix;
+  state.browseMode = "raw";
+  state.icebergTable = null;
+  state.icebergAvailable = false;
+  state.icebergSnapshotId = "";
   renderCurrentPrefix();
+  syncIcebergModeToggle();
+  syncIcebergSnapshotControl();
   syncDestructiveControls();
   renderObjectPlaceholder(t("browser.loading"));
   resetPreview(t("preview.selectCompatible"));
@@ -561,6 +674,7 @@ async function loadObjects(prefix) {
     );
     state.objectItems = response.items ?? [];
     renderObjectList();
+    await refreshIcebergAvailability(prefix);
     setConnectionStatus(
       t("messages.loadedSummary", {
         folders: response.summary?.folders ?? 0,
@@ -570,6 +684,8 @@ async function loadObjects(prefix) {
     );
   } catch (error) {
     renderObjectPlaceholder(t("browser.failed"));
+    state.icebergAvailable = false;
+    syncIcebergModeToggle();
     setConnectionStatus(getErrorMessage(error), true);
     setDiagnosticMessage(buildDiagnosticMessage(error));
   }
@@ -611,7 +727,7 @@ function renderCurrentPrefix() {
     crumb.className = "prefix-crumb";
     crumb.textContent = segment;
     crumb.setAttribute("aria-current", index === segments.length - 1 ? "page" : "false");
-    crumb.addEventListener("click", () => loadObjects(targetPrefix));
+    crumb.addEventListener("click", () => openPrefix(targetPrefix));
     elements.currentPrefix.appendChild(crumb);
   });
 }
@@ -721,11 +837,115 @@ function renderObjectList() {
 
 function handleObjectSelection(item) {
   if (item.type === "folder") {
-    loadObjects(item.key);
+    openPrefix(item.key);
     return;
   }
 
   previewObject(item.key);
+}
+
+async function openPrefix(prefix) {
+  if (!state.sessionId) {
+    return;
+  }
+
+  try {
+    const response = await apiFetch(
+      `/api/iceberg/inspect?sessionId=${encodeURIComponent(state.sessionId)}&prefix=${encodeURIComponent(prefix)}`,
+    );
+
+    if (response.isIceberg) {
+      state.icebergAvailable = true;
+      await openIcebergTable(response);
+      return;
+    }
+    state.icebergAvailable = false;
+    state.icebergSnapshotId = "";
+    syncIcebergModeToggle();
+    syncIcebergSnapshotControl();
+  } catch (error) {
+    setConnectionStatus(getErrorMessage(error), true);
+    setDiagnosticMessage(buildDiagnosticMessage(error));
+    return;
+  }
+
+  await loadObjects(prefix);
+}
+
+async function openIcebergTable(table) {
+  state.prefix = table.tablePrefix ?? "";
+  state.selectedKey = "";
+  state.browseMode = "iceberg";
+  state.icebergTable = table;
+  state.icebergAvailable = true;
+  state.icebergSnapshotId = resolveIcebergSnapshotId(table);
+  elements.downloadButton.disabled = true;
+  elements.previewMode.value = "table";
+  elements.previewMode.disabled = true;
+  renderCurrentPrefix();
+  syncIcebergModeToggle();
+  syncIcebergSnapshotControl();
+  syncDestructiveControls();
+  renderObjectPlaceholder(
+    t("browser.icebergSummary", {
+      snapshotId: state.icebergSnapshotId || table.snapshotId || "n/a",
+      dataFileCount: table.dataFileCount ?? 0,
+      dataFormat: table.dataFormat ?? "unknown",
+    }),
+  );
+  setConnectionStatus(
+    t("browser.icebergSummary", {
+      snapshotId: state.icebergSnapshotId || table.snapshotId || "n/a",
+      dataFileCount: table.dataFileCount ?? 0,
+      dataFormat: table.dataFormat ?? "unknown",
+    }),
+  );
+  await previewIcebergTable();
+}
+
+async function refreshIcebergAvailability(prefix) {
+  if (!state.sessionId || !prefix) {
+    state.icebergAvailable = false;
+    syncIcebergModeToggle();
+    return;
+  }
+
+  try {
+    const response = await apiFetch(
+      `/api/iceberg/inspect?sessionId=${encodeURIComponent(state.sessionId)}&prefix=${encodeURIComponent(prefix)}`,
+    );
+    state.icebergAvailable = response.isIceberg === true;
+    if (state.icebergAvailable) {
+      state.icebergTable = response;
+      state.icebergSnapshotId = resolveIcebergSnapshotId(response);
+    } else {
+      state.icebergSnapshotId = "";
+    }
+  } catch {
+    state.icebergAvailable = false;
+    state.icebergSnapshotId = "";
+  }
+
+  syncIcebergModeToggle();
+  syncIcebergSnapshotControl();
+}
+
+async function toggleIcebergMode() {
+  if (!state.sessionId || !state.prefix || !state.icebergAvailable) {
+    return;
+  }
+
+  if (state.browseMode === "iceberg") {
+    await loadObjects(state.prefix);
+    return;
+  }
+
+  if (state.icebergTable?.isIceberg) {
+    await openIcebergTable(state.icebergTable);
+    return;
+  }
+
+  await openPrefix(state.prefix);
 }
 
 async function previewObject(key) {
@@ -785,6 +1005,104 @@ async function previewObject(key) {
   } catch (error) {
     resetPreview(getErrorMessage(error), true, t("preview.failed"));
   }
+}
+
+async function previewIcebergTable() {
+  if (!state.sessionId || !state.icebergTable?.tablePrefix) {
+    return;
+  }
+
+  const snapshotId = getSelectedIcebergSnapshotId();
+  elements.previewMeta.textContent = t("preview.loadingFor", { key: state.icebergTable.tablePrefix });
+  elements.previewTableWrap.className = "preview-table-wrap empty-state";
+  elements.previewTableWrap.textContent = t("preview.reading");
+
+  try {
+    const rowLimit = getPreviewRowLimit();
+    const rowOrder = getPreviewRowOrder();
+    const response = await apiFetch(
+      `/api/iceberg/preview?sessionId=${encodeURIComponent(state.sessionId)}&prefix=${encodeURIComponent(state.icebergTable.tablePrefix)}&limit=${encodeURIComponent(rowLimit)}&order=${encodeURIComponent(rowOrder)}&snapshotId=${encodeURIComponent(snapshotId)}`,
+    );
+
+    const preview = buildPreviewModel(
+      response.rows ?? [],
+      response.metadataColumns ?? [],
+      response.order ?? rowOrder,
+    );
+    state.icebergTable = {
+      ...state.icebergTable,
+      ...response.icebergMeta,
+      snapshots: response.icebergMeta?.snapshots ?? state.icebergTable.snapshots ?? [],
+    };
+    state.icebergSnapshotId = String(response.icebergMeta?.snapshotId ?? snapshotId);
+    syncIcebergSnapshotControl();
+    renderPreviewTable(preview);
+    elements.previewMeta.textContent = t("preview.showingRows", {
+      key: state.icebergTable.tablePrefix,
+      count: response.lineCount ?? 0,
+      orderSuffix: getPreviewRowOrder() === "reverse" ? ` · ${t("preview.reverseOrder")}` : "",
+      modeSuffix: "",
+      formatSuffix: ` · ${t("preview.formatSuffix", { format: "iceberg" })}${t("preview.snapshotSuffix", { snapshotId: state.icebergSnapshotId })}`,
+      dfmSuffix: "",
+    });
+  } catch (error) {
+    resetPreview(getErrorMessage(error), true, t("preview.failed"));
+  }
+}
+
+function resolveIcebergSnapshotId(table) {
+  const availableSnapshots = Array.isArray(table?.snapshots) ? table.snapshots : [];
+
+  if (state.icebergSnapshotId && availableSnapshots.some((snapshot) => String(snapshot.snapshotId) === state.icebergSnapshotId)) {
+    return state.icebergSnapshotId;
+  }
+
+  return String(table?.snapshotId ?? table?.currentSnapshotId ?? availableSnapshots[0]?.snapshotId ?? "");
+}
+
+function getSelectedIcebergSnapshotId() {
+  const selectedValue = elements.icebergSnapshotSelect.value || state.icebergSnapshotId;
+  return selectedValue || resolveIcebergSnapshotId(state.icebergTable);
+}
+
+function syncIcebergSnapshotControl() {
+  const hasSnapshots = state.browseMode === "iceberg" && Array.isArray(state.icebergTable?.snapshots) && state.icebergTable.snapshots.length > 0;
+  elements.icebergSnapshotControl.hidden = !hasSnapshots;
+
+  if (!hasSnapshots) {
+    elements.icebergSnapshotSelect.innerHTML = "";
+    elements.icebergSnapshotSelect.disabled = true;
+    return;
+  }
+
+  const selectedSnapshotId = resolveIcebergSnapshotId(state.icebergTable);
+  elements.icebergSnapshotSelect.innerHTML = "";
+
+  state.icebergTable.snapshots.forEach((snapshot) => {
+    const option = document.createElement("option");
+    option.value = String(snapshot.snapshotId);
+    option.textContent = formatIcebergSnapshotOption(snapshot);
+    option.selected = option.value === selectedSnapshotId;
+    elements.icebergSnapshotSelect.appendChild(option);
+  });
+
+  state.icebergSnapshotId = selectedSnapshotId;
+  elements.icebergSnapshotSelect.disabled = state.icebergTable.snapshots.length <= 1;
+  elements.icebergSnapshotSelect.setAttribute("aria-label", t("preview.snapshot"));
+}
+
+function formatIcebergSnapshotOption(snapshot) {
+  const parts = [String(snapshot.snapshotId)];
+
+  if (snapshot?.committedAt) {
+    parts.push(new Date(snapshot.committedAt).toLocaleString(DATE_LOCALES[state.language] ?? "en-US"));
+  }
+
+  if (snapshot?.operation) {
+    parts.push(String(snapshot.operation));
+  }
+
+  return parts.join(" · ");
 }
 
 function renderPreviewTable(preview) {
@@ -1247,6 +1565,209 @@ async function deleteObjectFile(key) {
   }
 }
 
+async function seedIcebergFixtures() {
+  if (!state.sessionId) {
+    return;
+  }
+
+  const suggestedPrefix = getSeedPrefix();
+  const confirmed = await confirmSeedGeneration(suggestedPrefix);
+
+  if (!confirmed) {
+    return;
+  }
+
+  const prefix = normalizeSeedPrefix(elements.seedConfirmPrefix.value);
+
+  if (!prefix) {
+    setConnectionStatus(t("seed.prefixRequired"), true);
+    return;
+  }
+
+  elements.seedIcebergButton.disabled = true;
+  showSeedProgress(prefix);
+  setConnectionStatus(t("seed.generating", { prefix }));
+
+  try {
+    const response = await apiFetch("/api/dev/seed-iceberg", {
+      method: "POST",
+      body: JSON.stringify({
+        sessionId: state.sessionId,
+        targetPrefix: prefix,
+      }),
+    });
+
+    const basePrefix = response.basePrefix ?? prefix;
+    setConnectionStatus(t("seed.generatedStatus", { prefix: basePrefix }));
+    setDiagnosticMessage(buildSeedDiagnosticMessage(response));
+    showSeedResult(response);
+  } catch (error) {
+    setConnectionStatus(getErrorMessage(error), true);
+    setDiagnosticMessage(buildDiagnosticMessage(error));
+  } finally {
+    hideSeedProgress();
+    syncSeedControls();
+  }
+}
+
+function getSeedPrefix() {
+  return `${state.prefix || ""}_sample_data/iceberg/`;
+}
+
+function normalizeSeedPrefix(value) {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+
+  if (!trimmed) {
+    return "";
+  }
+
+  return trimmed.endsWith("/") ? trimmed : `${trimmed}/`;
+}
+
+function buildSeedDiagnosticMessage(response) {
+  const warnings = Array.isArray(response.warnings) ? response.warnings : [];
+
+  if (!warnings.length) {
+    return setDiagnosticForSeedTables(response.createdTables ?? []);
+  }
+
+  return `${setDiagnosticForSeedTables(response.createdTables ?? [])}\n\n${warnings.join("\n")}`;
+}
+
+function setDiagnosticForSeedTables(createdTables) {
+  if (!Array.isArray(createdTables) || !createdTables.length) {
+    return "";
+  }
+
+  return createdTables
+    .map((table) => `${table.name} · ${table.prefix} · snapshot ${table.currentSnapshotId ?? "n/a"}`)
+    .join("\n");
+}
+
+function confirmSeedGeneration(prefix) {
+  return new Promise((resolve) => {
+    const previousActiveElement = document.activeElement;
+
+    const close = (confirmed) => {
+      elements.seedConfirmModal.hidden = true;
+      document.body.style.overflow = "";
+      elements.seedConfirmModal.removeEventListener("click", handleShellClick);
+      document.removeEventListener("keydown", handleKeydown);
+      elements.seedConfirmCancel.removeEventListener("click", handleCancel);
+      elements.seedConfirmConfirm.removeEventListener("click", handleConfirm);
+      if (previousActiveElement instanceof HTMLElement) {
+        previousActiveElement.focus();
+      }
+      resolve(confirmed);
+    };
+
+    const handleCancel = () => close(false);
+    const handleConfirm = () => close(true);
+    const handleShellClick = (event) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.hasAttribute("data-modal-close")) {
+        close(false);
+      }
+    };
+    const handleKeydown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close(false);
+      }
+    };
+
+    elements.seedConfirmTitle.textContent = t("seed.confirmTitle");
+    elements.seedConfirmBody.textContent = t("seed.confirmBody");
+    elements.seedConfirmConfirm.textContent = t("seed.confirmAction");
+    elements.seedConfirmPrefix.value = prefix;
+    elements.seedConfirmModal.hidden = false;
+    document.body.style.overflow = "hidden";
+    elements.seedConfirmModal.addEventListener("click", handleShellClick);
+    document.addEventListener("keydown", handleKeydown);
+    elements.seedConfirmCancel.addEventListener("click", handleCancel);
+    elements.seedConfirmConfirm.addEventListener("click", handleConfirm);
+    elements.seedConfirmCancel.focus();
+  });
+}
+
+function showSeedProgress(prefix) {
+  elements.seedProgressTitle.textContent = t("seed.progressTitle");
+  elements.seedProgressBody.textContent = t("seed.progressBody");
+  elements.seedProgressPrefix.textContent = prefix;
+  elements.seedProgressModal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function hideSeedProgress() {
+  elements.seedProgressModal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function showSeedResult(response) {
+  const previousActiveElement = document.activeElement;
+  const basePrefix = response.basePrefix ?? getSeedPrefix();
+  const createdTables = Array.isArray(response.createdTables) ? response.createdTables : [];
+  const warnings = Array.isArray(response.warnings) ? response.warnings : [];
+
+  const close = () => {
+    elements.seedResultModal.hidden = true;
+    document.body.style.overflow = "";
+    elements.seedResultModal.removeEventListener("click", handleShellClick);
+    document.removeEventListener("keydown", handleKeydown);
+    elements.seedResultClose.removeEventListener("click", close);
+    elements.seedResultNavigate.removeEventListener("click", handleNavigate);
+    if (previousActiveElement instanceof HTMLElement) {
+      previousActiveElement.focus();
+    }
+  };
+
+  const handleNavigate = async () => {
+    close();
+    await loadObjects(basePrefix);
+  };
+  const handleShellClick = (event) => {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.hasAttribute("data-seed-result-close")) {
+      close();
+    }
+  };
+  const handleKeydown = (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close();
+    }
+  };
+
+  elements.seedResultTitle.textContent = t("seed.resultTitle");
+  elements.seedResultBody.textContent = t("seed.resultBody");
+  elements.seedResultPrefix.textContent = basePrefix;
+  elements.seedResultTables.innerHTML = "";
+  createdTables.forEach((table) => {
+    const item = document.createElement("li");
+    item.textContent = `${table.name} · ${table.format} · ${table.prefix}`;
+    elements.seedResultTables.appendChild(item);
+  });
+  elements.seedResultWarnings.innerHTML = "";
+  if (warnings.length) {
+    warnings.forEach((warning) => {
+      const item = document.createElement("li");
+      item.textContent = warning;
+      elements.seedResultWarnings.appendChild(item);
+    });
+  } else {
+    const item = document.createElement("li");
+    item.textContent = "—";
+    elements.seedResultWarnings.appendChild(item);
+  }
+  elements.seedResultModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  elements.seedResultModal.addEventListener("click", handleShellClick);
+  document.addEventListener("keydown", handleKeydown);
+  elements.seedResultClose.addEventListener("click", close);
+  elements.seedResultNavigate.addEventListener("click", handleNavigate);
+  elements.seedResultNavigate.focus();
+}
+
 function confirmDeletion({ title, body, actionLabel, target }) {
   return new Promise((resolve) => {
     const previousActiveElement = document.activeElement;
@@ -1307,9 +1828,24 @@ function hideDeleteProgress() {
 }
 
 function syncDestructiveControls() {
-  const canDeletePrefix = state.destructiveOperationsEnabled && Boolean(state.prefix) && Boolean(state.sessionId);
+  const canDeletePrefix =
+    state.destructiveOperationsEnabled && state.browseMode !== "iceberg" && Boolean(state.prefix) && Boolean(state.sessionId);
   elements.clearPrefixButton.disabled = !canDeletePrefix;
-  elements.clearPrefixButton.hidden = !state.destructiveOperationsEnabled;
+  elements.clearPrefixButton.hidden = !state.destructiveOperationsEnabled || state.browseMode === "iceberg";
+}
+
+function syncIcebergModeToggle() {
+  const available = Boolean(state.sessionId) && Boolean(state.prefix) && state.icebergAvailable;
+  elements.toggleIcebergModeButton.hidden = !available;
+  elements.toggleIcebergModeButton.disabled = !available;
+  elements.toggleIcebergModeButton.textContent =
+    state.browseMode === "iceberg" ? t("browser.openFolders") : t("browser.openIceberg");
+}
+
+function syncSeedControls() {
+  const enabled = state.seedIcebergEnabled === true;
+  elements.seedIcebergButton.hidden = !enabled;
+  elements.seedIcebergButton.disabled = !enabled || !state.sessionId;
 }
 
 function setStartupDiagnostic() {
@@ -1582,6 +2118,12 @@ function isPreviewableFile(key) {
     normalizedKey.endsWith(".dfm") ||
     normalizedKey.endsWith(".dfm.gz") ||
     normalizedKey.endsWith(".dfm.snappy") ||
+    normalizedKey.endsWith(".md") ||
+    normalizedKey.endsWith(".md.gz") ||
+    normalizedKey.endsWith(".md.snappy") ||
+    normalizedKey.endsWith(".txt") ||
+    normalizedKey.endsWith(".txt.gz") ||
+    normalizedKey.endsWith(".txt.snappy") ||
     normalizedKey.endsWith(".json") ||
     normalizedKey.endsWith(".json.gz") ||
     normalizedKey.endsWith(".json.snappy") ||
@@ -1636,11 +2178,29 @@ function isJsonPreviewFile(key) {
 
 function syncPreviewModeAvailability(key) {
   const allowRaw = isJsonPreviewFile(key);
-  elements.previewMode.disabled = !allowRaw;
+  const rawOnly = isRawOnlyPreviewFile(key);
+  elements.previewMode.disabled = !allowRaw || rawOnly;
+
+  if (rawOnly) {
+    elements.previewMode.value = "raw";
+    return;
+  }
 
   if (!allowRaw) {
     elements.previewMode.value = "table";
   }
+}
+
+function isRawOnlyPreviewFile(key) {
+  const normalizedKey = key.toLowerCase();
+  return (
+    normalizedKey.endsWith(".md") ||
+    normalizedKey.endsWith(".md.gz") ||
+    normalizedKey.endsWith(".md.snappy") ||
+    normalizedKey.endsWith(".txt") ||
+    normalizedKey.endsWith(".txt.gz") ||
+    normalizedKey.endsWith(".txt.snappy")
+  );
 }
 
 function refreshConnectionSummary() {
@@ -1673,6 +2233,8 @@ async function loadAppVersion() {
   try {
     const response = await apiFetch("/api/app-info");
     const version = typeof response.version === "string" ? response.version.trim() : "";
+    state.seedIcebergEnabled = response.devFeatures?.seedIceberg === true;
+    syncSeedControls();
 
     if (!version) {
       elements.appVersionText.hidden = true;
@@ -1682,6 +2244,8 @@ async function loadAppVersion() {
     elements.appVersionText.textContent = `v${version}`;
     elements.appVersionText.hidden = false;
   } catch {
+    state.seedIcebergEnabled = false;
+    syncSeedControls();
     elements.appVersionText.hidden = true;
   }
 }

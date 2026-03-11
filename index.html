@@ -263,6 +263,24 @@
             </div>
             <div class="toolbar-actions">
               <button
+                id="toggleIcebergModeButton"
+                class="ghost-button"
+                type="button"
+                hidden
+                disabled
+              >
+                Open as Iceberg
+              </button>
+              <button
+                id="seedIcebergButton"
+                class="ghost-button"
+                type="button"
+                data-i18n="seed.button"
+                disabled
+              >
+                Create Iceberg samples
+              </button>
+              <button
                 id="refreshButton"
                 class="ghost-button icon-button"
                 type="button"
@@ -333,6 +351,10 @@
                   <option value="reverse" data-i18n="preview.reverse">Newest first</option>
                 </select>
               </label>
+              <label class="preview-limit-control" id="icebergSnapshotControl" hidden>
+                <span data-i18n="preview.snapshot">Snapshot</span>
+                <select id="icebergSnapshotSelect" aria-label="Iceberg snapshot"></select>
+              </label>
               <button id="downloadButton" class="ghost-button" disabled data-i18n="preview.download">
                 Download file
               </button>
@@ -347,6 +369,85 @@
         </div>
       </section>
     </main>
+
+    <div
+      id="seedConfirmModal"
+      class="modal-shell"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="seedConfirmTitle"
+      aria-describedby="seedConfirmBody"
+      hidden
+      >
+      <div class="modal-backdrop" data-modal-close></div>
+      <div class="modal-card" role="document">
+        <p class="panel-kicker" data-i18n="seed.kicker">Sample Data</p>
+        <h2 id="seedConfirmTitle" data-i18n="seed.confirmTitle">Create Iceberg sample tables</h2>
+        <p id="seedConfirmBody" class="modal-copy" data-i18n="seed.confirmBody">
+          This will create sample Iceberg tables inside the connected storage target under a fixed development prefix.
+        </p>
+        <label class="span-2">
+          <input id="seedConfirmPrefix" class="modal-prefix" type="text" spellcheck="false" />
+        </label>
+        <div class="modal-actions">
+          <button id="seedConfirmCancel" class="ghost-button" type="button" data-i18n="common.cancel">Cancel</button>
+          <button id="seedConfirmConfirm" class="primary-button" type="button" data-i18n="seed.confirmAction">Create samples</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="seedProgressModal"
+      class="modal-shell"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="seedProgressTitle"
+      aria-describedby="seedProgressBody"
+      hidden
+      >
+      <div class="modal-backdrop"></div>
+      <div class="modal-card modal-card-compact" role="document">
+        <div class="progress-indicator" aria-hidden="true"></div>
+        <p class="panel-kicker" data-i18n="seed.kicker">Sample Data</p>
+        <h2 id="seedProgressTitle" data-i18n="seed.progressTitle">Creating sample tables</h2>
+        <p id="seedProgressBody" class="modal-copy" data-i18n="seed.progressBody">
+          The backend is preparing sample Iceberg tables and uploading them to the connected storage target.
+        </p>
+        <code id="seedProgressPrefix" class="modal-prefix"></code>
+      </div>
+    </div>
+
+    <div
+      id="seedResultModal"
+      class="modal-shell"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="seedResultTitle"
+      aria-describedby="seedResultBody"
+      hidden
+      >
+      <div class="modal-backdrop" data-seed-result-close></div>
+      <div class="modal-card" role="document">
+        <p class="panel-kicker" data-i18n="seed.kicker">Sample Data</p>
+        <h2 id="seedResultTitle" data-i18n="seed.resultTitle">Sample tables created</h2>
+        <p id="seedResultBody" class="modal-copy" data-i18n="seed.resultBody">
+          The Iceberg sample tables are now available in the connected storage target.
+        </p>
+        <code id="seedResultPrefix" class="modal-prefix"></code>
+        <div class="seed-result-block">
+          <strong data-i18n="seed.createdTablesTitle">Created tables</strong>
+          <ul id="seedResultTables" class="seed-result-list"></ul>
+        </div>
+        <div class="seed-result-block">
+          <strong data-i18n="seed.warningsTitle">Warnings</strong>
+          <ul id="seedResultWarnings" class="seed-result-list"></ul>
+        </div>
+        <div class="modal-actions">
+          <button id="seedResultClose" class="ghost-button" type="button" data-i18n="common.close">Close</button>
+          <button id="seedResultNavigate" class="primary-button" type="button" data-i18n="seed.navigateAction">Open sample prefix</button>
+        </div>
+      </div>
+    </div>
 
     <div
       id="confirmModal"

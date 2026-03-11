@@ -591,6 +591,22 @@ code {
   margin-top: 20px;
 }
 
+.seed-result-block {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.seed-result-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
+.seed-result-list li {
+  margin-bottom: 6px;
+}
+
 .progress-indicator {
   width: 44px;
   height: 44px;
