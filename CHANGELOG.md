@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.4.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.4.0) - 2026-03-11
+
+### Changes
+- feat(iceberg): add snapshot browsing and dev sample tooling (22e761d)
+- chore(changelog): update for v0.3.0 [skip ci] (94fea93)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.3.0...v0.4.0)
+
+
 ## [v0.3.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.3.0) - 2026-03-11
 
 ### Changes
