@@ -1567,19 +1567,23 @@ async function deleteObjectFile(key) {
 
 async function seedIcebergFixtures() {
   if (!state.sessionId) {
+    console.warn("[seed] skipped: no active session");
     return;
   }
 
   const suggestedPrefix = getSeedPrefix();
+  console.log("[seed] open confirm", { suggestedPrefix, provider: state.provider, sessionId: state.sessionId });
   const confirmed = await confirmSeedGeneration(suggestedPrefix);
 
   if (!confirmed) {
+    console.log("[seed] cancelled");
     return;
   }
 
   const prefix = normalizeSeedPrefix(elements.seedConfirmPrefix.value);
 
   if (!prefix) {
+    console.warn("[seed] invalid prefix");
     setConnectionStatus(t("seed.prefixRequired"), true);
     return;
   }
@@ -1587,6 +1591,8 @@ async function seedIcebergFixtures() {
   elements.seedIcebergButton.disabled = true;
   showSeedProgress(prefix);
   setConnectionStatus(t("seed.generating", { prefix }));
+  setDiagnosticMessage(`Seed request started for ${prefix}`);
+  console.log("[seed] request start", { prefix, provider: state.provider, sessionId: state.sessionId });
 
   try {
     const response = await apiFetch("/api/dev/seed-iceberg", {
@@ -1598,10 +1604,12 @@ async function seedIcebergFixtures() {
     });
 
     const basePrefix = response.basePrefix ?? prefix;
+    console.log("[seed] request completed", response);
     setConnectionStatus(t("seed.generatedStatus", { prefix: basePrefix }));
     setDiagnosticMessage(buildSeedDiagnosticMessage(response));
     showSeedResult(response);
   } catch (error) {
+    console.error("[seed] request failed", error);
     setConnectionStatus(getErrorMessage(error), true);
     setDiagnosticMessage(buildDiagnosticMessage(error));
   } finally {

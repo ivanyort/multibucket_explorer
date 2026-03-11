@@ -100,3 +100,4 @@ By default the application runs at `http://localhost:8086`.
 2. Temporary task notes or experiments should not live here.
 3. If a decision changes how the app should be run, developed, or operated, record it in this file.
 4. `DISABLE_DESTRUCTIVE_OPERATIONS=true` is the runtime switch for read-only delete behavior and must block both prefix deletion and single-file deletion.
+5. Prefix deletion must remove only the contents under the selected folder and preserve that folder across all supported providers.

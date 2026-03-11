@@ -317,6 +317,13 @@ const server = createServer(async (request, response) => {
 
     sendJson(response, 404, { error: localizeError(locale, new LocalizedError("route_not_found")) });
   } catch (error) {
+    console.error("[server] request failed", {
+      method: request.method,
+      url: request.url,
+      message: getErrorMessage(error, locale),
+      code: typeof error?.code === "string" ? error.code : undefined,
+      statusCode: typeof error?.statusCode === "number" ? error.statusCode : undefined,
+    });
     sendJson(response, 500, { error: localizeError(locale, error) });
   }
 });
@@ -549,7 +556,9 @@ async function handleSeedIceberg(request, response, locale) {
   const body = await readJsonBody(request);
   const session = getSession(typeof body.sessionId === "string" ? body.sessionId : "");
   const targetPrefix = buildIcebergSamplePrefix(typeof body.targetPrefix === "string" ? body.targetPrefix : "");
+  console.log(`[seed] start provider=${session.storage.provider} prefix=${targetPrefix}`);
   const result = await seedIcebergFixtures(session, locale, targetPrefix);
+  console.log(`[seed] completed provider=${session.storage.provider} prefix=${targetPrefix} tables=${result.createdTables?.length ?? 0}`);
   sendJson(response, 200, result);
 }
 
@@ -831,15 +840,16 @@ async function listAdlsObjects(session, prefix) {
       continue;
     }
 
-    const normalizedName = item.isDirectory ? ensureTrailingSlash(item.name) : item.name;
+    const resolvedName = resolveAdlsListPath(path, item.name);
+    const normalizedName = item.isDirectory ? ensureTrailingSlash(resolvedName) : resolvedName;
 
-    if (normalizedName === prefix || item.name === path) {
+    if (normalizedName === prefix || resolvedName === path) {
       continue;
     }
 
     items.push({
       type: item.isDirectory ? "folder" : "file",
-      key: item.isDirectory ? ensureTrailingSlash(item.name) : item.name,
+      key: item.isDirectory ? ensureTrailingSlash(resolvedName) : resolvedName,
       name: trimCurrentPrefix(normalizedName, prefix).replace(/\/$/, ""),
       size: Number(item.contentLength ?? 0),
       lastModified: item.lastModified ? new Date(item.lastModified).toISOString() : null,
@@ -862,7 +872,10 @@ async function listStoragePaths(session, prefix, recursive = true) {
       recursive,
     })) {
       if (item.name) {
-        paths.push(item);
+        paths.push({
+          ...item,
+          name: resolveAdlsListPath(path, item.name),
+        });
       }
     }
 
@@ -938,17 +951,33 @@ async function deleteStoragePrefix(session, prefix) {
     }
 
     const paths = await listStoragePaths(session, prefix, true);
-    const deletedCount = paths.filter((item) => !item.isDirectory).length;
-    await session.storage.fileSystemClient.getDirectoryClient(normalizedPrefix).delete(true);
+    const childPaths = paths.filter((item) => item.name && item.name !== normalizedPrefix);
+    const files = childPaths.filter((item) => !item.isDirectory);
+    const directories = childPaths
+      .filter((item) => item.isDirectory)
+      .sort((left, right) => getPathDepth(right.name) - getPathDepth(left.name));
+
+    await Promise.all(files.map((item) => session.storage.fileSystemClient.getFileClient(item.name).delete()));
+
+    for (const directory of directories) {
+      await session.storage.fileSystemClient.getDirectoryClient(directory.name).delete();
+    }
+
+    const deletedCount = files.length;
     return deletedCount;
   }
 
   if (session.storage.provider === "gcs") {
-    const files = await listStoragePaths(session, prefix, true);
-    await Promise.all(files.map((file) => file.delete()));
-    return files.length;
+    const normalizedPrefix = ensureTrailingSlash(prefix);
+    const files = await listStoragePaths(session, normalizedPrefix, true);
+    const childFiles = files.filter((file) => file.name !== normalizedPrefix);
+
+    await Promise.all(childFiles.map((file) => file.delete()));
+    await ensurePrefixMarkerObject(session, normalizedPrefix);
+    return childFiles.length;
   }
 
+  const normalizedPrefix = ensureTrailingSlash(prefix);
   let continuationToken;
   let deletedCount = 0;
 
@@ -956,13 +985,14 @@ async function deleteStoragePrefix(session, prefix) {
     const listResult = await session.storage.client.send(
       new ListObjectsV2Command({
         Bucket: session.storage.bucket,
-        Prefix: prefix,
+        Prefix: normalizedPrefix,
         ContinuationToken: continuationToken,
       }),
     );
 
     const objects =
-      listResult.Contents?.map((item) => item.Key).filter((key) => typeof key === "string" && key.length) ?? [];
+      listResult.Contents?.map((item) => item.Key)
+        .filter((key) => typeof key === "string" && key.length && key !== normalizedPrefix) ?? [];
 
     if (objects.length) {
       await session.storage.client.send(
@@ -980,6 +1010,7 @@ async function deleteStoragePrefix(session, prefix) {
     continuationToken = listResult.IsTruncated ? listResult.NextContinuationToken : undefined;
   } while (continuationToken);
 
+  await ensurePrefixMarkerObject(session, normalizedPrefix);
   return deletedCount;
 }
 
@@ -1053,7 +1084,15 @@ async function seedIcebergFixtures(session, locale, targetPrefix) {
 }
 
 async function ensureIcebergSamplePrefixEmpty(session, targetPrefix) {
-  const existingPaths = await listStoragePaths(session, targetPrefix, true);
+  let existingPaths = [];
+
+  try {
+    existingPaths = await listStoragePaths(session, targetPrefix, true);
+  } catch (error) {
+    if (!isStoragePathMissingError(error)) {
+      throw error;
+    }
+  }
 
   if (existingPaths.length > 0) {
     throw new LocalizedError("iceberg_seed_conflict", {
@@ -1177,10 +1216,9 @@ async function putStorageObject(session, key, buffer, contentType = "application
   if (session.storage.provider === "adls") {
     await ensureAdlsParentDirectories(session.storage.fileSystemClient, key);
     const fileClient = session.storage.fileSystemClient.getFileClient(key);
-    await fileClient.uploadData(buffer, {
-      overwrite: true,
-      blobHTTPHeaders: {
-        blobContentType: contentType,
+    await fileClient.upload(buffer, {
+      pathHttpHeaders: {
+        contentType,
       },
     });
     return;
@@ -1202,6 +1240,14 @@ async function putStorageObject(session, key, buffer, contentType = "application
       ContentType: contentType,
     }),
   );
+}
+
+async function ensurePrefixMarkerObject(session, prefix) {
+  if (!prefix || session.storage.provider === "adls") {
+    return;
+  }
+
+  await putStorageObject(session, prefix, Buffer.alloc(0), "application/x-directory");
 }
 
 async function ensureAdlsParentDirectories(fileSystemClient, key) {
@@ -1345,6 +1391,10 @@ async function inspectIcebergTable(session, prefix, locale = "en", requestedSnap
   } catch (error) {
     if (error instanceof LocalizedError) {
       throw error;
+    }
+
+    if (isStoragePathMissingError(error)) {
+      return null;
     }
 
     throw new LocalizedError("iceberg_preview_failed", {
@@ -1502,6 +1552,54 @@ function resolveIcebergStorageKey(tablePrefix, sourcePath, segmentHint = "") {
 
 function normalizeAdlsDirectory(prefix) {
   return prefix.replace(/\/+$/, "");
+}
+
+function resolveAdlsListPath(prefix, itemName) {
+  if (typeof itemName !== "string") {
+    return "";
+  }
+
+  const normalizedItemName = itemName.replace(/^\/+/, "");
+  const normalizedPrefix = normalizeAdlsDirectory(prefix).replace(/^\/+/, "");
+
+  if (!normalizedPrefix || !normalizedItemName || normalizedItemName === normalizedPrefix) {
+    return normalizedItemName;
+  }
+
+  if (normalizedItemName.startsWith(`${normalizedPrefix}/`)) {
+    return normalizedItemName;
+  }
+
+  return `${normalizedPrefix}/${normalizedItemName}`;
+}
+
+function getPathDepth(value) {
+  if (typeof value !== "string") {
+    return 0;
+  }
+
+  return value.split("/").filter(Boolean).length;
+}
+
+function isStoragePathMissingError(error) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const code = typeof error.code === "string" ? error.code : "";
+  const statusCode = typeof error.statusCode === "number" ? error.statusCode : null;
+  const details =
+    error.details && typeof error.details === "object" && typeof error.details.errorCode === "string"
+      ? error.details.errorCode
+      : "";
+
+  return (
+    code === "PathNotFound" ||
+    code === "ResourceNotFound" ||
+    details === "PathNotFound" ||
+    details === "ResourceNotFound" ||
+    statusCode === 404
+  );
 }
 
 function ensureTrailingSlash(value) {
@@ -1787,7 +1885,19 @@ function getErrorMessage(error, locale = "en") {
   if (error && typeof error === "object") {
     const message = Reflect.get(error, "message");
     if (typeof message === "string" && message) {
-      return message;
+      const code = typeof Reflect.get(error, "code") === "string" ? Reflect.get(error, "code") : "";
+      const statusCode = typeof Reflect.get(error, "statusCode") === "number" ? Reflect.get(error, "statusCode") : null;
+      const parts = [message.trim()];
+
+      if (code) {
+        parts.push(`code=${code}`);
+      }
+
+      if (statusCode !== null) {
+        parts.push(`status=${statusCode}`);
+      }
+
+      return parts.join(" ");
     }
   }
 

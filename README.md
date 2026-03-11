@@ -12,6 +12,7 @@ Web application with a local backend for:
 - creating temporary Iceberg sample data under the current browser prefix plus `_sample_data/iceberg/` in the connected storage target when running in local development mode
 - downloading files through a local proxy
 - deleting a specific file from the current listing
+- deleting all files under a prefix while preserving the selected folder
 - switching the frontend language between English, Brazilian Portuguese, Spanish, and Italian
 
 ## Running
@@ -178,5 +179,6 @@ If a MinIO deployment uses a self-signed or otherwise untrusted HTTPS certificat
 - Avro preview reads Avro Object Container Files in the backend, including files using the Avro `snappy` codec
 - ORC preview uses Apache ORC's Java tooling in the backend and downloads a cached jar on first ORC preview if it is not already available locally
 - setting `DISABLE_DESTRUCTIVE_OPERATIONS=true` disables prefix deletion and single-file deletion server-side and hides delete controls in the UI
+- prefix deletion removes child files but preserves the selected folder across all supported providers
 - this solution is intended for local or internal use
 - for production, the preferred approach is to avoid sending credentials through the frontend and use server-side authentication
