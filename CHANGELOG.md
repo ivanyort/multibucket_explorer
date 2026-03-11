@@ -14,7 +14,16 @@
 
 ### Changes
 - feat(preview): add avro support (3e27eac)
+  - Added backend preview support for Avro Object Container Files in `server.js`, including schema/column extraction and row sampling through the existing `/api/preview` contract.
+  - Extended format detection so Avro previews also work for compressed name variants such as `.avro.gz`, `.avro.snappy`, `.gz.avro`, and `.snappy.avro`.
+  - Added `avsc` as a backend dependency and configured Avro `long` decoding to avoid runtime failures when records contain 64-bit integer values outside JavaScript's safe integer range.
+  - Reused the existing preview panel in `app.js` instead of introducing a new UI mode, so Avro rows render with the same table preview path already used for CSV/JSON/Parquet/ORC.
+  - Updated user-facing preview copy and supported-format messaging so the frontend explicitly advertises Avro as a previewable format.
+  - Documented the new preview capability in `README.md` and persisted the operational decision in `AGENTS.md` because Avro became a first-class backend preview format.
+  - Validation performed for the release included syntax checks and a local smoke test against real Avro sample content, including files that use the Avro `snappy` codec.
 - chore(changelog): update for v0.2.2 [skip ci] (cc535e2)
+  - Prepended the generated `v0.2.2` release notes to `CHANGELOG.md` as part of the release automation path.
+  - Marked the changelog-only commit with `[skip ci]` so the release bookkeeping update would not trigger another publish cycle.
 
 [Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.2.2...v0.3.0)
 
@@ -23,6 +32,11 @@
 
 ### Changes
 - Add changelog automation to release workflow (f327c84)
+  - Updated the GitHub Actions release pipeline so every automated Docker publish also prepends a new version section to `CHANGELOG.md`.
+  - Ensured the changelog update is committed back to `main` by the workflow itself, keeping the repository history aligned with the published Docker and GitHub Release artifacts.
+  - Made changelog generation part of the same semantic-versioning flow that already derives major/minor/patch bumps from commit messages.
+  - Established `CHANGELOG.md` as the durable in-repo release history instead of leaving release details only in GitHub Releases or workflow logs.
+  - This change was operational rather than UI-facing: it altered the release process and repository bookkeeping, not runtime storage browsing behavior.
 
 [Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.2.1...v0.2.2)
 
