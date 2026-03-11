@@ -1,9 +1,12 @@
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
-import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
+import { createReadStream, createWriteStream } from "node:fs";
+import { mkdir, mkdtemp, rename, rm, stat, writeFile } from "node:fs/promises";
 import https from "node:https";
+import { spawn } from "node:child_process";
+import { createInterface } from "node:readline";
 import { Readable } from "node:stream";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createGunzip, gunzipSync } from "node:zlib";
@@ -12,6 +15,7 @@ import { DataLakeServiceClient, StorageSharedKeyCredential } from "@azure/storag
 import { Storage as GoogleCloudStorage } from "@google-cloud/storage";
 import { parquetMetadataAsync, parquetReadObjects } from "hyparquet";
 import { compressors as hyparquetCompressors } from "hyparquet-compressors";
+import snappy from "snappyjs";
 import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
@@ -26,6 +30,11 @@ const __dirname = path.dirname(__filename);
 const PORT = Number.parseInt(process.env.PORT ?? "8086", 10);
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const DESTRUCTIVE_OPERATIONS_ENABLED = !isTruthyEnv(process.env.DISABLE_DESTRUCTIVE_OPERATIONS);
+const ORC_TOOLS_VERSION = "2.3.0";
+const ORC_TOOLS_FILE_NAME = `orc-tools-${ORC_TOOLS_VERSION}-uber.jar`;
+const ORC_TOOLS_URL =
+  `https://repo1.maven.org/maven2/org/apache/orc/orc-tools/${ORC_TOOLS_VERSION}/${ORC_TOOLS_FILE_NAME}`;
+const ORC_TOOLS_CACHE_DIR = path.join(__dirname, ".cache", "orc-tools");
 const sessions = new Map();
 
 const MIME_TYPES = {
@@ -57,6 +66,9 @@ const SERVER_TRANSLATIONS = {
     fill_s3: "Fill in region, bucket, and credentials.",
     unsupported_preview_format: "Unsupported preview format.",
     parquet_preview_failed: "Failed to read Parquet preview: {message}",
+    orc_preview_failed: "Failed to read ORC preview: {message}",
+    orc_java_missing: "ORC preview requires Java in PATH on the backend host.",
+    orc_tools_download_failed: "Failed to prepare ORC preview tooling: {message}",
   },
   "pt-BR": {
     route_not_found: "Rota nao encontrada.",
@@ -79,6 +91,9 @@ const SERVER_TRANSLATIONS = {
     fill_s3: "Preencha regiao, bucket e credenciais.",
     unsupported_preview_format: "Formato de pre-visualizacao nao suportado.",
     parquet_preview_failed: "Falha ao ler a pre-visualizacao do Parquet: {message}",
+    orc_preview_failed: "Falha ao ler a pre-visualizacao do ORC: {message}",
+    orc_java_missing: "A pre-visualizacao de ORC exige Java no PATH do backend.",
+    orc_tools_download_failed: "Falha ao preparar a ferramenta de pre-visualizacao ORC: {message}",
   },
   es: {
     route_not_found: "Ruta no encontrada.",
@@ -101,6 +116,9 @@ const SERVER_TRANSLATIONS = {
     fill_s3: "Completa region, bucket y credenciales.",
     unsupported_preview_format: "Formato de vista previa no compatible.",
     parquet_preview_failed: "Error al leer la vista previa de Parquet: {message}",
+    orc_preview_failed: "Error al leer la vista previa de ORC: {message}",
+    orc_java_missing: "La vista previa de ORC requiere Java en el PATH del backend.",
+    orc_tools_download_failed: "Error al preparar la herramienta de vista previa ORC: {message}",
   },
   it: {
     route_not_found: "Percorso non trovato.",
@@ -123,6 +141,9 @@ const SERVER_TRANSLATIONS = {
     fill_s3: "Compila regione, bucket e credenziali.",
     unsupported_preview_format: "Formato di anteprima non supportato.",
     parquet_preview_failed: "Errore durante la lettura dell'anteprima Parquet: {message}",
+    orc_preview_failed: "Errore durante la lettura dell'anteprima ORC: {message}",
+    orc_java_missing: "L'anteprima ORC richiede Java nel PATH del backend.",
+    orc_tools_download_failed: "Errore durante la preparazione dello strumento di anteprima ORC: {message}",
   },
 };
 
@@ -240,7 +261,7 @@ async function handlePreview(url, response, locale) {
     rows: previewData.rows,
     metadataColumns: previewData.metadataColumns,
     dfmKey: previewData.dfmKey,
-    order,
+    order: previewData.order ?? order,
     previewFormat: previewData.previewFormat,
     previewMode: previewData.previewMode,
     rawText: previewData.rawText,
@@ -783,8 +804,8 @@ function ensureTrailingSlash(value) {
   return value.endsWith("/") ? value : `${value}/`;
 }
 
-async function readObjectText(session, key, gzip = false) {
-  const buffer = await readObjectBuffer(session, key, gzip);
+async function readObjectText(session, key, compression = "none") {
+  const buffer = await readObjectBuffer(session, key, compression);
   const text = buffer.toString("utf-8");
 
   if (!text) {
@@ -794,14 +815,14 @@ async function readObjectText(session, key, gzip = false) {
   return text;
 }
 
-async function readObjectBuffer(session, key, gzip = false) {
+async function readObjectBuffer(session, key, compression = "none") {
   const buffer = await readObjectBufferRaw(session, key);
 
   if (!buffer.length) {
     throw new LocalizedError("file_empty");
   }
 
-  return gzip ? gunzipSync(buffer) : buffer;
+  return decompressBuffer(buffer, compression);
 }
 
 async function readObjectBufferRaw(session, key) {
@@ -1092,8 +1113,10 @@ function parsePreviewMode(value) {
 }
 
 async function loadPreviewRows(session, key, limit, order, formatOptions) {
-  if (isGzipKey(key)) {
-    const csvText = await readObjectText(session, key, true);
+  const compression = getCompressionKind(key);
+
+  if (compression !== "none") {
+    const csvText = await readObjectText(session, key, compression);
 
     return parseCsv(csvText, limit, {
       fieldDelimiter: formatOptions.fieldDelimiter,
@@ -1136,7 +1159,7 @@ async function loadPreviewRows(session, key, limit, order, formatOptions) {
 async function loadPreviewData(session, key, limit, order, mode, locale) {
   const previewTarget = analyzePreviewTarget(key);
   const extension = previewTarget.extension;
-  const isGzip = previewTarget.isGzip;
+  const compression = previewTarget.compression;
 
   if (extension === ".csv") {
     const dfmMatch = await loadDfmMetadata(session, previewTarget.metadataKey);
@@ -1152,7 +1175,7 @@ async function loadPreviewData(session, key, limit, order, mode, locale) {
       rows,
       metadataColumns: extractMetadataColumns(dfmMetadata),
       dfmKey: dfmMatch?.key ?? null,
-      previewFormat: isGzip ? "csv.gz" : "csv",
+      previewFormat: formatPreviewExtension("csv", compression),
       previewMode: "table",
       rawText: null,
       lineCount: countPreviewLines(rows),
@@ -1161,12 +1184,12 @@ async function loadPreviewData(session, key, limit, order, mode, locale) {
 
   if (extension === ".json" || extension === ".jsonl" || extension === ".ndjson" || extension === ".dfm") {
     if (mode === "raw") {
-      const rawText = await loadJsonRawPreview(session, key, limit, order, isGzip, extension);
+      const rawText = await loadJsonRawPreview(session, key, limit, order, compression, extension);
       return {
         rows: [],
         metadataColumns: [],
         dfmKey: null,
-        previewFormat: isGzip ? `${extension.slice(1)}.gz` : extension.slice(1),
+        previewFormat: formatPreviewExtension(extension.slice(1), compression),
         previewMode: "raw",
         rawText,
         lineCount: countRawPreviewLines(rawText),
@@ -1174,25 +1197,25 @@ async function loadPreviewData(session, key, limit, order, mode, locale) {
     }
 
     if (extension === ".dfm") {
-      const rawText = await loadJsonRawPreview(session, key, limit, order, isGzip, extension);
+      const rawText = await loadJsonRawPreview(session, key, limit, order, compression, extension);
       return {
         rows: [],
         metadataColumns: [],
         dfmKey: null,
-        previewFormat: isGzip ? "dfm.gz" : "dfm",
+        previewFormat: formatPreviewExtension("dfm", compression),
         previewMode: "raw",
         rawText,
         lineCount: countRawPreviewLines(rawText),
       };
     }
 
-    const records = await loadJsonPreviewRecords(session, key, limit, order, isGzip, extension);
+    const records = await loadJsonPreviewRecords(session, key, limit, order, compression, extension);
     const normalized = normalizePreviewRecords(records);
     return {
       rows: normalized.rows,
       metadataColumns: normalized.columns,
       dfmKey: null,
-      previewFormat: isGzip ? `${extension.slice(1)}.gz` : extension.slice(1),
+      previewFormat: formatPreviewExtension(extension.slice(1), compression),
       previewMode: "table",
       rawText: null,
       lineCount: normalized.rows.length,
@@ -1200,16 +1223,30 @@ async function loadPreviewData(session, key, limit, order, mode, locale) {
   }
 
   if (extension === ".parquet" || extension === ".parq") {
-    const records = await loadParquetPreviewRecords(session, key, limit, order, isGzip, locale);
+    const records = await loadParquetPreviewRecords(session, key, limit, order, compression, locale);
     const normalized = normalizePreviewRecords(records);
     return {
       rows: normalized.rows,
       metadataColumns: normalized.columns,
       dfmKey: null,
-      previewFormat: isGzip ? "parquet.gz" : "parquet",
+      previewFormat: formatPreviewExtension("parquet", compression),
       previewMode: "table",
       rawText: null,
       lineCount: normalized.rows.length,
+    };
+  }
+
+  if (extension === ".orc") {
+    const preview = await loadOrcPreviewData(session, key, limit, order, compression, locale);
+    return {
+      rows: preview.rows,
+      metadataColumns: preview.columns,
+      dfmKey: null,
+      previewFormat: formatPreviewExtension("orc", compression),
+      previewMode: "table",
+      rawText: null,
+      lineCount: preview.rows.length,
+      order: preview.order,
     };
   }
 
@@ -1260,7 +1297,7 @@ function replaceExtension(key, newExtension) {
 }
 
 function buildDfmCandidateKeys(csvKey) {
-  const normalizedKey = stripGzipExtension(csvKey);
+  const normalizedKey = stripCompressionSuffix(csvKey);
   const extension = path.extname(normalizedKey);
 
   if (!extension) {
@@ -1271,7 +1308,7 @@ function buildDfmCandidateKeys(csvKey) {
 }
 
 async function findMatchingDfmMetadata(session, csvKey) {
-  const normalizedKey = stripGzipExtension(csvKey);
+  const normalizedKey = stripCompressionSuffix(csvKey);
   const directoryPrefix = getDirectoryPrefix(normalizedKey);
   const csvBaseName = path.basename(normalizedKey, path.extname(normalizedKey));
   const listResult = await listStoragePaths(session, directoryPrefix, true);
@@ -1335,10 +1372,10 @@ async function loadJsonObject(session, key) {
   }
 }
 
-async function loadJsonPreviewRecords(session, key, limit, order, gzip = false, extension = ".json") {
+async function loadJsonPreviewRecords(session, key, limit, order, compression = "none", extension = ".json") {
   const isLineDelimitedJson = extension === ".jsonl" || extension === ".ndjson";
 
-  if (gzip && limit !== null) {
+  if (compression === "gzip" && limit !== null) {
     const records = await tryLoadGzipJsonRecords(session, key, limit, order);
 
     if (records) {
@@ -1346,17 +1383,17 @@ async function loadJsonPreviewRecords(session, key, limit, order, gzip = false, 
     }
   }
 
-  if (!gzip && isLineDelimitedJson && order === "normal" && limit !== null) {
+  if (compression === "none" && isLineDelimitedJson && order === "normal" && limit !== null) {
     const lines = await loadDelimitedHeadRecords(session, key, limit);
     return lines.map((line) => JSON.parse(line));
   }
 
-  if (!gzip && isLineDelimitedJson && order === "reverse" && limit !== null) {
+  if (compression === "none" && isLineDelimitedJson && order === "reverse" && limit !== null) {
     const lines = await loadDelimitedTailRecords(session, key, limit, "\n");
     return lines.map((line) => JSON.parse(line)).reverse();
   }
 
-  const text = await readObjectText(session, key, gzip);
+  const text = await readObjectText(session, key, compression);
   const trimmed = text.trim();
   let records = [];
 
@@ -1382,24 +1419,24 @@ async function loadJsonPreviewRecords(session, key, limit, order, gzip = false, 
   return slicePreviewRecords(records, limit, order);
 }
 
-async function loadJsonRawPreview(session, key, limit, order, gzip = false, extension = ".json") {
+async function loadJsonRawPreview(session, key, limit, order, compression = "none", extension = ".json") {
   const isLineDelimitedJson = extension === ".jsonl" || extension === ".ndjson";
 
   if (limit !== null && isLineDelimitedJson) {
-    if (gzip) {
+    if (compression === "gzip") {
       const lines = await tryLoadGzipDelimitedLines(session, key, limit, order);
 
       if (lines) {
         return formatRawJsonLines(order === "reverse" ? [...lines].reverse() : lines);
       }
-    } else if (order === "normal") {
+    } else if (compression === "none" && order === "normal") {
       return formatRawJsonLines(await loadDelimitedHeadRecords(session, key, limit));
-    } else {
+    } else if (compression === "none") {
       return formatRawJsonLines((await loadDelimitedTailRecords(session, key, limit, "\n")).reverse());
     }
   }
 
-  const text = await readObjectText(session, key, gzip);
+  const text = await readObjectText(session, key, compression);
   const trimmed = text.trim();
 
   if (!trimmed) {
@@ -1524,9 +1561,9 @@ async function tryLoadGzipDelimitedLines(session, key, limit, order) {
   return order === "reverse" ? lines : lines.slice(0, limit);
 }
 
-async function loadParquetPreviewRecords(session, key, limit, order, gzip = false, locale = "en") {
+async function loadParquetPreviewRecords(session, key, limit, order, compression = "none", locale = "en") {
   try {
-    const fileBuffer = await readObjectBuffer(session, key, gzip);
+    const fileBuffer = await readObjectBuffer(session, key, compression);
     const file = toArrayBuffer(fileBuffer);
     const metadata = await parquetMetadataAsync(file, { compressors: hyparquetCompressors });
     const totalRows = Number(metadata.num_rows ?? 0);
@@ -1549,6 +1586,300 @@ async function loadParquetPreviewRecords(session, key, limit, order, gzip = fals
       message: localizeError(locale, error),
     });
   }
+}
+
+async function loadOrcPreviewData(session, key, limit, order, compression = "none", locale = "en") {
+  let tempDir;
+
+  try {
+    const jarPath = await ensureOrcToolsJar(locale);
+    tempDir = await mkdtemp(path.join(tmpdir(), "multibucket-explorer-orc-"));
+    const tempFilePath = path.join(tempDir, buildOrcTempFileName(key));
+    const buffer = await readObjectBuffer(session, key, compression);
+
+    await writeFile(tempFilePath, buffer);
+
+    const columns = await loadOrcSchemaColumns(jarPath, tempFilePath, locale);
+    const rows = await loadOrcRows(jarPath, tempFilePath, limit, order, locale);
+    const normalized = normalizePreviewRecords(rows);
+
+    return {
+      rows: normalized.rows,
+      columns: columns.length ? columns : normalized.columns,
+      order,
+    };
+  } catch (error) {
+    if (error instanceof LocalizedError) {
+      throw error;
+    }
+
+    throw new LocalizedError("orc_preview_failed", {
+      message: localizeError(locale, error),
+    });
+  } finally {
+    if (tempDir) {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  }
+}
+
+async function ensureOrcToolsJar(locale) {
+  const jarPath = path.join(ORC_TOOLS_CACHE_DIR, ORC_TOOLS_FILE_NAME);
+
+  try {
+    await stat(jarPath);
+    return jarPath;
+  } catch {
+    // Cache miss.
+  }
+
+  await assertJavaAvailable();
+
+  try {
+    await mkdir(ORC_TOOLS_CACHE_DIR, { recursive: true });
+    await downloadFile(ORC_TOOLS_URL, jarPath);
+    return jarPath;
+  } catch (error) {
+    throw new LocalizedError("orc_tools_download_failed", {
+      message: localizeError(locale, error),
+    });
+  }
+}
+
+async function assertJavaAvailable() {
+  try {
+    await runProcess("java", ["-version"], {
+      captureStdout: false,
+      captureStderr: true,
+    });
+  } catch {
+    throw new LocalizedError("orc_java_missing");
+  }
+}
+
+async function loadOrcSchemaColumns(jarPath, filePath, locale) {
+  const result = await runProcess("java", ["-jar", jarPath, "scan", "-s", filePath], {
+    captureStderr: true,
+  });
+
+  const schemaText = extractJsonBlock(result.stdout);
+
+  if (!schemaText) {
+    throw new LocalizedError("orc_preview_failed", {
+      message: localizeError(locale, new Error("ORC schema output was empty.")),
+    });
+  }
+
+  let schema;
+
+  try {
+    schema = JSON.parse(schemaText);
+  } catch (error) {
+    throw new LocalizedError("orc_preview_failed", {
+      message: localizeError(locale, error),
+    });
+  }
+
+  if (schema?.category !== "struct" || !Array.isArray(schema.fields)) {
+    return [];
+  }
+
+  return schema.fields
+    .map((field) => Object.keys(field ?? {})[0] ?? "")
+    .filter((name) => typeof name === "string" && name.length);
+}
+
+async function loadOrcRows(jarPath, filePath, limit, order, locale) {
+  const args = ["-jar", jarPath, "data"];
+
+  if (order !== "reverse" && limit !== null) {
+    args.push("-n", String(limit));
+  }
+
+  args.push(filePath);
+
+  try {
+    return await collectOrcDataRows(args, limit, order);
+  } catch (error) {
+    throw new LocalizedError("orc_preview_failed", {
+      message: localizeError(locale, error),
+    });
+  }
+}
+
+async function collectOrcDataRows(args, limit, order) {
+  const child = spawn("java", args, {
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const reader = createInterface({ input: child.stdout });
+  const stderrChunks = [];
+  const rows = [];
+  let exitCode = null;
+  let spawnError = null;
+
+  child.stderr.on("data", (chunk) => {
+    stderrChunks.push(chunk.toString("utf-8"));
+  });
+
+  child.on("error", (error) => {
+    spawnError = error;
+  });
+
+  child.on("close", (code) => {
+    exitCode = code;
+  });
+
+  try {
+    for await (const line of reader) {
+      const trimmed = line.trim();
+
+      if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
+        continue;
+      }
+
+      const parsed = JSON.parse(trimmed);
+
+      if (order === "reverse" && limit !== null) {
+        if (rows.length === limit) {
+          rows.shift();
+        }
+        rows.push(parsed);
+        continue;
+      }
+
+      rows.push(parsed);
+    }
+  } finally {
+    reader.close();
+  }
+
+  if (exitCode === null && !spawnError) {
+    await new Promise((resolve) => child.once("close", resolve));
+  }
+
+  if (spawnError) {
+    throw spawnError;
+  }
+
+  if (exitCode !== 0) {
+    throw new Error(stderrChunks.join("").trim() || `java exited with code ${exitCode}`);
+  }
+
+  if (order === "reverse") {
+    return rows.reverse();
+  }
+
+  return limit === null ? rows : rows.slice(0, limit);
+}
+
+function extractJsonBlock(text) {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+
+  if (start < 0 || end < start) {
+    return "";
+  }
+
+  return text.slice(start, end + 1);
+}
+
+function buildOrcTempFileName(key) {
+  const baseName = path.basename(stripCompressionSuffix(key)) || "preview.orc";
+  const sanitized = baseName.replace(/[^a-zA-Z0-9._-]+/g, "_");
+  return sanitized.toLowerCase().endsWith(".orc") ? sanitized : `${sanitized}.orc`;
+}
+
+function downloadFile(url, destinationPath) {
+  return new Promise((resolve, reject) => {
+    const request = https.get(url, (response) => {
+      if (
+        response.statusCode &&
+        response.statusCode >= 300 &&
+        response.statusCode < 400 &&
+        response.headers.location
+      ) {
+        response.resume();
+        downloadFile(response.headers.location, destinationPath).then(resolve).catch(reject);
+        return;
+      }
+
+      if (response.statusCode !== 200) {
+        response.resume();
+        reject(new Error(`HTTP ${response.statusCode ?? "unknown"} while downloading ${url}`));
+        return;
+      }
+
+      const tempPath = `${destinationPath}.tmp`;
+      const output = createWriteStream(tempPath);
+
+      output.on("finish", () => {
+        output.close(async (closeError) => {
+          if (closeError) {
+            reject(closeError);
+            return;
+          }
+
+          try {
+            await rename(tempPath, destinationPath);
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+
+      output.on("error", async (error) => {
+        response.destroy();
+        await rm(tempPath, { force: true });
+        reject(error);
+      });
+
+      response.on("error", async (error) => {
+        await rm(tempPath, { force: true });
+        reject(error);
+      });
+
+      response.pipe(output);
+    });
+
+    request.on("error", reject);
+  });
+}
+
+function runProcess(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      stdio: [
+        "ignore",
+        options.captureStdout === false ? "ignore" : "pipe",
+        options.captureStderr === false ? "ignore" : "pipe",
+      ],
+    });
+    const stdoutChunks = [];
+    const stderrChunks = [];
+
+    child.on("error", reject);
+
+    if (child.stdout) {
+      child.stdout.on("data", (chunk) => stdoutChunks.push(chunk.toString("utf-8")));
+    }
+
+    if (child.stderr) {
+      child.stderr.on("data", (chunk) => stderrChunks.push(chunk.toString("utf-8")));
+    }
+
+    child.on("close", (code) => {
+      if (code !== 0) {
+        reject(new Error(stderrChunks.join("").trim() || `${command} exited with code ${code}`));
+        return;
+      }
+
+      resolve({
+        stdout: stdoutChunks.join(""),
+        stderr: stderrChunks.join(""),
+      });
+    });
+  });
 }
 
 function slicePreviewRecords(records, limit, order) {
@@ -1617,16 +1948,17 @@ function stringifyPreviewValue(value) {
 }
 
 function analyzePreviewTarget(key) {
-  const normalizedKey = stripGzipExtension(key);
+  const normalizedKey = stripCompressionSuffix(key);
+  const compression = getCompressionKind(key);
 
   return {
     extension: path.extname(normalizedKey).toLowerCase(),
-    isGzip: isGzipKey(key),
+    compression,
     metadataKey: normalizedKey,
   };
 }
 
-function stripGzipExtension(key) {
+function stripCompressionSuffix(key) {
   const normalizedKey = key.toLowerCase();
 
   if (normalizedKey.endsWith(".gzip.parquet")) {
@@ -1645,11 +1977,73 @@ function stripGzipExtension(key) {
     return key;
   }
 
-  return isGzipKey(key) ? key.slice(0, -3) : key;
+  if (normalizedKey.endsWith(".snappy.parquet")) {
+    return key;
+  }
+
+  if (normalizedKey.endsWith(".snappy.parq")) {
+    return key;
+  }
+
+  if (normalizedKey.endsWith(".snappy.orc")) {
+    return key;
+  }
+
+  const compression = getCompressionKind(key);
+
+  if (compression === "gzip") {
+    return key.slice(0, -3);
+  }
+
+  if (compression === "snappy") {
+    return key.slice(0, -7);
+  }
+
+  return key;
 }
 
 function isGzipKey(key) {
   return key.toLowerCase().endsWith(".gz");
+}
+
+function isSnappyKey(key) {
+  return key.toLowerCase().endsWith(".snappy");
+}
+
+function getCompressionKind(key) {
+  if (isGzipKey(key)) {
+    return "gzip";
+  }
+
+  if (isSnappyKey(key)) {
+    return "snappy";
+  }
+
+  return "none";
+}
+
+function decompressBuffer(buffer, compression) {
+  if (compression === "gzip") {
+    return gunzipSync(buffer);
+  }
+
+  if (compression === "snappy") {
+    return Buffer.from(snappy.uncompress(buffer));
+  }
+
+  return buffer;
+}
+
+function formatPreviewExtension(baseExtension, compression) {
+  if (compression === "gzip") {
+    return `${baseExtension}.gz`;
+  }
+
+  if (compression === "snappy") {
+    return `${baseExtension}.snappy`;
+  }
+
+  return baseExtension;
 }
 
 function toArrayBuffer(buffer) {

@@ -7,7 +7,8 @@ Web application with a local backend for:
 - browsing prefixes in Google Cloud Storage buckets
 - browsing prefixes in MinIO buckets
 - listing folders and files
-- previewing CSV, JSON, DFM, and Parquet files
+- previewing CSV, JSON, DFM, Parquet, and ORC files, including `.gz` and `.snappy` compressed variants
+- previewing ORC files
 - downloading files through a local proxy
 - deleting a specific file from the current listing
 - switching the frontend language between English, Brazilian Portuguese, Spanish, and Italian
@@ -27,6 +28,8 @@ npm start
 ```
 
 By default the application runs at `http://localhost:8086`.
+
+ORC preview requires `java` to be available in the backend host `PATH`.
 
 To start in read-only mode for destructive operations, set `DISABLE_DESTRUCTIVE_OPERATIONS=true`:
 
@@ -133,6 +136,8 @@ If a MinIO deployment uses a self-signed or otherwise untrusted HTTPS certificat
 
 - all connection fields are persisted in browser `localStorage`, including credentials, secret fields, textarea content, and provider-specific toggles
 - the backend keeps an in-memory session for 12 hours after connecting
+- preview compression support now includes both `.gz` and `.snappy` variants for supported previewable formats
+- ORC preview uses Apache ORC's Java tooling in the backend and downloads a cached jar on first ORC preview if it is not already available locally
 - setting `DISABLE_DESTRUCTIVE_OPERATIONS=true` disables prefix deletion and single-file deletion server-side and hides delete controls in the UI
 - this solution is intended for local or internal use
 - for production, the preferred approach is to avoid sending credentials through the frontend and use server-side authentication

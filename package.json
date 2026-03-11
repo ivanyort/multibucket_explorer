@@ -11,6 +11,7 @@
     "@azure/storage-file-datalake": "^12.29.0",
     "@google-cloud/storage": "^7.19.0",
     "hyparquet": "^1.25.1",
-    "hyparquet-compressors": "^1.1.1"
+    "hyparquet-compressors": "^1.1.1",
+    "snappyjs": "^0.7.0"
   }
 }

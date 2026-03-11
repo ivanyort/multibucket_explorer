@@ -16,6 +16,7 @@ This project is a local web explorer for object and hierarchical cloud storage, 
 - `samples/`: sample files used for local development
 
 The project uses plain ESM JavaScript and no frontend framework. Keep that simplicity unless explicitly asked to change it.
+ORC preview now relies on Java being available on the backend host and caches the Apache ORC tools jar under `.cache/orc-tools/` on first use.
 
 # Supported Providers
 - AWS S3

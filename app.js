@@ -66,10 +66,10 @@ const translations = {
     preview: {
       kicker: "File Preview", title: "Preview", view: "View", table: "Table", raw: "Raw", rows: "Rows", all: "All",
       order: "Order", normal: "Normal", reverse: "Newest first", download: "Download file",
-      selectCompatible: "Select a compatible `.csv`, `.json`, `.dfm`, `.parquet`, or `.gz` file to preview.",
+      selectCompatible: "Select a compatible `.csv`, `.json`, `.dfm`, `.parquet`, `.orc`, `.gz`, or `.snappy` file to preview.",
       noFileSelected: "No file selected.", reading: "Reading file...", loadingFor: "Loading preview for {key}...",
       unsupportedFormat: "Unsupported preview format: {key}",
-      unsupportedBody: "Select a .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, or matching .gz file.",
+      unsupportedBody: "Select a .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .orc, or matching .gz/.snappy file.",
       emptyFile: "Empty file.", emptyBody: "The file has no rows to display.", failed: "Failed to load preview.",
       rawModeSuffix: "raw mode", formatSuffix: "format {format}", reverseOrder: "reverse order",
       showingRows: "{key} · showing {count} sample row(s){orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
@@ -138,10 +138,10 @@ const translations = {
     preview: {
       kicker: "Pré-visualização de Arquivo", title: "Prévia", view: "Visualização", table: "Tabela", raw: "Bruto", rows: "Linhas", all: "Todas",
       order: "Ordem", normal: "Normal", reverse: "Mais novos primeiro", download: "Baixar arquivo",
-      selectCompatible: "Selecione um arquivo compatível `.csv`, `.json`, `.dfm`, `.parquet` ou `.gz` para visualizar.",
+      selectCompatible: "Selecione um arquivo compatível `.csv`, `.json`, `.dfm`, `.parquet`, `.orc`, `.gz` ou `.snappy` para visualizar.",
       noFileSelected: "Nenhum arquivo selecionado.", reading: "Lendo arquivo...", loadingFor: "Carregando prévia de {key}...",
       unsupportedFormat: "Formato de prévia não suportado: {key}",
-      unsupportedBody: "Selecione um arquivo .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq ou .gz correspondente.",
+      unsupportedBody: "Selecione um arquivo .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .orc ou .gz/.snappy correspondente.",
       emptyFile: "Arquivo vazio.", emptyBody: "O arquivo não tem linhas para exibir.", failed: "Falha ao carregar a prévia.",
       rawModeSuffix: "modo bruto", formatSuffix: "formato {format}", reverseOrder: "ordem reversa",
       showingRows: "{key} · exibindo {count} linha(s) de amostra{orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
@@ -210,10 +210,10 @@ const translations = {
     preview: {
       kicker: "Vista Previa de Archivo", title: "Vista previa", view: "Vista", table: "Tabla", raw: "Raw", rows: "Filas", all: "Todas",
       order: "Orden", normal: "Normal", reverse: "Más nuevos primero", download: "Descargar archivo",
-      selectCompatible: "Selecciona un archivo compatible `.csv`, `.json`, `.dfm`, `.parquet` o `.gz` para previsualizar.",
+      selectCompatible: "Selecciona un archivo compatible `.csv`, `.json`, `.dfm`, `.parquet`, `.orc`, `.gz` o `.snappy` para previsualizar.",
       noFileSelected: "Ningún archivo seleccionado.", reading: "Leyendo archivo...", loadingFor: "Cargando vista previa de {key}...",
       unsupportedFormat: "Formato de vista previa no compatible: {key}",
-      unsupportedBody: "Selecciona un archivo .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq o un .gz correspondiente.",
+      unsupportedBody: "Selecciona un archivo .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .orc o un .gz/.snappy correspondiente.",
       emptyFile: "Archivo vacío.", emptyBody: "El archivo no tiene filas para mostrar.", failed: "Error al cargar la vista previa.",
       rawModeSuffix: "modo raw", formatSuffix: "formato {format}", reverseOrder: "orden inverso",
       showingRows: "{key} · mostrando {count} fila(s) de muestra{orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
@@ -282,10 +282,10 @@ const translations = {
     preview: {
       kicker: "Anteprima File", title: "Anteprima", view: "Vista", table: "Tabella", raw: "Raw", rows: "Righe", all: "Tutte",
       order: "Ordine", normal: "Normale", reverse: "Più recenti prima", download: "Scarica file",
-      selectCompatible: "Seleziona un file compatibile `.csv`, `.json`, `.dfm`, `.parquet` o `.gz` da visualizzare.",
+      selectCompatible: "Seleziona un file compatibile `.csv`, `.json`, `.dfm`, `.parquet`, `.orc`, `.gz` o `.snappy` da visualizzare.",
       noFileSelected: "Nessun file selezionato.", reading: "Lettura file...", loadingFor: "Caricamento anteprima di {key}...",
       unsupportedFormat: "Formato di anteprima non supportato: {key}",
-      unsupportedBody: "Seleziona un file .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq o un .gz corrispondente.",
+      unsupportedBody: "Seleziona un file .csv, .json, .jsonl, .ndjson, .dfm, .parquet, .parq, .orc o un .gz/.snappy corrispondente.",
       emptyFile: "File vuoto.", emptyBody: "Il file non contiene righe da mostrare.", failed: "Errore durante il caricamento dell'anteprima.",
       rawModeSuffix: "modalità raw", formatSuffix: "formato {format}", reverseOrder: "ordine inverso",
       showingRows: "{key} · visualizzazione di {count} righe di esempio{orderSuffix}{modeSuffix}{formatSuffix}{dfmSuffix}",
@@ -688,8 +688,10 @@ function renderObjectList() {
     if (item.type === "file" && state.destructiveOperationsEnabled) {
       const deleteButton = document.createElement("button");
       deleteButton.type = "button";
-      deleteButton.className = "ghost-button danger-ghost-button row-action-button";
-      deleteButton.textContent = t("browser.deleteFile");
+      deleteButton.className = "ghost-button danger-ghost-button icon-button row-action-icon-button";
+      deleteButton.setAttribute("aria-label", t("browser.deleteFile"));
+      deleteButton.setAttribute("title", t("browser.deleteFile"));
+      deleteButton.innerHTML = trashIconSvg();
       deleteButton.addEventListener("click", (event) => {
         event.stopPropagation();
         deleteObjectFile(item.key);
@@ -761,7 +763,7 @@ async function previewObject(key) {
       renderPreviewTable(preview);
     }
     const dfmSuffix =
-      response.previewFormat === "csv" || response.previewFormat === "csv.gz"
+      response.previewFormat === "csv" || response.previewFormat === "csv.gz" || response.previewFormat === "csv.snappy"
         ? response.dfmKey
           ? t("preview.dfmFound", { dfmKey: response.dfmKey, count: response.metadataColumns?.length ?? 0 })
           : t("preview.dfmNotFound")
@@ -848,11 +850,11 @@ function shouldRenderJsonTree(previewFormat, rawText) {
     return false;
   }
 
-  return ["dfm", "dfm.gz"].includes(previewFormat);
+  return ["dfm", "dfm.gz", "dfm.snappy"].includes(previewFormat);
 }
 
 function parseRawJsonPreview(rawText, previewFormat) {
-  if (["jsonl", "jsonl.gz", "ndjson", "ndjson.gz"].includes(previewFormat)) {
+  if (["jsonl", "jsonl.gz", "jsonl.snappy", "ndjson", "ndjson.gz", "ndjson.snappy"].includes(previewFormat)) {
     return parseJsonLines(rawText);
   }
 
@@ -1574,22 +1576,35 @@ function isPreviewableFile(key) {
   return (
     normalizedKey.endsWith(".csv") ||
     normalizedKey.endsWith(".csv.gz") ||
+    normalizedKey.endsWith(".csv.snappy") ||
     normalizedKey.endsWith(".dfm") ||
     normalizedKey.endsWith(".dfm.gz") ||
+    normalizedKey.endsWith(".dfm.snappy") ||
     normalizedKey.endsWith(".json") ||
     normalizedKey.endsWith(".json.gz") ||
+    normalizedKey.endsWith(".json.snappy") ||
     normalizedKey.endsWith(".jsonl") ||
     normalizedKey.endsWith(".jsonl.gz") ||
+    normalizedKey.endsWith(".jsonl.snappy") ||
     normalizedKey.endsWith(".ndjson") ||
     normalizedKey.endsWith(".ndjson.gz") ||
+    normalizedKey.endsWith(".ndjson.snappy") ||
     normalizedKey.endsWith(".parquet") ||
     normalizedKey.endsWith(".parquet.gz") ||
+    normalizedKey.endsWith(".parquet.snappy") ||
     normalizedKey.endsWith(".gzip.parquet") ||
     normalizedKey.endsWith(".gz.parquet") ||
+    normalizedKey.endsWith(".snappy.parquet") ||
     normalizedKey.endsWith(".parq") ||
     normalizedKey.endsWith(".parq.gz") ||
+    normalizedKey.endsWith(".parq.snappy") ||
     normalizedKey.endsWith(".gzip.parq") ||
-    normalizedKey.endsWith(".gz.parq")
+    normalizedKey.endsWith(".gz.parq") ||
+    normalizedKey.endsWith(".snappy.parq") ||
+    normalizedKey.endsWith(".orc") ||
+    normalizedKey.endsWith(".orc.gz") ||
+    normalizedKey.endsWith(".orc.snappy") ||
+    normalizedKey.endsWith(".snappy.orc")
   );
 }
 
@@ -1598,12 +1613,16 @@ function isJsonPreviewFile(key) {
   return (
     normalizedKey.endsWith(".dfm") ||
     normalizedKey.endsWith(".dfm.gz") ||
+    normalizedKey.endsWith(".dfm.snappy") ||
     normalizedKey.endsWith(".json") ||
     normalizedKey.endsWith(".json.gz") ||
+    normalizedKey.endsWith(".json.snappy") ||
     normalizedKey.endsWith(".jsonl") ||
     normalizedKey.endsWith(".jsonl.gz") ||
+    normalizedKey.endsWith(".jsonl.snappy") ||
     normalizedKey.endsWith(".ndjson") ||
-    normalizedKey.endsWith(".ndjson.gz")
+    normalizedKey.endsWith(".ndjson.gz") ||
+    normalizedKey.endsWith(".ndjson.snappy")
   );
 }
 
@@ -1686,6 +1705,14 @@ function fileIconSvg() {
   return `
     <svg viewBox="0 0 24 24" focusable="false">
       <path d="M7.5 3.75A2.25 2.25 0 0 0 5.25 6v12A2.25 2.25 0 0 0 7.5 20.25h9A2.25 2.25 0 0 0 18.75 18V8.56a2.25 2.25 0 0 0-.66-1.59l-2.81-2.81a2.25 2.25 0 0 0-1.59-.66zm6 1.8 3.45 3.45H13.5z"></path>
+    </svg>
+  `;
+}
+
+function trashIconSvg() {
+  return `
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="M9.75 3A2.25 2.25 0 0 0 7.5 5.25V6H4.75a.75.75 0 0 0 0 1.5h.58l.71 10.05A2.25 2.25 0 0 0 8.28 19.5h7.44a2.25 2.25 0 0 0 2.24-1.95l.71-10.05h.58a.75.75 0 0 0 0-1.5H16.5v-.75A2.25 2.25 0 0 0 14.25 3h-4.5Zm0 1.5h4.5a.75.75 0 0 1 .75.75V6H9V5.25a.75.75 0 0 1 .75-.75ZM7.54 7.5l.7 9.94a.75.75 0 0 0 .74.56h7.04a.75.75 0 0 0 .74-.56l.7-9.94H7.54Zm2.71 1.75a.75.75 0 0 1 .75.75v5a.75.75 0 0 1-1.5 0v-5a.75.75 0 0 1 .75-.75Zm3.5 0a.75.75 0 0 1 .75.75v5a.75.75 0 0 1-1.5 0v-5a.75.75 0 0 1 .75-.75Z"></path>
     </svg>
   `;
 }
