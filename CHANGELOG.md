@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.5.1](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.5.1) - 2026-03-12
+
+### Changes
+- fix(ui): streamline disconnected explorer state (eac1856)
+- chore(changelog): update for v0.5.0 [skip ci] (cff1b97)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.5.0...v0.5.1)
+
+
 ## [v0.5.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.5.0) - 2026-03-12
 
 ### Changes
