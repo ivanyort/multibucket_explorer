@@ -446,6 +446,7 @@ const elements = {
   minioFields: document.querySelector("#minioFields"),
   connectionStatus: document.querySelector("#connectionStatus"),
   diagnosticBox: document.querySelector("#diagnosticBox"),
+  workspace: document.querySelector(".workspace"),
   objectList: document.querySelector("#objectList"),
   currentPrefix: document.querySelector("#currentPrefix"),
   toggleIcebergModeButton: document.querySelector("#toggleIcebergModeButton"),
@@ -581,6 +582,7 @@ setStartupDiagnostic();
 refreshConnectionSummary();
 syncPreviewModeAvailability("");
 syncSeedControls();
+syncWorkspaceVisibility();
 
 function restoreLanguage() {
   const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
@@ -648,6 +650,7 @@ function applyLanguage() {
     renderObjectList();
   }
   syncDestructiveControls();
+  syncWorkspaceVisibility();
   if (state.selectedKey && state.sessionId) {
     previewObject(state.selectedKey);
   }
@@ -764,6 +767,7 @@ async function connectToBucketWithPayload(connection) {
   state.icebergAvailable = false;
   state.icebergSnapshotId = "";
   state.sessionId = "";
+  syncWorkspaceVisibility();
 
   elements.refreshButton.disabled = true;
   elements.clearPrefixButton.disabled = true;
@@ -786,6 +790,7 @@ async function connectToBucketWithPayload(connection) {
     state.targetName = response.targetName ?? state.targetName;
     state.locationName = response.locationName ?? state.locationName;
     state.destructiveOperationsEnabled = response.destructiveOperationsEnabled !== false;
+    syncWorkspaceVisibility();
     elements.refreshButton.disabled = false;
     syncDestructiveControls();
     syncSeedControls();
@@ -800,6 +805,7 @@ async function connectToBucketWithPayload(connection) {
     setConnectionStatus("");
     setConnectionModalStatus(getErrorMessage(error), true);
     setDiagnosticMessage("");
+    syncWorkspaceVisibility();
     syncSeedControls();
     return false;
   } finally {
@@ -1620,6 +1626,14 @@ function setConnectionStatus(message, isError = false) {
 function setDiagnosticMessage(message) {
   elements.diagnosticBox.textContent = message;
   elements.diagnosticBox.hidden = !message.trim();
+}
+
+function syncWorkspaceVisibility() {
+  if (elements.workspace instanceof HTMLElement) {
+    const visible = Boolean(state.sessionId);
+    elements.workspace.hidden = !visible;
+    elements.workspace.style.display = visible ? "" : "none";
+  }
 }
 
 function formatBytes(bytes) {

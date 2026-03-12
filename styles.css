@@ -554,6 +554,10 @@ button:disabled {
   min-width: 0;
 }
 
+.workspace[hidden] {
+  display: none !important;
+}
+
 .browser-panel,
 .preview-panel {
   min-height: auto;
