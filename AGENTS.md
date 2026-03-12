@@ -72,16 +72,17 @@ By default the application runs at `http://localhost:8086`.
 
 # Frontend Rules
 1. Keep the interface in English unless the user explicitly requests localization.
-2. Preserve the current local-app experience: connection form, object browser, and preview panel.
+2. Preserve the current local-app experience: provider card quick-connect, credential modal editing/testing, object browser, and preview panel.
 3. Avoid frameworks, bundlers, or build steps if the problem can be solved within the current HTML/CSS/JS setup.
 4. When adding controls, wire state, visual feedback, and error handling consistently with the rest of `app.js`.
 5. Provider selection must remain explicit in the UI when behavior or required credentials differ across backends.
-6. Each provider should have its own visible connection block in the UI; users should not have to infer which fields belong to which backend.
-7. Destructive actions in the UI should prefer first-class confirmation modals over browser-native dialogs, and the default focused action must be the safe non-destructive option.
-8. Long-running destructive actions should show explicit in-progress feedback in the UI even when the backend only provides completion status.
-9. The frontend must remain multilingual with English as the default plus Brazilian Portuguese (`pt-BR`), Spanish (`es`), and Italian (`it`) for user-facing UI text and frontend-generated messages.
-10. Backend error responses surfaced in the frontend must follow the same language set when they originate from application-controlled validation or guardrails.
-11. When destructive operations are disabled by server configuration, the UI should hide or disable delete affordances instead of inviting an action that will always fail.
+6. Provider selection must stay explicit through the provider cards; clicking a card is the quick-connect path and the pencil action opens the credential modal for that provider.
+7. The credential modal must show only the selected provider's fields; users should not have to infer which fields belong to which backend.
+8. Destructive actions in the UI should prefer first-class confirmation modals over browser-native dialogs, and the default focused action must be the safe non-destructive option.
+9. Long-running destructive actions should show explicit in-progress feedback in the UI even when the backend only provides completion status.
+10. The frontend must remain multilingual with English as the default plus Brazilian Portuguese (`pt-BR`), Spanish (`es`), and Italian (`it`) for user-facing UI text and frontend-generated messages.
+11. Backend error responses surfaced in the frontend must follow the same language set when they originate from application-controlled validation or guardrails.
+12. When destructive operations are disabled by server configuration, the UI should hide or disable delete affordances instead of inviting an action that will always fail.
 
 # Security And Sensitive Data
 1. Storage credentials are entered through the UI and are currently persisted in `localStorage`. All provider-specific connection fields, credentials, secrets, textarea content, and toggles must remain persistable unless the behavior is intentionally redesigned. Any change in this area must consider security impact and be documented.

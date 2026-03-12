@@ -31,7 +31,16 @@ const DATE_LOCALES = {
 const translations = {
   en: {
     language: { label: "Language" },
-    connection: { kicker: "Connection", title: "Storage Access", settings: "Connection settings", connect: "Connect" },
+    connection: {
+      kicker: "Connection",
+      title: "Storage Access",
+      settings: "Connection settings",
+      edit: "Edit credentials",
+      modalTitle: "Connection settings",
+      modalBody: "Review the provider credentials, test access, and save to connect.",
+      test: "Test connection",
+      saveAndConnect: "Save",
+    },
     providers: {
       kicker: "Providers",
       ariaLabel: "Storage provider",
@@ -107,11 +116,13 @@ const translations = {
     },
     common: { cancel: "Cancel", close: "Close" },
     messages: {
-      enterCredentials: "Enter credentials and click connect.", startupDiagnostic: "Frontend configured to use the local API.\nStart the Node server and open the application at http://localhost:8086.",
+      enterCredentials: "Click a provider card to connect or use the pencil to edit credentials.", startupDiagnostic: "Frontend configured to use the local API.\nStart the Node server and open the application at http://localhost:8086.",
       connecting: "Connecting...", connectingTo: "Connecting to {target} ({location})...", validateAccess: "Calling the local backend to validate storage access...",
       connectionOk: "Connection OK through the local backend.\nProvider: {provider}\nTarget: {target}\nLocation: {location}\nSession: {session}",
       destructiveDisabled: "Destructive operations are disabled by the server configuration.",
-      failedToConnect: "Failed to connect.", restored: "Connection data restored from the browser.",
+      failedToConnect: "Failed to connect.",
+      testingConnection: "Testing connection...", testConnectionOk: "Connection test passed for {target} ({location}).",
+      savedCredentialsMissing: "Saved credentials are incomplete for this provider. Update them before connecting.",
       loadedSummary: "{folders} folder(s) and {files} file(s) loaded from {target}.",
       unexpectedStorageError: "Unexpected error while accessing storage.", backendError: "Error returned by the local backend:\n{message}",
       noFailureDetails: "Failure without additional details.",
@@ -123,7 +134,16 @@ const translations = {
   },
   "pt-BR": {
     language: { label: "Idioma" },
-    connection: { kicker: "Conexão", title: "Acesso ao Storage", settings: "Configurações da conexão", connect: "Conectar" },
+    connection: {
+      kicker: "Conexão",
+      title: "Acesso ao Storage",
+      settings: "Configurações da conexão",
+      edit: "Editar credenciais",
+      modalTitle: "Configurações da conexão",
+      modalBody: "Revise as credenciais do provedor, teste o acesso e salve para conectar.",
+      test: "Testar conexão",
+      saveAndConnect: "Salvar",
+    },
     providers: {
       kicker: "Provedores", ariaLabel: "Provedor de storage",
       s3: "Buckets AWS com região e chaves de acesso.",
@@ -193,11 +213,13 @@ const translations = {
     },
     common: { cancel: "Cancelar", close: "Fechar" },
     messages: {
-      enterCredentials: "Preencha as credenciais e clique em conectar.", startupDiagnostic: "Frontend configurado para usar a API local.\nInicie o servidor Node e abra a aplicação em http://localhost:8086.",
+      enterCredentials: "Clique em um card de provedor para conectar ou use o lápis para editar as credenciais.", startupDiagnostic: "Frontend configurado para usar a API local.\nInicie o servidor Node e abra a aplicação em http://localhost:8086.",
       connecting: "Conectando...", connectingTo: "Conectando a {target} ({location})...", validateAccess: "Chamando o backend local para validar o acesso ao storage...",
       connectionOk: "Conexão OK pelo backend local.\nProvedor: {provider}\nDestino: {target}\nLocalização: {location}\nSessão: {session}",
       destructiveDisabled: "As operações destrutivas estão desativadas pela configuração do servidor.",
-      failedToConnect: "Falha ao conectar.", restored: "Dados de conexão restaurados do navegador.",
+      failedToConnect: "Falha ao conectar.",
+      testingConnection: "Testando conexão...", testConnectionOk: "Teste de conexão aprovado para {target} ({location}).",
+      savedCredentialsMissing: "As credenciais salvas estão incompletas para este provedor. Atualize-as antes de conectar.",
       loadedSummary: "{folders} pasta(s) e {files} arquivo(s) carregados de {target}.",
       unexpectedStorageError: "Erro inesperado ao acessar o storage.", backendError: "Erro retornado pelo backend local:\n{message}",
       noFailureDetails: "Falha sem detalhes adicionais.",
@@ -209,7 +231,16 @@ const translations = {
   },
   es: {
     language: { label: "Idioma" },
-    connection: { kicker: "Conexión", title: "Acceso al Storage", settings: "Configuración de la conexión", connect: "Conectar" },
+    connection: {
+      kicker: "Conexión",
+      title: "Acceso al Storage",
+      settings: "Configuración de la conexión",
+      edit: "Editar credenciales",
+      modalTitle: "Configuración de la conexión",
+      modalBody: "Revisa las credenciales del proveedor, prueba el acceso y guarda para conectar.",
+      test: "Probar conexión",
+      saveAndConnect: "Guardar",
+    },
     providers: {
       kicker: "Proveedores", ariaLabel: "Proveedor de storage",
       s3: "Buckets de AWS con región y claves de acceso.",
@@ -279,11 +310,13 @@ const translations = {
     },
     common: { cancel: "Cancelar", close: "Cerrar" },
     messages: {
-      enterCredentials: "Ingresa las credenciales y haz clic en conectar.", startupDiagnostic: "Frontend configurado para usar la API local.\nInicia el servidor Node y abre la aplicación en http://localhost:8086.",
+      enterCredentials: "Haz clic en una tarjeta de proveedor para conectar o usa el lápiz para editar credenciales.", startupDiagnostic: "Frontend configurado para usar la API local.\nInicia el servidor Node y abre la aplicación en http://localhost:8086.",
       connecting: "Conectando...", connectingTo: "Conectando a {target} ({location})...", validateAccess: "Llamando al backend local para validar el acceso al storage...",
       connectionOk: "Conexión OK a través del backend local.\nProveedor: {provider}\nDestino: {target}\nUbicación: {location}\nSesión: {session}",
       destructiveDisabled: "Las operaciones destructivas están deshabilitadas por la configuración del servidor.",
-      failedToConnect: "Error al conectar.", restored: "Datos de conexión restaurados desde el navegador.",
+      failedToConnect: "Error al conectar.",
+      testingConnection: "Probando conexión...", testConnectionOk: "La prueba de conexión fue correcta para {target} ({location}).",
+      savedCredentialsMissing: "Las credenciales guardadas están incompletas para este proveedor. Actualízalas antes de conectar.",
       loadedSummary: "{folders} carpeta(s) y {files} archivo(s) cargados desde {target}.",
       unexpectedStorageError: "Error inesperado al acceder al storage.", backendError: "Error devuelto por el backend local:\n{message}",
       noFailureDetails: "Fallo sin detalles adicionales.",
@@ -295,7 +328,16 @@ const translations = {
   },
   it: {
     language: { label: "Lingua" },
-    connection: { kicker: "Connessione", title: "Accesso allo Storage", settings: "Impostazioni della connessione", connect: "Connetti" },
+    connection: {
+      kicker: "Connessione",
+      title: "Accesso allo Storage",
+      settings: "Impostazioni della connessione",
+      edit: "Modifica credenziali",
+      modalTitle: "Impostazioni della connessione",
+      modalBody: "Controlla le credenziali del provider, testa l'accesso e salva per connetterti.",
+      test: "Testa connessione",
+      saveAndConnect: "Salva",
+    },
     providers: {
       kicker: "Provider", ariaLabel: "Provider di storage",
       s3: "Bucket AWS con regione e chiavi di accesso.",
@@ -365,11 +407,13 @@ const translations = {
     },
     common: { cancel: "Annulla", close: "Chiudi" },
     messages: {
-      enterCredentials: "Inserisci le credenziali e fai clic su connetti.", startupDiagnostic: "Frontend configurato per usare l'API locale.\nAvvia il server Node e apri l'applicazione su http://localhost:8086.",
+      enterCredentials: "Fai clic su una card provider per connetterti oppure usa la matita per modificare le credenziali.", startupDiagnostic: "Frontend configurato per usare l'API locale.\nAvvia il server Node e apri l'applicazione su http://localhost:8086.",
       connecting: "Connessione...", connectingTo: "Connessione a {target} ({location})...", validateAccess: "Chiamata al backend locale per validare l'accesso allo storage...",
       connectionOk: "Connessione OK tramite il backend locale.\nProvider: {provider}\nDestinazione: {target}\nPosizione: {location}\nSessione: {session}",
       destructiveDisabled: "Le operazioni distruttive sono disabilitate dalla configurazione del server.",
-      failedToConnect: "Connessione non riuscita.", restored: "Dati di connessione ripristinati dal browser.",
+      failedToConnect: "Connessione non riuscita.",
+      testingConnection: "Test della connessione...", testConnectionOk: "Test di connessione riuscito per {target} ({location}).",
+      savedCredentialsMissing: "Le credenziali salvate sono incomplete per questo provider. Aggiornale prima di connetterti.",
       loadedSummary: "{folders} cartella/e e {files} file caricati da {target}.",
       unexpectedStorageError: "Errore imprevisto durante l'accesso allo storage.", backendError: "Errore restituito dal backend locale:\n{message}",
       noFailureDetails: "Errore senza dettagli aggiuntivi.",
@@ -386,14 +430,20 @@ const elements = {
   connectionPanel: document.querySelector("#connectionPanel"),
   languageSelect: document.querySelector("#languageSelect"),
   connectionSummaryText: document.querySelector("#connectionSummaryText"),
+  connectionModal: document.querySelector("#connectionModal"),
+  connectionModalStatus: document.querySelector("#connectionModalStatus"),
+  connectionModalCancel: document.querySelector("#connectionModalCancel"),
+  testConnectionButton: document.querySelector("#testConnectionButton"),
+  saveConnectionButton: document.querySelector("#saveConnectionButton"),
   credentialsForm: document.querySelector("#credentialsForm"),
   provider: document.querySelector("#provider"),
   providerCards: document.querySelectorAll("[data-provider-card]"),
+  providerCardTriggers: document.querySelectorAll("[data-provider-card-trigger]"),
+  providerEditButtons: document.querySelectorAll("[data-provider-edit]"),
   s3Fields: document.querySelector("#s3Fields"),
   adlsFields: document.querySelector("#adlsFields"),
   gcsFields: document.querySelector("#gcsFields"),
   minioFields: document.querySelector("#minioFields"),
-  connectButton: document.querySelector("#connectButton"),
   connectionStatus: document.querySelector("#connectionStatus"),
   diagnosticBox: document.querySelector("#diagnosticBox"),
   objectList: document.querySelector("#objectList"),
@@ -440,6 +490,8 @@ const elements = {
   deleteProgressPrefix: document.querySelector("#deleteProgressPrefix"),
 };
 
+let connectionModalPreviousActiveElement = null;
+
 state.language = restoreLanguage();
 if (elements.languageSelect instanceof HTMLSelectElement) {
   elements.languageSelect.value = state.language;
@@ -452,6 +504,7 @@ if (elements.languageSelect instanceof HTMLSelectElement) {
 
 elements.credentialsForm.addEventListener("submit", (event) => {
   event.preventDefault();
+  saveConnectionFromModal();
 });
 elements.credentialsForm.addEventListener("input", persistConnectionForm);
 elements.credentialsForm.addEventListener("change", persistConnectionForm);
@@ -460,15 +513,32 @@ if (serviceAccountJsonField instanceof HTMLTextAreaElement) {
   serviceAccountJsonField.addEventListener("input", syncProjectIdFromServiceAccountJson);
   serviceAccountJsonField.addEventListener("change", syncProjectIdFromServiceAccountJson);
 }
-elements.providerCards.forEach((card) => {
-  card.addEventListener("click", () => {
-    const provider = ["adls", "gcs", "minio"].includes(card.dataset.providerCard) ? card.dataset.providerCard : "s3";
-    elements.provider.value = provider;
-    syncProviderFields();
-    persistConnectionForm();
+elements.providerCardTriggers.forEach((trigger) => {
+  trigger.addEventListener("click", async () => {
+    await handleProviderCardClick(normalizeProvider(trigger.dataset.providerCardTrigger));
   });
 });
-elements.connectButton.addEventListener("click", connectToBucket);
+elements.providerEditButtons.forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openConnectionModal(normalizeProvider(button.dataset.providerEdit));
+  });
+});
+elements.connectionModalCancel.addEventListener("click", closeConnectionModal);
+elements.testConnectionButton.addEventListener("click", testConnectionFromModal);
+elements.connectionModal.addEventListener("click", (event) => {
+  const target = event.target;
+  if (target instanceof HTMLElement && target.hasAttribute("data-connection-modal-close")) {
+    closeConnectionModal();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (!elements.connectionModal.hidden && event.key === "Escape") {
+    event.preventDefault();
+    closeConnectionModal();
+  }
+});
 elements.toggleIcebergModeButton.addEventListener("click", toggleIcebergMode);
 elements.seedIcebergButton.addEventListener("click", seedIcebergFixtures);
 elements.refreshButton.addEventListener("click", () => loadObjects(state.prefix));
@@ -560,10 +630,10 @@ function applyLanguage() {
   });
 
   if (!elements.connectionStatus.textContent.trim()) {
-    setConnectionStatus(t("messages.enterCredentials"));
+    setConnectionStatus("");
   }
   if (!elements.diagnosticBox.textContent.trim()) {
-    setDiagnosticMessage(t("messages.startupDiagnostic"));
+    setDiagnosticMessage("");
   }
   if (!state.sessionId && !state.objectItems.length) {
     renderObjectPlaceholder(t("browser.connectToList"));
@@ -584,13 +654,103 @@ function applyLanguage() {
 }
 
 async function connectToBucket() {
-  const connection = getConnectionPayload();
+  return connectToBucketWithPayload(getConnectionPayload());
+}
 
+function normalizeProvider(provider) {
+  return ["adls", "gcs", "minio"].includes(provider) ? provider : "s3";
+}
+
+function selectProvider(provider) {
+  const normalizedProvider = normalizeProvider(provider);
+  elements.provider.value = normalizedProvider;
+  state.provider = normalizedProvider;
+  syncProviderFields();
+}
+
+function openConnectionModal(provider, options = {}) {
+  const { status = "", isError = false } = options;
+
+  connectionModalPreviousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  selectProvider(provider);
+  setConnectionModalStatus(status, isError);
+  elements.connectionModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  const firstField = getFirstProviderInput(elements.provider.value);
+  if (firstField) {
+    firstField.focus();
+  } else {
+    elements.connectionModalCancel.focus();
+  }
+}
+
+function closeConnectionModal() {
+  if (elements.connectionModal.hidden) {
+    return;
+  }
+
+  elements.connectionModal.hidden = true;
+  document.body.style.overflow = "";
+  setConnectionModalStatus("");
+  if (connectionModalPreviousActiveElement instanceof HTMLElement) {
+    connectionModalPreviousActiveElement.focus();
+  }
+  connectionModalPreviousActiveElement = null;
+}
+
+function getFirstProviderInput(provider) {
+  const inputNameByProvider = {
+    s3: "region",
+    adls: "accountName",
+    gcs: "gcsBucket",
+    minio: "endpoint",
+  };
+  const input = elements.credentialsForm.elements.namedItem(inputNameByProvider[normalizeProvider(provider)]);
+  return input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement ? input : null;
+}
+
+function setConnectionModalStatus(message, isError = false) {
+  elements.connectionModalStatus.className = isError ? "status-text error-text" : "status-text muted";
+  elements.connectionModalStatus.textContent = message;
+}
+
+function setConnectionActionState(isBusy) {
+  elements.connectionModalCancel.disabled = isBusy;
+  elements.testConnectionButton.disabled = isBusy;
+  elements.saveConnectionButton.disabled = isBusy;
+  elements.providerCardTriggers.forEach((button) => {
+    button.disabled = isBusy;
+  });
+  elements.providerEditButtons.forEach((button) => {
+    button.disabled = isBusy;
+  });
+}
+
+async function handleProviderCardClick(provider) {
+  selectProvider(provider);
+  persistConnectionForm();
+
+  const connection = getConnectionPayload();
   const validationError = validateConnectionPayload(connection);
 
   if (validationError) {
-    setConnectionStatus(validationError, true);
+    openConnectionModal(provider, {
+      status: t("messages.savedCredentialsMissing"),
+      isError: true,
+    });
     return;
+  }
+
+  await connectToBucketWithPayload(connection);
+}
+
+async function connectToBucketWithPayload(connection) {
+  const validationError = validateConnectionPayload(connection);
+
+  if (validationError) {
+    openConnectionModal(connection.provider, { status: validationError, isError: true });
+    setConnectionModalStatus(validationError, true);
+    return false;
   }
 
   persistConnectionForm();
@@ -610,10 +770,10 @@ async function connectToBucket() {
   syncSeedControls();
   elements.downloadButton.disabled = true;
   syncPreviewModeAvailability("");
-  renderObjectPlaceholder(t("messages.connecting"));
-  resetPreview(t("preview.selectCompatible"));
-  setConnectionStatus(t("messages.connectingTo", { target: state.targetName, location: state.locationName }));
-  setDiagnosticMessage(t("messages.validateAccess"));
+  setConnectionStatus("");
+  setDiagnosticMessage("");
+  setConnectionActionState(true);
+  setConnectionModalStatus("");
 
   try {
     const response = await apiFetch("/api/connect", {
@@ -630,25 +790,63 @@ async function connectToBucket() {
     syncDestructiveControls();
     syncSeedControls();
     await loadObjects("");
-    elements.connectionPanel.open = false;
+    closeConnectionModal();
     refreshConnectionSummary();
-    setDiagnosticMessage(
-      t("messages.connectionOk", {
-        provider: state.provider.toUpperCase(),
-        target: state.targetName,
-        location: state.locationName,
-        session: state.sessionId,
-      }),
-    );
-    if (!state.destructiveOperationsEnabled) {
-      setDiagnosticMessage(`${elements.diagnosticBox.textContent}\n\n${t("messages.destructiveDisabled")}`);
-    }
+    setConnectionStatus("");
+    setDiagnosticMessage("");
+    return true;
   } catch (error) {
-    renderObjectPlaceholder(t("messages.failedToConnect"));
-    setConnectionStatus(getErrorMessage(error), true);
-    setDiagnosticMessage(buildDiagnosticMessage(error));
+    openConnectionModal(connection.provider, { status: getErrorMessage(error), isError: true });
+    setConnectionStatus("");
+    setConnectionModalStatus(getErrorMessage(error), true);
+    setDiagnosticMessage("");
     syncSeedControls();
+    return false;
+  } finally {
+    setConnectionActionState(false);
   }
+}
+
+async function testConnectionFromModal() {
+  const connection = getConnectionPayload();
+  const validationError = validateConnectionPayload(connection);
+
+  if (validationError) {
+    setConnectionModalStatus(validationError, true);
+    return;
+  }
+
+  persistConnectionForm();
+  setConnectionActionState(true);
+  setConnectionModalStatus(t("messages.testingConnection"));
+
+  try {
+    const response = await apiFetch("/api/test-connection", {
+      method: "POST",
+      body: JSON.stringify(connection),
+    });
+
+    const targetName = response.targetName ?? getConnectionTargetName(connection);
+    const locationName = response.locationName ?? getConnectionLocationName(connection);
+    setConnectionModalStatus(t("messages.testConnectionOk", {
+      target: targetName,
+      location: locationName,
+    }));
+    setConnectionStatus("");
+    setDiagnosticMessage("");
+  } catch (error) {
+    setConnectionModalStatus(getErrorMessage(error), true);
+    setConnectionStatus("");
+    setDiagnosticMessage("");
+  } finally {
+    setConnectionActionState(false);
+  }
+}
+
+function saveConnectionFromModal() {
+  persistConnectionForm();
+  setConnectionModalStatus("");
+  closeConnectionModal();
 }
 
 async function loadObjects(prefix) {
@@ -675,13 +873,7 @@ async function loadObjects(prefix) {
     state.objectItems = response.items ?? [];
     renderObjectList();
     await refreshIcebergAvailability(prefix);
-    setConnectionStatus(
-      t("messages.loadedSummary", {
-        folders: response.summary?.folders ?? 0,
-        files: response.summary?.files ?? 0,
-        target: state.targetName,
-      }),
-    );
+    setConnectionStatus("");
   } catch (error) {
     renderObjectPlaceholder(t("browser.failed"));
     state.icebergAvailable = false;
@@ -1421,11 +1613,13 @@ function sortObjectItems(items, sort) {
 function setConnectionStatus(message, isError = false) {
   elements.connectionStatus.className = isError ? "status-text error-text" : "status-text muted";
   elements.connectionStatus.textContent = message;
+  elements.connectionStatus.hidden = !message.trim();
   refreshConnectionSummary();
 }
 
 function setDiagnosticMessage(message) {
   elements.diagnosticBox.textContent = message;
+  elements.diagnosticBox.hidden = !message.trim();
 }
 
 function formatBytes(bytes) {
@@ -1857,7 +2051,7 @@ function syncSeedControls() {
 }
 
 function setStartupDiagnostic() {
-  setDiagnosticMessage(t("messages.startupDiagnostic"));
+  setDiagnosticMessage("");
 }
 
 function persistConnectionForm() {
@@ -1875,7 +2069,7 @@ function restoreConnectionForm() {
 
   try {
     const payload = JSON.parse(rawValue);
-    setInputValue("provider", payload.provider || "s3");
+    setInputValue("provider", normalizeProvider(payload.provider));
     setInputValue("region", payload.region);
     setInputValue("bucket", payload.bucket);
     setInputValue("accessKeyId", payload.accessKeyId);
@@ -1892,8 +2086,8 @@ function restoreConnectionForm() {
     setInputValue("minioAccessKeyId", payload.minioAccessKeyId);
     setInputValue("minioSecretAccessKey", payload.minioSecretAccessKey);
     setCheckboxValue("ignoreTlsErrors", payload.ignoreTlsErrors === true);
-    syncProviderFields();
-    setConnectionStatus(t("messages.restored"));
+    selectProvider(payload.provider);
+    setConnectionStatus("");
     refreshConnectionSummary();
   } catch {
     window.localStorage.removeItem(STORAGE_KEY);
@@ -1970,9 +2164,7 @@ function getConnectionPayload() {
   const formData = new FormData(elements.credentialsForm);
 
   return {
-    provider: ["adls", "gcs", "minio"].includes(formData.get("provider")?.toString().trim())
-      ? formData.get("provider")?.toString().trim()
-      : "s3",
+    provider: normalizeProvider(formData.get("provider")?.toString().trim()),
     region: formData.get("region")?.toString().trim() ?? "",
     bucket: formData.get("bucket")?.toString().trim() ?? "",
     accessKeyId: formData.get("accessKeyId")?.toString().trim() ?? "",
@@ -2065,7 +2257,7 @@ function getConnectionLocationName(connection) {
 }
 
 function syncProviderFields() {
-  const provider = ["adls", "gcs", "minio"].includes(elements.provider.value) ? elements.provider.value : "s3";
+  const provider = normalizeProvider(elements.provider.value);
   const useS3 = provider === "s3";
   const useAdls = provider === "adls";
   const useGcs = provider === "gcs";
@@ -2074,7 +2266,10 @@ function syncProviderFields() {
   elements.providerCards.forEach((card) => {
     const isActive = card.dataset.providerCard === provider;
     card.classList.toggle("is-active", isActive);
-    card.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+  elements.providerCardTriggers.forEach((button) => {
+    const isActive = button.dataset.providerCardTrigger === provider;
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
 
   elements.s3Fields.hidden = !useS3;

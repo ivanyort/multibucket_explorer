@@ -44,203 +44,95 @@
         </summary>
 
         <div class="connection-panel-body">
-          <div class="panel-header">
-            <div></div>
-            <button id="connectButton" class="primary-button" data-i18n="connection.connect">Connect</button>
-          </div>
-
-          <form id="credentialsForm" class="credentials-grid" autocomplete="off">
-            <input id="provider" name="provider" type="hidden" value="s3" />
-
-            <div class="span-2">
-              <p class="panel-kicker" data-i18n="providers.kicker">Providers</p>
-              <div class="provider-card-grid" role="radiogroup" aria-label="Storage provider" data-i18n-aria-label="providers.ariaLabel">
-                <button
-                  type="button"
-                  class="provider-card is-active"
-                  data-provider-card="s3"
-                  aria-pressed="true"
-                >
-                  <strong>S3</strong>
-                  <span data-i18n="providers.s3">AWS buckets with region and access keys.</span>
-                </button>
-                <button
-                  type="button"
-                  class="provider-card"
-                  data-provider-card="adls"
-                  aria-pressed="false"
-                >
-                  <strong>ADLS</strong>
-                  <span data-i18n="providers.adls">Azure Data Lake Storage Gen2 with account and container name.</span>
-                </button>
-                <button
-                  type="button"
-                  class="provider-card"
-                  data-provider-card="gcs"
-                  aria-pressed="false"
-                >
-                  <strong>GCS</strong>
-                  <span data-i18n="providers.gcs">Google Cloud Storage with bucket and service account JSON.</span>
-                </button>
-                <button
-                  type="button"
-                  class="provider-card"
-                  data-provider-card="minio"
-                  aria-pressed="false"
-                >
-                  <strong>MinIO</strong>
-                  <span data-i18n="providers.minio">S3-compatible storage with custom endpoint and access keys.</span>
-                </button>
-              </div>
+          <div class="provider-cards-block">
+            <p class="panel-kicker" data-i18n="providers.kicker">Providers</p>
+            <div class="provider-card-grid" role="radiogroup" aria-label="Storage provider" data-i18n-aria-label="providers.ariaLabel">
+              <article class="provider-card is-active" data-provider-card="s3">
+                <div class="provider-card-header">
+                  <button type="button" class="provider-card-main" data-provider-card-trigger="s3" aria-pressed="true">
+                    <strong>S3</strong>
+                    <span data-i18n="providers.s3">AWS buckets with region and access keys.</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="provider-card-edit"
+                    data-provider-edit="s3"
+                    aria-label="Edit credentials"
+                    title="Edit credentials"
+                    data-i18n-aria-label="connection.edit"
+                    data-i18n-title="connection.edit"
+                  >
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                      <path d="M16.86 3.49a2.25 2.25 0 0 1 3.18 3.18l-10.4 10.4a3 3 0 0 1-1.27.74l-3.28.94a.75.75 0 0 1-.93-.93l.94-3.28a3 3 0 0 1 .74-1.27zM15.8 5.61 6.96 14.45a1.5 1.5 0 0 0-.37.64l-.56 1.94 1.94-.56a1.5 1.5 0 0 0 .64-.37l8.84-8.84z"></path>
+                    </svg>
+                  </button>
+                </div>
+              </article>
+              <article class="provider-card" data-provider-card="adls">
+                <div class="provider-card-header">
+                  <button type="button" class="provider-card-main" data-provider-card-trigger="adls" aria-pressed="false">
+                    <strong>ADLS</strong>
+                    <span data-i18n="providers.adls">Azure Data Lake Storage Gen2 with account and container name.</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="provider-card-edit"
+                    data-provider-edit="adls"
+                    aria-label="Edit credentials"
+                    title="Edit credentials"
+                    data-i18n-aria-label="connection.edit"
+                    data-i18n-title="connection.edit"
+                  >
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                      <path d="M16.86 3.49a2.25 2.25 0 0 1 3.18 3.18l-10.4 10.4a3 3 0 0 1-1.27.74l-3.28.94a.75.75 0 0 1-.93-.93l.94-3.28a3 3 0 0 1 .74-1.27zM15.8 5.61 6.96 14.45a1.5 1.5 0 0 0-.37.64l-.56 1.94 1.94-.56a1.5 1.5 0 0 0 .64-.37l8.84-8.84z"></path>
+                    </svg>
+                  </button>
+                </div>
+              </article>
+              <article class="provider-card" data-provider-card="gcs">
+                <div class="provider-card-header">
+                  <button type="button" class="provider-card-main" data-provider-card-trigger="gcs" aria-pressed="false">
+                    <strong>GCS</strong>
+                    <span data-i18n="providers.gcs">Google Cloud Storage with bucket and service account JSON.</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="provider-card-edit"
+                    data-provider-edit="gcs"
+                    aria-label="Edit credentials"
+                    title="Edit credentials"
+                    data-i18n-aria-label="connection.edit"
+                    data-i18n-title="connection.edit"
+                  >
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                      <path d="M16.86 3.49a2.25 2.25 0 0 1 3.18 3.18l-10.4 10.4a3 3 0 0 1-1.27.74l-3.28.94a.75.75 0 0 1-.93-.93l.94-3.28a3 3 0 0 1 .74-1.27zM15.8 5.61 6.96 14.45a1.5 1.5 0 0 0-.37.64l-.56 1.94 1.94-.56a1.5 1.5 0 0 0 .64-.37l8.84-8.84z"></path>
+                    </svg>
+                  </button>
+                </div>
+              </article>
+              <article class="provider-card" data-provider-card="minio">
+                <div class="provider-card-header">
+                  <button type="button" class="provider-card-main" data-provider-card-trigger="minio" aria-pressed="false">
+                    <strong>MinIO</strong>
+                    <span data-i18n="providers.minio">S3-compatible storage with custom endpoint and access keys.</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="provider-card-edit"
+                    data-provider-edit="minio"
+                    aria-label="Edit credentials"
+                    title="Edit credentials"
+                    data-i18n-aria-label="connection.edit"
+                    data-i18n-title="connection.edit"
+                  >
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                      <path d="M16.86 3.49a2.25 2.25 0 0 1 3.18 3.18l-10.4 10.4a3 3 0 0 1-1.27.74l-3.28.94a.75.75 0 0 1-.93-.93l.94-3.28a3 3 0 0 1 .74-1.27zM15.8 5.61 6.96 14.45a1.5 1.5 0 0 0-.37.64l-.56 1.94 1.94-.56a1.5 1.5 0 0 0 .64-.37l8.84-8.84z"></path>
+                    </svg>
+                  </button>
+                </div>
+              </article>
             </div>
-
-            <section id="s3Fields" class="span-2 provider-fields" aria-label="S3 connection settings" data-i18n-aria-label="s3.ariaLabel">
-              <div class="provider-fields-header">
-                <p class="panel-kicker" data-i18n="s3.kicker">S3 Connection</p>
-                <p class="provider-fields-copy" data-i18n="s3.copy">Use AWS bucket credentials for this connection.</p>
-              </div>
-              <div class="credentials-grid provider-fields-grid">
-              <label>
-                <span data-i18n="fields.region">Region</span>
-                <input id="region" name="region" placeholder="us-east-1" data-i18n-placeholder="placeholders.region" />
-              </label>
-              <label>
-                <span data-i18n="fields.bucket">Bucket</span>
-                <input id="bucket" name="bucket" placeholder="my-bucket" data-i18n-placeholder="placeholders.bucket" />
-              </label>
-              <label>
-                <span data-i18n="fields.accessKeyId">Access Key ID</span>
-                <input
-                  id="accessKeyId"
-                  name="accessKeyId"
-                  placeholder="AKIA..."
-                  data-i18n-placeholder="placeholders.accessKeyId"
-                />
-              </label>
-              <label>
-                <span data-i18n="fields.secretAccessKey">Secret Access Key</span>
-                <input
-                  id="secretAccessKey"
-                  name="secretAccessKey"
-                  type="password"
-                  placeholder="********"
-                  data-i18n-placeholder="placeholders.secretAccessKey"
-                />
-              </label>
-              </div>
-            </section>
-
-            <section
-              id="adlsFields"
-              class="span-2 provider-fields"
-              aria-label="ADLS connection settings"
-              data-i18n-aria-label="adls.ariaLabel"
-              hidden
-            >
-              <div class="provider-fields-header">
-                <p class="panel-kicker" data-i18n="adls.kicker">ADLS Connection</p>
-                <p class="provider-fields-copy" data-i18n="adls.copy">Use Azure Data Lake Storage Gen2 account credentials and container name.</p>
-              </div>
-              <div class="credentials-grid provider-fields-grid">
-              <label>
-                <span data-i18n="fields.accountName">Account Name</span>
-                <input id="accountName" name="accountName" placeholder="myaccount" data-i18n-placeholder="placeholders.accountName" />
-              </label>
-              <label>
-                <span data-i18n="fields.containerName">Container Name</span>
-                <input id="fileSystem" name="fileSystem" placeholder="my-filesystem" data-i18n-placeholder="placeholders.fileSystem" />
-              </label>
-              <label>
-                <span data-i18n="fields.accessKey">Access Key</span>
-                <input
-                  id="accountKey"
-                  name="accountKey"
-                  type="password"
-                  placeholder="********"
-                  data-i18n-placeholder="placeholders.secretAccessKey"
-                />
-              </label>
-              </div>
-            </section>
-
-            <section
-              id="gcsFields"
-              class="span-2 provider-fields"
-              aria-label="GCS connection settings"
-              data-i18n-aria-label="gcs.ariaLabel"
-              hidden
-            >
-              <div class="provider-fields-header">
-                <p class="panel-kicker" data-i18n="gcs.kicker">GCS Connection</p>
-                <p class="provider-fields-copy" data-i18n="gcs.copy">Use a Google Cloud Storage bucket and a service account JSON key.</p>
-              </div>
-              <div class="credentials-grid provider-fields-grid">
-                <label>
-                  <span data-i18n="fields.bucketOrUrl">Bucket or URL</span>
-                  <input id="gcsBucket" name="gcsBucket" placeholder="gs://my-bucket or my-bucket" data-i18n-placeholder="placeholders.gcsBucket" />
-                </label>
-                <label>
-                  <span data-i18n="fields.projectId">Project ID (auto-filled from the JSON when present)</span>
-                  <input id="projectId" name="projectId" placeholder="my-project-id" data-i18n-placeholder="placeholders.projectId" />
-                </label>
-                <label class="span-2">
-                  <span data-i18n="fields.serviceAccountJson">Service Account JSON</span>
-                  <textarea
-                    id="serviceAccountJson"
-                    name="serviceAccountJson"
-                    rows="8"
-                    placeholder='{"type":"service_account", ...}'
-                    data-i18n-placeholder="placeholders.serviceAccountJson"
-                  ></textarea>
-                </label>
-              </div>
-            </section>
-
-            <section
-              id="minioFields"
-              class="span-2 provider-fields"
-              aria-label="MinIO connection settings"
-              data-i18n-aria-label="minio.ariaLabel"
-              hidden
-            >
-              <div class="provider-fields-header">
-                <p class="panel-kicker" data-i18n="minio.kicker">MinIO Connection</p>
-                <p class="provider-fields-copy" data-i18n="minio.copy">Use a custom MinIO endpoint with S3-compatible access keys.</p>
-              </div>
-              <div class="credentials-grid provider-fields-grid">
-                <label class="span-2">
-                  <span data-i18n="fields.endpoint">Endpoint</span>
-                  <input id="endpoint" name="endpoint" placeholder="http://localhost:9000" data-i18n-placeholder="placeholders.endpoint" />
-                </label>
-                <label>
-                  <span data-i18n="fields.bucket">Bucket</span>
-                  <input id="minioBucket" name="minioBucket" placeholder="my-bucket" data-i18n-placeholder="placeholders.bucket" />
-                </label>
-                <label>
-                  <span data-i18n="fields.region">Region</span>
-                  <input id="minioRegion" name="minioRegion" placeholder="us-east-1" data-i18n-placeholder="placeholders.region" />
-                </label>
-                <label>
-                  <span data-i18n="fields.accessKeyId">Access Key ID</span>
-                  <input id="minioAccessKeyId" name="minioAccessKeyId" placeholder="minioadmin" data-i18n-placeholder="placeholders.minioAccessKeyId" />
-                </label>
-                <label>
-                  <span data-i18n="fields.secretAccessKey">Secret Access Key</span>
-                  <input
-                    id="minioSecretAccessKey"
-                    name="minioSecretAccessKey"
-                    type="password"
-                    placeholder="********"
-                    data-i18n-placeholder="placeholders.secretAccessKey"
-                  />
-                </label>
-                <label class="span-2 checkbox-field">
-                  <input id="ignoreTlsErrors" name="ignoreTlsErrors" type="checkbox" />
-                  <span data-i18n="minio.ignoreTlsErrors">Ignore HTTPS certificate errors for this MinIO connection</span>
-                </label>
-              </div>
-            </section>
-          </form>
+          </div>
 
           <p id="connectionStatus" class="status-text muted"></p>
           <div id="diagnosticBox" class="diagnostic-box muted"></div>
@@ -369,6 +261,178 @@
         </div>
       </section>
     </main>
+
+    <div
+      id="connectionModal"
+      class="modal-shell"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="connectionModalTitle"
+      aria-describedby="connectionModalBody"
+      hidden
+    >
+      <div class="modal-backdrop" data-connection-modal-close></div>
+      <div class="modal-card connection-modal-card" role="document">
+        <form id="credentialsForm" class="connection-modal-form" autocomplete="off">
+          <input id="provider" name="provider" type="hidden" value="s3" />
+
+          <p class="panel-kicker" data-i18n="connection.kicker">Connection</p>
+          <h2 id="connectionModalTitle" data-i18n="connection.modalTitle">Connection settings</h2>
+          <p id="connectionModalBody" class="modal-copy" data-i18n="connection.modalBody">
+            Review the provider credentials, test access, and save to connect.
+          </p>
+
+          <section id="s3Fields" class="provider-fields" aria-label="S3 connection settings" data-i18n-aria-label="s3.ariaLabel">
+            <div class="provider-fields-header">
+              <p class="panel-kicker" data-i18n="s3.kicker">S3 Connection</p>
+              <p class="provider-fields-copy" data-i18n="s3.copy">Use AWS bucket credentials for this connection.</p>
+            </div>
+            <div class="credentials-grid provider-fields-grid">
+              <label>
+                <span data-i18n="fields.region">Region</span>
+                <input id="region" name="region" placeholder="us-east-1" data-i18n-placeholder="placeholders.region" />
+              </label>
+              <label>
+                <span data-i18n="fields.bucket">Bucket</span>
+                <input id="bucket" name="bucket" placeholder="my-bucket" data-i18n-placeholder="placeholders.bucket" />
+              </label>
+              <label>
+                <span data-i18n="fields.accessKeyId">Access Key ID</span>
+                <input id="accessKeyId" name="accessKeyId" placeholder="AKIA..." data-i18n-placeholder="placeholders.accessKeyId" />
+              </label>
+              <label>
+                <span data-i18n="fields.secretAccessKey">Secret Access Key</span>
+                <input
+                  id="secretAccessKey"
+                  name="secretAccessKey"
+                  type="password"
+                  placeholder="********"
+                  data-i18n-placeholder="placeholders.secretAccessKey"
+                />
+              </label>
+            </div>
+          </section>
+
+          <section
+            id="adlsFields"
+            class="provider-fields"
+            aria-label="ADLS connection settings"
+            data-i18n-aria-label="adls.ariaLabel"
+            hidden
+          >
+            <div class="provider-fields-header">
+              <p class="panel-kicker" data-i18n="adls.kicker">ADLS Connection</p>
+              <p class="provider-fields-copy" data-i18n="adls.copy">Use Azure Data Lake Storage Gen2 account credentials and container name.</p>
+            </div>
+            <div class="credentials-grid provider-fields-grid">
+              <label>
+                <span data-i18n="fields.accountName">Account Name</span>
+                <input id="accountName" name="accountName" placeholder="myaccount" data-i18n-placeholder="placeholders.accountName" />
+              </label>
+              <label>
+                <span data-i18n="fields.containerName">Container Name</span>
+                <input id="fileSystem" name="fileSystem" placeholder="my-filesystem" data-i18n-placeholder="placeholders.fileSystem" />
+              </label>
+              <label>
+                <span data-i18n="fields.accessKey">Access Key</span>
+                <input
+                  id="accountKey"
+                  name="accountKey"
+                  type="password"
+                  placeholder="********"
+                  data-i18n-placeholder="placeholders.secretAccessKey"
+                />
+              </label>
+            </div>
+          </section>
+
+          <section
+            id="gcsFields"
+            class="provider-fields"
+            aria-label="GCS connection settings"
+            data-i18n-aria-label="gcs.ariaLabel"
+            hidden
+          >
+            <div class="provider-fields-header">
+              <p class="panel-kicker" data-i18n="gcs.kicker">GCS Connection</p>
+              <p class="provider-fields-copy" data-i18n="gcs.copy">Use a Google Cloud Storage bucket and a service account JSON key.</p>
+            </div>
+            <div class="credentials-grid provider-fields-grid">
+              <label>
+                <span data-i18n="fields.bucketOrUrl">Bucket or URL</span>
+                <input id="gcsBucket" name="gcsBucket" placeholder="gs://my-bucket or my-bucket" data-i18n-placeholder="placeholders.gcsBucket" />
+              </label>
+              <label>
+                <span data-i18n="fields.projectId">Project ID (auto-filled from the JSON when present)</span>
+                <input id="projectId" name="projectId" placeholder="my-project-id" data-i18n-placeholder="placeholders.projectId" />
+              </label>
+              <label class="span-2">
+                <span data-i18n="fields.serviceAccountJson">Service Account JSON</span>
+                <textarea
+                  id="serviceAccountJson"
+                  name="serviceAccountJson"
+                  rows="8"
+                  placeholder='{"type":"service_account", ...}'
+                  data-i18n-placeholder="placeholders.serviceAccountJson"
+                ></textarea>
+              </label>
+            </div>
+          </section>
+
+          <section
+            id="minioFields"
+            class="provider-fields"
+            aria-label="MinIO connection settings"
+            data-i18n-aria-label="minio.ariaLabel"
+            hidden
+          >
+            <div class="provider-fields-header">
+              <p class="panel-kicker" data-i18n="minio.kicker">MinIO Connection</p>
+              <p class="provider-fields-copy" data-i18n="minio.copy">Use a custom MinIO endpoint with S3-compatible access keys.</p>
+            </div>
+            <div class="credentials-grid provider-fields-grid">
+              <label class="span-2">
+                <span data-i18n="fields.endpoint">Endpoint</span>
+                <input id="endpoint" name="endpoint" placeholder="http://localhost:9000" data-i18n-placeholder="placeholders.endpoint" />
+              </label>
+              <label>
+                <span data-i18n="fields.bucket">Bucket</span>
+                <input id="minioBucket" name="minioBucket" placeholder="my-bucket" data-i18n-placeholder="placeholders.bucket" />
+              </label>
+              <label>
+                <span data-i18n="fields.region">Region</span>
+                <input id="minioRegion" name="minioRegion" placeholder="us-east-1" data-i18n-placeholder="placeholders.region" />
+              </label>
+              <label>
+                <span data-i18n="fields.accessKeyId">Access Key ID</span>
+                <input id="minioAccessKeyId" name="minioAccessKeyId" placeholder="minioadmin" data-i18n-placeholder="placeholders.minioAccessKeyId" />
+              </label>
+              <label>
+                <span data-i18n="fields.secretAccessKey">Secret Access Key</span>
+                <input
+                  id="minioSecretAccessKey"
+                  name="minioSecretAccessKey"
+                  type="password"
+                  placeholder="********"
+                  data-i18n-placeholder="placeholders.secretAccessKey"
+                />
+              </label>
+              <label class="span-2 checkbox-field">
+                <input id="ignoreTlsErrors" name="ignoreTlsErrors" type="checkbox" />
+                <span data-i18n="minio.ignoreTlsErrors">Ignore HTTPS certificate errors for this MinIO connection</span>
+              </label>
+            </div>
+          </section>
+
+          <p id="connectionModalStatus" class="status-text muted"></p>
+          <div class="modal-actions">
+            <button id="connectionModalCancel" class="ghost-button" type="button" data-i18n="common.cancel">Cancel</button>
+            <button id="testConnectionButton" class="ghost-button" type="button" data-i18n="connection.test">Test connection</button>
+            <button id="saveConnectionButton" class="primary-button" type="submit" data-i18n="connection.saveAndConnect">Save and connect</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <div
       id="seedConfirmModal"

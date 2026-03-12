@@ -113,6 +113,11 @@ This avoids browser-side CORS issues in this flow.
 
 Fill these fields in the interface:
 
+- click the provider card to connect immediately with the saved credentials for that provider
+- use the pencil icon on the provider card to open the credential modal
+- in the credential modal, use `Test connection` to validate access without replacing the active session
+- use `Save and connect` to persist the credentials and connect immediately
+
 - `Region`
 - `Bucket`
 - `Access Key ID`
@@ -128,6 +133,11 @@ Minimum permissions:
 ### Azure Data Lake Storage Gen2
 
 Fill these fields in the interface:
+
+- click the provider card to connect immediately with the saved credentials for that provider
+- use the pencil icon on the provider card to open the credential modal
+- in the credential modal, use `Test connection` to validate access without replacing the active session
+- use `Save and connect` to persist the credentials and connect immediately
 
 - `Account Name`
 - `Container Name`
@@ -146,6 +156,11 @@ Minimum effective permissions:
 
 Fill these fields in the interface:
 
+- click the provider card to connect immediately with the saved credentials for that provider
+- use the pencil icon on the provider card to open the credential modal
+- in the credential modal, use `Test connection` to validate access without replacing the active session
+- use `Save and connect` to persist the credentials and connect immediately
+
 - `Bucket`
 - `Project ID (get it in the first lines of the JSON)` (optional if already present in the service account JSON)
 - `Service Account JSON`
@@ -157,6 +172,11 @@ The current implementation uses a service account JSON key loaded directly in th
 ### MinIO
 
 Fill these fields in the interface:
+
+- click the provider card to connect immediately with the saved credentials for that provider
+- use the pencil icon on the provider card to open the credential modal
+- in the credential modal, use `Test connection` to validate access without replacing the active session
+- use `Save and connect` to persist the credentials and connect immediately
 
 - `Endpoint`
 - `Bucket`

@@ -265,6 +265,11 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/test-connection") {
+      await handleTestConnection(request, response);
+      return;
+    }
+
     if (request.method === "GET" && url.pathname === "/api/objects") {
       await handleListObjects(url, response);
       return;
@@ -333,11 +338,7 @@ server.listen(PORT, () => {
 });
 
 async function handleConnect(request, response) {
-  const body = await readJsonBody(request);
-  const connection = normalizeConnection(body);
-  validateConnection(connection);
-
-  const storage = await createStorageSession(connection);
+  const { connection, storage } = await validateAndCreateConnection(request);
 
   const sessionId = randomUUID();
   sessions.set(sessionId, {
@@ -354,6 +355,24 @@ async function handleConnect(request, response) {
     locationName: getConnectionLocationName(connection),
     destructiveOperationsEnabled: DESTRUCTIVE_OPERATIONS_ENABLED,
   });
+}
+
+async function handleTestConnection(request, response) {
+  const { connection } = await validateAndCreateConnection(request);
+
+  sendJson(response, 200, {
+    provider: connection.provider,
+    targetName: getConnectionTargetName(connection),
+    locationName: getConnectionLocationName(connection),
+  });
+}
+
+async function validateAndCreateConnection(request) {
+  const body = await readJsonBody(request);
+  const connection = normalizeConnection(body);
+  validateConnection(connection);
+  const storage = await createStorageSession(connection);
+  return { connection, storage };
 }
 
 async function handleListObjects(url, response) {
