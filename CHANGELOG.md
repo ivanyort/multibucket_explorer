@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.5.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.5.0) - 2026-03-12
+
+### Changes
+- feat(ui): refactor provider connection flow into modal-based quick connect (3f741dd)
+- chore(changelog): update for v0.4.2 [skip ci] (5f75865)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.4.2...v0.5.0)
+
+
 ## [v0.4.2](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.4.2) - 2026-03-11
 
 ### Changes
