@@ -163,6 +163,18 @@ The workflow tags and publishes the resulting version as both `X.Y.Z` and `vX.Y.
 
 This avoids browser-side CORS issues in this flow.
 
+## Disclaimer
+
+This project is provided on an "as is" basis, without warranties or guarantees of any kind, whether express or implied, including availability, security, integrity, merchantability, or fitness for a particular purpose.
+
+You are solely responsible for:
+
+- validating credentials, permissions, and target selection before connecting
+- ensuring appropriate backups, retention policies, and recovery procedures exist
+- reviewing the impact of preview, download, file deletion, and prefix deletion operations before using them
+
+The author is not liable for data loss, downtime, service disruption, cloud charges, security exposure, or misuse arising from the use of this project.
+
 ## Supported Providers
 
 ### AWS S3

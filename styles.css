@@ -115,6 +115,28 @@ textarea {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 20px 28px;
+  display: grid;
+  gap: 14px;
+}
+
+.footer-disclaimer {
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 251, 245, 0.7);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 32px rgba(67, 49, 31, 0.08);
+}
+
+.footer-disclaimer .panel-kicker {
+  margin-bottom: 8px;
+}
+
+.footer-disclaimer-copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 0.94rem;
 }
 
 .footer-repo-link {
@@ -993,5 +1015,17 @@ tbody tr:nth-child(even) {
 
   .modal-actions button {
     width: 100%;
+  }
+
+  .app-footer {
+    padding: 0 12px 24px;
+  }
+
+  .footer-disclaimer {
+    padding: 14px 16px;
+  }
+
+  .footer-repo-link {
+    font-size: 0.78rem;
   }
 }

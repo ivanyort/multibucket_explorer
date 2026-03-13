@@ -115,6 +115,10 @@ const translations = {
       prefixRequired: "Seed prefix is required.",
     },
     common: { cancel: "Cancel", close: "Close" },
+    disclaimer: {
+      kicker: "Legal Notice",
+      body: "This project is provided as is, without warranties of any kind. You are solely responsible for validating credentials, permissions, backups, and the impact of destructive operations. The author is not liable for data loss, downtime, costs, or misuse resulting from its use.",
+    },
     messages: {
       enterCredentials: "Click a provider card to connect or use the pencil to edit credentials.", startupDiagnostic: "Frontend configured to use the local API.\nStart the Node server with TLS configured and open the application at https://localhost:8086.",
       connecting: "Connecting...", connectingTo: "Connecting to {target} ({location})...", validateAccess: "Calling the local backend to validate storage access...",
@@ -212,6 +216,10 @@ const translations = {
       prefixRequired: "O prefixo de seed e obrigatorio.",
     },
     common: { cancel: "Cancelar", close: "Fechar" },
+    disclaimer: {
+      kicker: "Aviso legal",
+      body: "Este projeto e fornecido no estado em que se encontra, sem garantias de qualquer tipo. Voce e o unico responsavel por validar credenciais, permissoes, backups e o impacto de operacoes destrutivas. O autor nao se responsabiliza por perda de dados, indisponibilidade, custos ou uso indevido decorrentes da utilizacao.",
+    },
     messages: {
       enterCredentials: "Clique em um card de provedor para conectar ou use o lápis para editar as credenciais.", startupDiagnostic: "Frontend configurado para usar a API local.\nInicie o servidor Node com TLS configurado e abra a aplicação em https://localhost:8086.",
       connecting: "Conectando...", connectingTo: "Conectando a {target} ({location})...", validateAccess: "Chamando o backend local para validar o acesso ao storage...",
@@ -309,6 +317,10 @@ const translations = {
       prefixRequired: "El prefijo de seed es obligatorio.",
     },
     common: { cancel: "Cancelar", close: "Cerrar" },
+    disclaimer: {
+      kicker: "Aviso legal",
+      body: "Este proyecto se proporciona tal cual, sin garantias de ningun tipo. Usted es el unico responsable de validar credenciales, permisos, copias de seguridad y el impacto de las operaciones destructivas. El autor no se hace responsable por perdida de datos, inactividad, costos o uso indebido derivados de su utilizacion.",
+    },
     messages: {
       enterCredentials: "Haz clic en una tarjeta de proveedor para conectar o usa el lápiz para editar credenciales.", startupDiagnostic: "Frontend configurado para usar la API local.\nInicia el servidor Node con TLS configurado y abre la aplicación en https://localhost:8086.",
       connecting: "Conectando...", connectingTo: "Conectando a {target} ({location})...", validateAccess: "Llamando al backend local para validar el acceso al storage...",
@@ -406,6 +418,10 @@ const translations = {
       prefixRequired: "Il prefisso di seed e obbligatorio.",
     },
     common: { cancel: "Annulla", close: "Chiudi" },
+    disclaimer: {
+      kicker: "Avviso legale",
+      body: "Questo progetto viene fornito cosi com'e, senza garanzie di alcun tipo. Sei l'unico responsabile della verifica di credenziali, permessi, backup e impatto delle operazioni distruttive. L'autore non e responsabile per perdita di dati, tempi di inattivita, costi o uso improprio derivanti dal suo utilizzo.",
+    },
     messages: {
       enterCredentials: "Fai clic su una card provider per connetterti oppure usa la matita per modificare le credenziali.", startupDiagnostic: "Frontend configurato per usare l'API locale.\nAvvia il server Node con TLS configurato e apri l'applicazione su https://localhost:8086.",
       connecting: "Connessione...", connectingTo: "Connessione a {target} ({location})...", validateAccess: "Chiamata al backend locale per validare l'accesso allo storage...",
