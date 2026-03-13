@@ -61,6 +61,7 @@ By default the application runs at `https://localhost:8086`.
 8. When creating commits, always include new files that are part of the delivery unless the user explicitly asks to exclude them.
 9. When closing out work with a commit, run `git push` by default unless the user explicitly asks not to push or there is a technical constraint that blocks it.
 10. HTTPS on port `8086` is the default runtime contract. `TLS_CERT_FILE` and `TLS_KEY_FILE` are required unless `ALLOW_INSECURE_HTTP=true` is set explicitly for local or emergency use.
+11. `README.md` should document a local self-signed OpenSSL flow for developers who need to test HTTPS without an existing host certificate.
 
 # Backend Rules
 1. All storage access must continue to go through the backend. Do not move provider SDK access directly into the browser.

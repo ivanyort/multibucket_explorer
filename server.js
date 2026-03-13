@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream, existsSync, readFileSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { createServer as createHttpsServer } from "node:https";
+import * as https from "node:https";
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import { Readable } from "node:stream";

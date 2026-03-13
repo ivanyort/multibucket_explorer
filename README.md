@@ -37,6 +37,20 @@ Provide PEM files through these environment variables before starting:
 - `TLS_CERT_FILE`: certificate or full chain PEM file
 - `TLS_KEY_FILE`: private key PEM file
 
+For local testing, you can generate a self-signed certificate with OpenSSL:
+
+```bash
+mkdir -p certs
+
+openssl req -x509 -newkey rsa:2048 -nodes \
+  -keyout certs/localhost-key.pem \
+  -out certs/localhost.pem \
+  -days 365 \
+  -subj "/CN=localhost"
+```
+
+Browsers will warn that the certificate is not trusted until you install it in the local trust store. For local testing, you can usually continue manually after the warning.
+
 Example:
 
 ```bash
@@ -73,6 +87,16 @@ docker run --rm -p 8086:8086 \
   -e TLS_CERT_FILE=/run/certs/tls.crt \
   -e TLS_KEY_FILE=/run/certs/tls.key \
   multibucket-explorer
+```
+
+If you already have a certificate on the host, mount that directory read-only and point the container to the mounted PEM files:
+
+```bash
+docker run -d --name multibucket-explorer -p 8086:8086 \
+  -v /path/to/host/certs:/path/to/host/certs:ro \
+  -e TLS_CERT_FILE=/path/to/host/certs/fullchain.pem \
+  -e TLS_KEY_FILE=/path/to/host/certs/privkey.pem \
+  ivanyort/multibucket-explorer:latest
 ```
 
 The image now includes Java so ORC preview works inside Docker as well.
