@@ -16,6 +16,8 @@ COPY app.js index.html server.js styles.css ./
 ENV NODE_ENV=production
 ENV PORT=8086
 ENV APP_VERSION=${APP_VERSION}
+ENV TLS_CERT_FILE=/run/certs/tls.crt
+ENV TLS_KEY_FILE=/run/certs/tls.key
 
 EXPOSE 8086
 

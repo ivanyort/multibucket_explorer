@@ -8,7 +8,7 @@ This project is a local web explorer for object and hierarchical cloud storage, 
 5. download files and remove all objects or paths under a prefix
 
 # Stack And Structure
-- `server.js`: Node HTTP server, `/api/*` endpoints, in-memory session handling, and storage-provider access
+- `server.js`: Node HTTPS server by default, `/api/*` endpoints, in-memory session handling, and storage-provider access
 - `app.js`: UI logic, local state, backend calls, and rendering
 - `index.html`: page structure
 - `styles.css`: interface styling
@@ -44,11 +44,11 @@ For MinIO, ignoring HTTPS certificate validation must remain an explicit per-con
 - start the server: `npm start`
 - standard local flow: `./start.sh`
 - build container image: `docker build -t multibucket-explorer .`
-- run container: `docker run --rm -p 8086:8086 multibucket-explorer`
-- run container in read-only mode for destructive actions: `docker run --rm -p 8086:8086 -e DISABLE_DESTRUCTIVE_OPERATIONS=true multibucket-explorer`
+- run container: `docker run --rm -p 8086:8086 -v "$(pwd)/certs:/run/certs:ro" -e TLS_CERT_FILE=/run/certs/tls.crt -e TLS_KEY_FILE=/run/certs/tls.key multibucket-explorer`
+- run container in read-only mode for destructive actions: `docker run --rm -p 8086:8086 -v "$(pwd)/certs:/run/certs:ro" -e TLS_CERT_FILE=/run/certs/tls.crt -e TLS_KEY_FILE=/run/certs/tls.key -e DISABLE_DESTRUCTIVE_OPERATIONS=true multibucket-explorer`
 - publish Docker Hub image automatically from `main` after configuring `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` GitHub secrets; semantic versioning is derived from commit messages (`BREAKING CHANGE`/`!` = major, `feat:` = minor, otherwise patch), each automated tag must also create a GitHub Release, and the workflow must prepend the new entry to `CHANGELOG.md`
 
-By default the application runs at `http://localhost:8086`.
+By default the application runs at `https://localhost:8086`.
 
 # Development Rules
 1. Before changing behavior, read `README.md`, `server.js`, and `app.js` to preserve the current flow.
@@ -60,6 +60,7 @@ By default the application runs at `http://localhost:8086`.
 7. If you add new operational scripts, document their usage in `README.md`.
 8. When creating commits, always include new files that are part of the delivery unless the user explicitly asks to exclude them.
 9. When closing out work with a commit, run `git push` by default unless the user explicitly asks not to push or there is a technical constraint that blocks it.
+10. HTTPS on port `8086` is the default runtime contract. `TLS_CERT_FILE` and `TLS_KEY_FILE` are required unless `ALLOW_INSECURE_HTTP=true` is set explicitly for local or emergency use.
 
 # Backend Rules
 1. All storage access must continue to go through the backend. Do not move provider SDK access directly into the browser.
@@ -89,6 +90,7 @@ By default the application runs at `http://localhost:8086`.
 2. Never log secrets such as AWS secret keys or Azure access keys in logs, error messages, state dumps, or documentation.
 3. Do not commit real credentials, private buckets, private file systems, or customer-sensitive data.
 4. If testing against real cloud storage is necessary, prefer minimally invasive validation and clearly confirm any destructive action.
+5. Self-signed certificates are acceptable for local/internal use, but certificate trust distribution is an operational concern and should be documented instead of handled in app code.
 
 # Validation
 1. There is no automated test suite in the repository today, so manually validate the changed flow whenever possible.

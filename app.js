@@ -116,7 +116,7 @@ const translations = {
     },
     common: { cancel: "Cancel", close: "Close" },
     messages: {
-      enterCredentials: "Click a provider card to connect or use the pencil to edit credentials.", startupDiagnostic: "Frontend configured to use the local API.\nStart the Node server and open the application at http://localhost:8086.",
+      enterCredentials: "Click a provider card to connect or use the pencil to edit credentials.", startupDiagnostic: "Frontend configured to use the local API.\nStart the Node server with TLS configured and open the application at https://localhost:8086.",
       connecting: "Connecting...", connectingTo: "Connecting to {target} ({location})...", validateAccess: "Calling the local backend to validate storage access...",
       connectionOk: "Connection OK through the local backend.\nProvider: {provider}\nTarget: {target}\nLocation: {location}\nSession: {session}",
       destructiveDisabled: "Destructive operations are disabled by the server configuration.",
@@ -213,7 +213,7 @@ const translations = {
     },
     common: { cancel: "Cancelar", close: "Fechar" },
     messages: {
-      enterCredentials: "Clique em um card de provedor para conectar ou use o lápis para editar as credenciais.", startupDiagnostic: "Frontend configurado para usar a API local.\nInicie o servidor Node e abra a aplicação em http://localhost:8086.",
+      enterCredentials: "Clique em um card de provedor para conectar ou use o lápis para editar as credenciais.", startupDiagnostic: "Frontend configurado para usar a API local.\nInicie o servidor Node com TLS configurado e abra a aplicação em https://localhost:8086.",
       connecting: "Conectando...", connectingTo: "Conectando a {target} ({location})...", validateAccess: "Chamando o backend local para validar o acesso ao storage...",
       connectionOk: "Conexão OK pelo backend local.\nProvedor: {provider}\nDestino: {target}\nLocalização: {location}\nSessão: {session}",
       destructiveDisabled: "As operações destrutivas estão desativadas pela configuração do servidor.",
@@ -310,7 +310,7 @@ const translations = {
     },
     common: { cancel: "Cancelar", close: "Cerrar" },
     messages: {
-      enterCredentials: "Haz clic en una tarjeta de proveedor para conectar o usa el lápiz para editar credenciales.", startupDiagnostic: "Frontend configurado para usar la API local.\nInicia el servidor Node y abre la aplicación en http://localhost:8086.",
+      enterCredentials: "Haz clic en una tarjeta de proveedor para conectar o usa el lápiz para editar credenciales.", startupDiagnostic: "Frontend configurado para usar la API local.\nInicia el servidor Node con TLS configurado y abre la aplicación en https://localhost:8086.",
       connecting: "Conectando...", connectingTo: "Conectando a {target} ({location})...", validateAccess: "Llamando al backend local para validar el acceso al storage...",
       connectionOk: "Conexión OK a través del backend local.\nProveedor: {provider}\nDestino: {target}\nUbicación: {location}\nSesión: {session}",
       destructiveDisabled: "Las operaciones destructivas están deshabilitadas por la configuración del servidor.",
@@ -407,7 +407,7 @@ const translations = {
     },
     common: { cancel: "Annulla", close: "Chiudi" },
     messages: {
-      enterCredentials: "Fai clic su una card provider per connetterti oppure usa la matita per modificare le credenziali.", startupDiagnostic: "Frontend configurato per usare l'API locale.\nAvvia il server Node e apri l'applicazione su http://localhost:8086.",
+      enterCredentials: "Fai clic su una card provider per connetterti oppure usa la matita per modificare le credenziali.", startupDiagnostic: "Frontend configurato per usare l'API locale.\nAvvia il server Node con TLS configurato e apri l'applicazione su https://localhost:8086.",
       connecting: "Connessione...", connectingTo: "Connessione a {target} ({location})...", validateAccess: "Chiamata al backend locale per validare l'accesso allo storage...",
       connectionOk: "Connessione OK tramite il backend locale.\nProvider: {provider}\nDestinazione: {target}\nPosizione: {location}\nSessione: {session}",
       destructiveDisabled: "Le operazioni distruttive sono disabilitate dalla configurazione del server.",

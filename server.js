@@ -1,13 +1,14 @@
-import { createServer } from "node:http";
+import { createServer as createHttpServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream, existsSync, readFileSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import https from "node:https";
+import { createServer as createHttpsServer } from "node:https";
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import { Readable } from "node:stream";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { createSecureContext } from "node:tls";
 import { fileURLToPath } from "node:url";
 import { createGunzip, gunzipSync } from "node:zlib";
 import AdmZip from "adm-zip";
@@ -36,6 +37,7 @@ const APP_VERSION = typeof process.env.APP_VERSION === "string" && process.env.A
   ? process.env.APP_VERSION.trim()
   : PACKAGE_VERSION;
 const PORT = Number.parseInt(process.env.PORT ?? "8086", 10);
+const ALLOW_INSECURE_HTTP = isTruthyEnv(process.env.ALLOW_INSECURE_HTTP);
 const IS_DOCKER = detectDockerEnvironment();
 const DEV_FEATURES_ENABLED = process.env.NODE_ENV !== "production" && !IS_DOCKER;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
@@ -91,6 +93,8 @@ const AVRO_LONG_AS_STRING_TYPE = avro.types.LongType.__with({
   },
 });
 const sessions = new Map();
+const TLS_CONFIGURATION = ALLOW_INSECURE_HTTP ? null : loadTlsConfiguration();
+const SERVER_SCHEME = ALLOW_INSECURE_HTTP ? "http" : "https";
 
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -254,11 +258,12 @@ class LocalizedError extends Error {
   }
 }
 
-const server = createServer(async (request, response) => {
+const requestHandler = async (request, response) => {
   const locale = getRequestLocale(request);
 
   try {
-    const url = new URL(request.url ?? "/", `http://${request.headers.host}`);
+    const host = request.headers.host ?? `localhost:${PORT}`;
+    const url = new URL(request.url ?? "/", `${SERVER_SCHEME}://${host}`);
 
     if (request.method === "POST" && url.pathname === "/api/connect") {
       await handleConnect(request, response);
@@ -331,10 +336,17 @@ const server = createServer(async (request, response) => {
     });
     sendJson(response, 500, { error: localizeError(locale, error) });
   }
-});
+};
+
+const server = ALLOW_INSECURE_HTTP
+  ? createHttpServer(requestHandler)
+  : createHttpsServer(TLS_CONFIGURATION, requestHandler);
 
 server.listen(PORT, () => {
-  console.log(`MultiBucket Explorer available at http://localhost:${PORT}`);
+  console.log(`MultiBucket Explorer available at ${SERVER_SCHEME}://localhost:${PORT}`);
+  if (ALLOW_INSECURE_HTTP) {
+    console.warn("ALLOW_INSECURE_HTTP=true is enabled. Traffic on this port is not encrypted.");
+  }
 });
 
 async function handleConnect(request, response) {
@@ -413,6 +425,48 @@ function detectDockerEnvironment() {
   } catch {
     return false;
   }
+}
+
+function loadTlsConfiguration() {
+  const certPath = resolveRequiredPath(process.env.TLS_CERT_FILE, "TLS_CERT_FILE");
+  const keyPath = resolveRequiredPath(process.env.TLS_KEY_FILE, "TLS_KEY_FILE");
+
+  let cert;
+  let key;
+
+  try {
+    cert = readFileSync(certPath);
+  } catch (error) {
+    exitWithConfigurationError(`Failed to read TLS certificate file at ${certPath}: ${error.message}`);
+  }
+
+  try {
+    key = readFileSync(keyPath);
+  } catch (error) {
+    exitWithConfigurationError(`Failed to read TLS private key file at ${keyPath}: ${error.message}`);
+  }
+
+  try {
+    createSecureContext({ cert, key });
+  } catch (error) {
+    exitWithConfigurationError(`Invalid TLS certificate/key configuration: ${error.message}`);
+  }
+
+  return { cert, key };
+}
+
+function resolveRequiredPath(rawPath, envName) {
+  if (typeof rawPath !== "string" || !rawPath.trim()) {
+    exitWithConfigurationError(`${envName} is required unless ALLOW_INSECURE_HTTP=true.`);
+  }
+
+  const trimmedPath = rawPath.trim();
+  return path.isAbsolute(trimmedPath) ? trimmedPath : path.join(__dirname, trimmedPath);
+}
+
+function exitWithConfigurationError(message) {
+  console.error(`[server] startup configuration error: ${message}`);
+  process.exit(1);
 }
 
 async function handlePreview(url, response, locale) {

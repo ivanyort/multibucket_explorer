@@ -29,14 +29,32 @@ Start the server:
 npm start
 ```
 
-By default the application runs at `http://localhost:8086`.
+By default the application runs at `https://localhost:8086`.
+
+HTTPS is mandatory unless you explicitly opt into insecure local HTTP with `ALLOW_INSECURE_HTTP=true`.
+Provide PEM files through these environment variables before starting:
+
+- `TLS_CERT_FILE`: certificate or full chain PEM file
+- `TLS_KEY_FILE`: private key PEM file
+
+Example:
+
+```bash
+TLS_CERT_FILE=certs/localhost.pem TLS_KEY_FILE=certs/localhost-key.pem npm start
+```
 
 ORC preview requires `java` to be available in the backend host `PATH`.
 
 To start in read-only mode for destructive operations, set `DISABLE_DESTRUCTIVE_OPERATIONS=true`:
 
 ```bash
-DISABLE_DESTRUCTIVE_OPERATIONS=true npm start
+TLS_CERT_FILE=certs/localhost.pem TLS_KEY_FILE=certs/localhost-key.pem DISABLE_DESTRUCTIVE_OPERATIONS=true npm start
+```
+
+To opt into insecure HTTP for local or emergency use only:
+
+```bash
+ALLOW_INSECURE_HTTP=true npm start
 ```
 
 ## Docker
@@ -50,7 +68,11 @@ docker build -t multibucket-explorer .
 Run the container:
 
 ```bash
-docker run --rm -p 8086:8086 multibucket-explorer
+docker run --rm -p 8086:8086 \
+  -v "$(pwd)/certs:/run/certs:ro" \
+  -e TLS_CERT_FILE=/run/certs/tls.crt \
+  -e TLS_KEY_FILE=/run/certs/tls.key \
+  multibucket-explorer
 ```
 
 The image now includes Java so ORC preview works inside Docker as well.
@@ -58,13 +80,23 @@ The image now includes Java so ORC preview works inside Docker as well.
 Run the container with destructive operations disabled:
 
 ```bash
-docker run --rm -p 8086:8086 -e DISABLE_DESTRUCTIVE_OPERATIONS=true multibucket-explorer
+docker run --rm -p 8086:8086 \
+  -v "$(pwd)/certs:/run/certs:ro" \
+  -e TLS_CERT_FILE=/run/certs/tls.crt \
+  -e TLS_KEY_FILE=/run/certs/tls.key \
+  -e DISABLE_DESTRUCTIVE_OPERATIONS=true \
+  multibucket-explorer
 ```
 
 If you want a different port inside the container, set `PORT` explicitly:
 
 ```bash
-docker run --rm -p 8090:8090 -e PORT=8090 multibucket-explorer
+docker run --rm -p 8090:8090 \
+  -v "$(pwd)/certs:/run/certs:ro" \
+  -e TLS_CERT_FILE=/run/certs/tls.crt \
+  -e TLS_KEY_FILE=/run/certs/tls.key \
+  -e PORT=8090 \
+  multibucket-explorer
 ```
 
 ## Releases And Changelog
@@ -101,7 +133,7 @@ The workflow tags and publishes the resulting version as both `X.Y.Z` and `vX.Y.
 
 ## How It Works
 
-- the browser talks only to the local server
+- the browser talks only to the local server over HTTPS by default
 - the local server accesses S3 or ADLS through the provider SDK
 - the storage account does not need to respond directly to the browser
 
@@ -192,6 +224,7 @@ If a MinIO deployment uses a self-signed or otherwise untrusted HTTPS certificat
 
 - all connection fields are persisted in browser `localStorage`, including credentials, secret fields, textarea content, and provider-specific toggles
 - the backend keeps an in-memory session for 12 hours after connecting
+- the backend now requires `TLS_CERT_FILE` and `TLS_KEY_FILE` to serve HTTPS on port `8086`; `ALLOW_INSECURE_HTTP=true` is an explicit non-default escape hatch
 - preview compression support now includes both `.gz` and `.snappy` variants for supported previewable formats
 - folders containing `metadata/*.metadata.json` are now inspected as potential Iceberg table roots and switch to an Iceberg snapshot preview when detected
 - Iceberg preview now exposes a snapshot dropdown so the current table can be sampled from older snapshots without leaving folder mode
@@ -202,3 +235,4 @@ If a MinIO deployment uses a self-signed or otherwise untrusted HTTPS certificat
 - prefix deletion removes child files but preserves the selected folder across all supported providers
 - this solution is intended for local or internal use
 - for production, the preferred approach is to avoid sending credentials through the frontend and use server-side authentication
+- self-signed certificates are acceptable for local/internal use, but browser trust installation is an operator responsibility
