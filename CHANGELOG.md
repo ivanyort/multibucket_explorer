@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.6.2](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.6.2) - 2026-03-13
+
+### Changes
+- docs(ui): add usage disclaimer to app and README (446931d)
+- chore(changelog): update for v0.6.1 [skip ci] (529a3b9)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.6.1...v0.6.2)
+
+
 ## [v0.6.1](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.6.1) - 2026-03-13
 
 ### Changes
