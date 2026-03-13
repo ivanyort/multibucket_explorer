@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.6.1](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.6.1) - 2026-03-13
+
+### Changes
+- fix(minio): restore https runtime helpers (fe4ed27)
+- chore(changelog): update for v0.6.0 [skip ci] (179f4bf)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.6.0...v0.6.1)
+
+
 ## [v0.6.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.6.0) - 2026-03-13
 
 ### Changes
