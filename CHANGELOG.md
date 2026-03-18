@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.7.1](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.7.1) - 2026-03-18
+
+### Changes
+- chore(git): ignore local TLS certificates (d27ef90)
+- chore(changelog): update for v0.7.0 [skip ci] (415ace9)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.7.0...v0.7.1)
+
+
 ## [v0.7.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.7.0) - 2026-03-18
 
 ### Changes
