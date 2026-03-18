@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.6.3](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.6.3) - 2026-03-18
+
+### Changes
+- fix(ui): show folder modification date when available (4e8a00e)
+- chore(changelog): update for v0.6.2 [skip ci] (fac5f5d)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.6.2...v0.6.3)
+
+
 ## [v0.6.2](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.6.2) - 2026-03-13
 
 ### Changes
