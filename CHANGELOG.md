@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.7.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.7.0) - 2026-03-18
+
+### Changes
+- feat(browser): derive virtual folder timestamps for object stores (c8d8731)
+- chore(changelog): update for v0.6.4 [skip ci] (a96dfa1)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.6.4...v0.7.0)
+
+
 ## [v0.6.4](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.6.4) - 2026-03-18
 
 ### Changes
