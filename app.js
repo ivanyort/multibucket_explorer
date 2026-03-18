@@ -1010,10 +1010,9 @@ function renderObjectList() {
     sizeCell.textContent = item.type === "folder" ? "—" : formatBytes(item.size);
 
     const dateCell = document.createElement("td");
-    dateCell.textContent =
-      item.type === "folder" || !item.lastModified
-        ? "—"
-        : new Date(item.lastModified).toLocaleString(DATE_LOCALES[state.language] ?? "en-US");
+    dateCell.textContent = item.lastModified
+      ? new Date(item.lastModified).toLocaleString(DATE_LOCALES[state.language] ?? "en-US")
+      : "—";
 
     const actionsCell = document.createElement("td");
     actionsCell.className = "object-actions-cell";
