@@ -25,6 +25,7 @@ Avro preview is handled in the backend for Avro Object Container Files, includin
 ORC preview now relies on Java being available on the backend host and caches the Apache ORC tools jar under `.cache/orc-tools/` on first use.
 The Docker image must include a Java runtime so ORC preview works in containerized runs too.
 When built by GitHub Actions for release publishing, the Docker image must receive `APP_VERSION` so the header version matches the published Docker tag.
+Release automation keeps Git tags and GitHub Releases in `vX.Y.Z` format, while Docker image tags use `X.Y.Z` plus `latest`.
 
 # Supported Providers
 - AWS S3

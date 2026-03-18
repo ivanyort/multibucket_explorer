@@ -151,7 +151,7 @@ Examples:
 - `fix(docker): install java runtime` -> patch
 - `feat(api)!: change session contract` -> major
 
-The workflow tags and publishes the resulting version as both `X.Y.Z` and `vX.Y.Z`, updates `CHANGELOG.md`, creates a matching GitHub Release, and also refreshes `latest`.
+The workflow creates the Git tag and GitHub Release as `vX.Y.Z`, publishes the Docker image as `X.Y.Z`, and also refreshes `latest`.
 
 `CHANGELOG.md` is the durable release history in the repository. Each automated release prepends a new entry and pushes a dedicated changelog commit back to `main`.
 
