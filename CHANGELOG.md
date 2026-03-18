@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.6.4](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.6.4) - 2026-03-18
+
+### Changes
+- fix(release): stop publishing duplicate docker version tags (f08b834)
+- chore(changelog): update for v0.6.3 [skip ci] (c0a643f)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.6.3...v0.6.4)
+
+
 ## [v0.6.3](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.6.3) - 2026-03-18
 
 ### Changes
