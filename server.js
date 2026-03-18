@@ -841,15 +841,26 @@ async function listStorageObjects(session, prefix) {
     }),
   );
 
-  const folders =
-    result.CommonPrefixes?.map((item) => ({
-      type: "folder",
-      key: item.Prefix,
-      name: trimCurrentPrefix(item.Prefix ?? "", prefix).replace(/\/$/, ""),
-    })) ?? [];
+  const folderMarkerMap = new Map(
+    (result.Contents ?? [])
+      .filter((item) => typeof item.Key === "string" && item.Key.endsWith("/") && item.Key !== prefix)
+      .map((item) => [item.Key, item.LastModified?.toISOString() ?? null]),
+  );
+  const folderKeys = new Set([
+    ...((result.CommonPrefixes ?? []).map((item) => item.Prefix).filter(Boolean)),
+    ...folderMarkerMap.keys(),
+  ]);
+
+  const folders = Array.from(folderKeys).map((folderKey) => ({
+    type: "folder",
+    key: folderKey,
+    name: trimCurrentPrefix(folderKey, prefix).replace(/\/$/, ""),
+    lastModified: folderMarkerMap.get(folderKey) ?? null,
+  }));
+  await populateVirtualFolderLastModified(session, prefix, folders);
 
   const files =
-    result.Contents?.filter((item) => item.Key !== prefix).map((item) => ({
+    result.Contents?.filter((item) => item.Key !== prefix && !folderMarkerMap.has(item.Key ?? "")).map((item) => ({
       type: "file",
       key: item.Key,
       name: trimCurrentPrefix(item.Key ?? "", prefix),
@@ -860,6 +871,40 @@ async function listStorageObjects(session, prefix) {
   return { folders, files };
 }
 
+async function populateVirtualFolderLastModified(session, prefix, folders) {
+  if (!folders.length) {
+    return;
+  }
+
+  const folderLatestMap = new Map(
+    folders.map((folder) => [folder.key, folder.lastModified ? new Date(folder.lastModified).getTime() : 0]),
+  );
+  const items = await listStoragePaths(session, prefix, true);
+
+  for (const item of items) {
+    const normalizedItem = toStoragePathItem(item);
+    const key = normalizedItem.key;
+    if (!key || key === prefix) {
+      continue;
+    }
+
+    const immediateFolderKey = resolveImmediateFolderKey(prefix, key);
+    if (!immediateFolderKey || !folderLatestMap.has(immediateFolderKey)) {
+      continue;
+    }
+
+    const timestamp = normalizedItem.lastModified ? new Date(normalizedItem.lastModified).getTime() : 0;
+    if (timestamp > (folderLatestMap.get(immediateFolderKey) ?? 0)) {
+      folderLatestMap.set(immediateFolderKey, timestamp);
+    }
+  }
+
+  folders.forEach((folder) => {
+    const timestamp = folderLatestMap.get(folder.key) ?? 0;
+    folder.lastModified = timestamp > 0 ? new Date(timestamp).toISOString() : null;
+  });
+}
+
 async function listGcsObjects(session, prefix) {
   const [files, , apiResponse] = await session.storage.bucket.getFiles({
     prefix,
@@ -867,14 +912,26 @@ async function listGcsObjects(session, prefix) {
     autoPaginate: false,
   });
 
-  const folders = (apiResponse.prefixes ?? []).map((folderPrefix) => ({
+  const folderMarkerMap = new Map(
+    files
+      .filter((file) => typeof file.name === "string" && file.name.endsWith("/") && file.name !== prefix)
+      .map((file) => [file.name, file.metadata.updated ?? null]),
+  );
+  const folderKeys = new Set([
+    ...((apiResponse.prefixes ?? []).filter(Boolean)),
+    ...folderMarkerMap.keys(),
+  ]);
+
+  const folders = Array.from(folderKeys).map((folderPrefix) => ({
     type: "folder",
     key: folderPrefix,
     name: trimCurrentPrefix(folderPrefix, prefix).replace(/\/$/, ""),
+    lastModified: folderMarkerMap.get(folderPrefix) ?? null,
   }));
+  await populateVirtualFolderLastModified(session, prefix, folders);
 
   const fileItems = files
-    .filter((file) => file.name !== prefix)
+    .filter((file) => file.name !== prefix && !folderMarkerMap.has(file.name ?? ""))
     .map((file) => ({
       type: "file",
       key: file.name,
@@ -1833,6 +1890,16 @@ function isTruthyEnv(value) {
 
 function trimCurrentPrefix(key, prefix) {
   return prefix && key.startsWith(prefix) ? key.slice(prefix.length) : key;
+}
+
+function resolveImmediateFolderKey(prefix, key) {
+  const relativeKey = trimCurrentPrefix(key, prefix);
+  if (!relativeKey || !relativeKey.includes("/")) {
+    return null;
+  }
+
+  const firstSegment = relativeKey.split("/").find(Boolean);
+  return firstSegment ? `${prefix}${firstSegment}/` : null;
 }
 
 function readJsonBody(request) {

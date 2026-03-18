@@ -26,6 +26,7 @@ ORC preview now relies on Java being available on the backend host and caches th
 The Docker image must include a Java runtime so ORC preview works in containerized runs too.
 When built by GitHub Actions for release publishing, the Docker image must receive `APP_VERSION` so the header version matches the published Docker tag.
 Release automation keeps Git tags and GitHub Releases in `vX.Y.Z` format, while Docker image tags use `X.Y.Z` plus `latest`.
+For AWS S3, MinIO, and GCS, folder timestamps in the browser are derived from the newest object found under each immediate child prefix, including a real marker object when present; this adds an extra recursive listing cost to object-browser loads for those providers.
 
 # Supported Providers
 - AWS S3
