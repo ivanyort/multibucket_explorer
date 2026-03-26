@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.9.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.9.0) - 2026-03-26
+
+### Changes
+- feat(browser): add directory creation flow (3b60941)
+- chore(changelog): update for v0.8.0 [skip ci] (2ae31dc)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.8.0...v0.9.0)
+
+
 ## [v0.8.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.8.0) - 2026-03-26
 
 ### Changes
