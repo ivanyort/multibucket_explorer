@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.14.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.14.0) - 2026-03-26
+
+### Changes
+- feat(preview): render markdown files in browser (0330256)
+- chore(changelog): update for v0.13.0 [skip ci] (f7b7a8b)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.13.0...v0.14.0)
+
+
 ## [v0.13.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.13.0) - 2026-03-26
 
 ### Changes
