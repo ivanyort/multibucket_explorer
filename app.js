@@ -88,6 +88,13 @@ const translations = {
       clearPrefix: "Clear prefix", connectToList: "Connect to list storage objects.",
       noItems: "No items found in this prefix.", loading: "Loading objects...", failed: "Failed to list objects.",
       folder: "Folder", file: "File", actions: "Actions", deleteFile: "Delete file",
+      createDirectory: "Create directory",
+      createDirectoryTitle: "Create directory",
+      createDirectoryBody: "Create a new directory inside the current prefix.",
+      createDirectoryName: "Directory name",
+      createDirectoryInvalid: "Enter a single directory name without nested slashes.",
+      createDirectoryCreating: "Creating directory {prefix}...",
+      createDirectoryCreated: "Directory created at {prefix}.",
       destructiveDisabled: "Delete actions are disabled by the server.",
       openIceberg: "Open as Iceberg",
       openFolders: "View folders",
@@ -213,6 +220,13 @@ const translations = {
       clearPrefix: "Limpar prefixo", connectToList: "Conecte-se para listar os objetos do storage.",
       noItems: "Nenhum item encontrado neste prefixo.", loading: "Carregando objetos...", failed: "Falha ao listar objetos.",
       folder: "Pasta", file: "Arquivo", actions: "Ações", deleteFile: "Apagar arquivo",
+      createDirectory: "Criar diretorio",
+      createDirectoryTitle: "Criar diretorio",
+      createDirectoryBody: "Crie um novo diretorio dentro do prefixo atual.",
+      createDirectoryName: "Nome do diretorio",
+      createDirectoryInvalid: "Informe um unico nome de diretorio sem barras internas.",
+      createDirectoryCreating: "Criando diretorio {prefix}...",
+      createDirectoryCreated: "Diretorio criado em {prefix}.",
       destructiveDisabled: "As ações de exclusão estão desativadas pelo servidor.",
       openIceberg: "Abrir como Iceberg",
       openFolders: "Ver pastas",
@@ -314,6 +328,13 @@ const translations = {
       clearPrefix: "Borrar prefijo", connectToList: "Conéctate para listar los objetos del storage.",
       noItems: "No se encontraron elementos en este prefijo.", loading: "Cargando objetos...", failed: "Error al listar objetos.",
       folder: "Carpeta", file: "Archivo", actions: "Acciones", deleteFile: "Borrar archivo",
+      createDirectory: "Crear directorio",
+      createDirectoryTitle: "Crear directorio",
+      createDirectoryBody: "Crea un nuevo directorio dentro del prefijo actual.",
+      createDirectoryName: "Nombre del directorio",
+      createDirectoryInvalid: "Introduce un unico nombre de directorio sin barras internas.",
+      createDirectoryCreating: "Creando directorio {prefix}...",
+      createDirectoryCreated: "Directorio creado en {prefix}.",
       destructiveDisabled: "Las acciones de borrado están deshabilitadas por el servidor.",
       openIceberg: "Abrir como Iceberg",
       openFolders: "Ver carpetas",
@@ -415,6 +436,13 @@ const translations = {
       clearPrefix: "Cancella prefisso", connectToList: "Connettiti per elencare gli oggetti dello storage.",
       noItems: "Nessun elemento trovato in questo prefisso.", loading: "Caricamento oggetti...", failed: "Errore durante l'elenco degli oggetti.",
       folder: "Cartella", file: "File", actions: "Azioni", deleteFile: "Elimina file",
+      createDirectory: "Crea cartella",
+      createDirectoryTitle: "Crea cartella",
+      createDirectoryBody: "Crea una nuova cartella dentro il prefisso corrente.",
+      createDirectoryName: "Nome della cartella",
+      createDirectoryInvalid: "Inserisci un solo nome cartella senza slash interni.",
+      createDirectoryCreating: "Creazione della cartella {prefix}...",
+      createDirectoryCreated: "Cartella creata in {prefix}.",
       destructiveDisabled: "Le azioni di eliminazione sono disabilitate dal server.",
       openIceberg: "Apri come Iceberg",
       openFolders: "Vedi cartelle",
@@ -505,6 +533,7 @@ const elements = {
   objectList: document.querySelector("#objectList"),
   currentPrefix: document.querySelector("#currentPrefix"),
   toggleIcebergModeButton: document.querySelector("#toggleIcebergModeButton"),
+  createDirectoryButton: document.querySelector("#createDirectoryButton"),
   seedIcebergButton: document.querySelector("#seedIcebergButton"),
   refreshButton: document.querySelector("#refreshButton"),
   clearPrefixButton: document.querySelector("#clearPrefixButton"),
@@ -534,6 +563,16 @@ const elements = {
   vaultModalStatus: document.querySelector("#vaultModalStatus"),
   vaultModalCancel: document.querySelector("#vaultModalCancel"),
   vaultModalConfirm: document.querySelector("#vaultModalConfirm"),
+  createDirectoryModal: document.querySelector("#createDirectoryModal"),
+  createDirectoryKicker: document.querySelector("#createDirectoryKicker"),
+  createDirectoryTitle: document.querySelector("#createDirectoryTitle"),
+  createDirectoryBody: document.querySelector("#createDirectoryBody"),
+  createDirectoryPrefix: document.querySelector("#createDirectoryPrefix"),
+  createDirectoryNameLabel: document.querySelector("#createDirectoryNameLabel"),
+  createDirectoryName: document.querySelector("#createDirectoryName"),
+  createDirectoryStatus: document.querySelector("#createDirectoryStatus"),
+  createDirectoryCancel: document.querySelector("#createDirectoryCancel"),
+  createDirectoryConfirm: document.querySelector("#createDirectoryConfirm"),
   seedConfirmModal: document.querySelector("#seedConfirmModal"),
   seedConfirmTitle: document.querySelector("#seedConfirmTitle"),
   seedConfirmBody: document.querySelector("#seedConfirmBody"),
@@ -560,6 +599,7 @@ const elements = {
 
 let connectionModalPreviousActiveElement = null;
 let vaultModalPreviousActiveElement = null;
+let createDirectoryPreviousActiveElement = null;
 
 state.language = restoreLanguage();
 if (elements.languageSelect instanceof HTMLSelectElement) {
@@ -616,13 +656,28 @@ elements.connectionModal.addEventListener("click", (event) => {
     closeConnectionModal();
   }
 });
+elements.createDirectoryCancel.addEventListener("click", closeCreateDirectoryModal);
+elements.createDirectoryConfirm.addEventListener("click", () => {
+  void createDirectoryFromModal();
+});
+elements.createDirectoryModal.addEventListener("click", (event) => {
+  const target = event.target;
+  if (target instanceof HTMLElement && target.hasAttribute("data-create-directory-close")) {
+    closeCreateDirectoryModal();
+  }
+});
 document.addEventListener("keydown", (event) => {
   if (!elements.connectionModal.hidden && event.key === "Escape") {
     event.preventDefault();
     closeConnectionModal();
   }
+  if (!elements.createDirectoryModal.hidden && event.key === "Escape") {
+    event.preventDefault();
+    closeCreateDirectoryModal();
+  }
 });
 elements.toggleIcebergModeButton.addEventListener("click", toggleIcebergMode);
+elements.createDirectoryButton.addEventListener("click", openCreateDirectoryModal);
 elements.seedIcebergButton.addEventListener("click", seedIcebergFixtures);
 elements.refreshButton.addEventListener("click", () => loadObjects(state.prefix));
 elements.clearPrefixButton.addEventListener("click", clearCurrentPrefix);
@@ -729,6 +784,7 @@ function applyLanguage() {
   renderCurrentPrefix();
   syncIcebergModeToggle();
   syncIcebergSnapshotControl();
+  syncCreateDirectoryControls();
   if (state.objectItems.length) {
     renderObjectList();
   }
@@ -854,6 +910,7 @@ async function connectToBucketWithPayload(connection) {
 
   elements.refreshButton.disabled = true;
   elements.clearPrefixButton.disabled = true;
+  syncCreateDirectoryControls();
   syncSeedControls();
   elements.downloadButton.disabled = true;
   syncPreviewModeAvailability("");
@@ -876,6 +933,7 @@ async function connectToBucketWithPayload(connection) {
     syncWorkspaceVisibility();
     elements.refreshButton.disabled = false;
     syncDestructiveControls();
+    syncCreateDirectoryControls();
     syncSeedControls();
     await loadObjects("");
     closeConnectionModal();
@@ -889,6 +947,7 @@ async function connectToBucketWithPayload(connection) {
     setConnectionModalStatus(getErrorMessage(error), true);
     setDiagnosticMessage("");
     syncWorkspaceVisibility();
+    syncCreateDirectoryControls();
     syncSeedControls();
     return false;
   } finally {
@@ -2158,11 +2217,96 @@ function hideDeleteProgress() {
   document.body.style.overflow = "";
 }
 
+function normalizeCreateDirectoryName(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim().replace(/^\/+|\/+$/g, "");
+}
+
+function setCreateDirectoryStatus(message, isError = false) {
+  elements.createDirectoryStatus.className = isError ? "status-text error-text" : "status-text muted";
+  elements.createDirectoryStatus.textContent = message;
+}
+
+function openCreateDirectoryModal() {
+  if (!state.sessionId || state.browseMode === "iceberg") {
+    return;
+  }
+
+  createDirectoryPreviousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  elements.createDirectoryKicker.textContent = t("browser.kicker");
+  elements.createDirectoryTitle.textContent = t("browser.createDirectoryTitle");
+  elements.createDirectoryBody.textContent = t("browser.createDirectoryBody");
+  elements.createDirectoryNameLabel.textContent = t("browser.createDirectoryName");
+  elements.createDirectoryCancel.textContent = t("common.cancel");
+  elements.createDirectoryConfirm.textContent = t("browser.createDirectory");
+  elements.createDirectoryPrefix.textContent = state.prefix || "/";
+  elements.createDirectoryName.value = "";
+  setCreateDirectoryStatus("");
+  elements.createDirectoryModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  elements.createDirectoryName.focus();
+}
+
+function closeCreateDirectoryModal() {
+  if (elements.createDirectoryModal.hidden) {
+    return;
+  }
+
+  elements.createDirectoryModal.hidden = true;
+  document.body.style.overflow = "";
+  setCreateDirectoryStatus("");
+  elements.createDirectoryName.value = "";
+  if (createDirectoryPreviousActiveElement instanceof HTMLElement) {
+    createDirectoryPreviousActiveElement.focus();
+  }
+  createDirectoryPreviousActiveElement = null;
+}
+
+async function createDirectoryFromModal() {
+  const normalizedName = normalizeCreateDirectoryName(elements.createDirectoryName.value);
+
+  if (!normalizedName || normalizedName === "." || normalizedName === ".." || normalizedName.includes("/")) {
+    setCreateDirectoryStatus(t("browser.createDirectoryInvalid"), true);
+    return;
+  }
+
+  const createdPrefix = `${state.prefix || ""}${normalizedName}/`;
+  setCreateDirectoryStatus("");
+  setConnectionStatus(t("browser.createDirectoryCreating", { prefix: createdPrefix }));
+
+  try {
+    await apiFetch("/api/create-directory", {
+      method: "POST",
+      body: JSON.stringify({
+        sessionId: state.sessionId,
+        prefix: state.prefix,
+        name: normalizedName,
+      }),
+    });
+    closeCreateDirectoryModal();
+    setConnectionStatus(t("browser.createDirectoryCreated", { prefix: createdPrefix }));
+    await loadObjects(state.prefix);
+  } catch (error) {
+    setCreateDirectoryStatus(getErrorMessage(error), true);
+    setConnectionStatus(getErrorMessage(error), true);
+  }
+}
+
 function syncDestructiveControls() {
   const canDeletePrefix =
     state.destructiveOperationsEnabled && state.browseMode !== "iceberg" && Boolean(state.prefix) && Boolean(state.sessionId);
   elements.clearPrefixButton.disabled = !canDeletePrefix;
   elements.clearPrefixButton.hidden = !state.destructiveOperationsEnabled || state.browseMode === "iceberg";
+}
+
+function syncCreateDirectoryControls() {
+  const enabled = Boolean(state.sessionId) && state.browseMode !== "iceberg";
+  elements.createDirectoryButton.disabled = !enabled;
+  elements.createDirectoryButton.hidden = !enabled;
+  elements.createDirectoryButton.textContent = t("browser.createDirectory");
 }
 
 function syncIcebergModeToggle() {
@@ -2171,6 +2315,7 @@ function syncIcebergModeToggle() {
   elements.toggleIcebergModeButton.disabled = !available;
   elements.toggleIcebergModeButton.textContent =
     state.browseMode === "iceberg" ? t("browser.openFolders") : t("browser.openIceberg");
+  syncCreateDirectoryControls();
 }
 
 function syncSeedControls() {

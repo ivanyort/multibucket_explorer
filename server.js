@@ -133,6 +133,8 @@ const SERVER_TRANSLATIONS = {
     iceberg_seed_prefix_invalid: "The sample prefix is required.",
     iceberg_seed_conflict: "The sample prefix already contains data. Remove {prefix} before generating fixtures again.",
     iceberg_seed_failed: "Failed to generate Iceberg sample data: {message}",
+    directory_name_required: "The directory name is required.",
+    directory_name_invalid: "The directory name must be a single segment without nested slashes.",
     iceberg_seed_warning_aliases: "Avro, ORC, delete-heavy, and empty table variants are temporary aliases of the parquet-backed sample until native fixture generation is expanded.",
     iceberg_seed_warning_template: "The current seed tool stages the official DuckDB Iceberg sample under several table names to keep the test prefix deterministic.",
     avro_preview_failed: "Failed to read Avro preview: {message}",
@@ -169,6 +171,8 @@ const SERVER_TRANSLATIONS = {
     iceberg_seed_prefix_invalid: "O prefixo de amostra e obrigatorio.",
     iceberg_seed_conflict: "O prefixo de amostras ja contem dados. Remova {prefix} antes de gerar os fixtures novamente.",
     iceberg_seed_failed: "Falha ao gerar os dados de exemplo Iceberg: {message}",
+    directory_name_required: "O nome do diretorio e obrigatorio.",
+    directory_name_invalid: "O nome do diretorio deve ser um unico segmento sem barras internas.",
     iceberg_seed_warning_aliases: "As variantes Avro, ORC, com deletes e vazia usam temporariamente o fixture em Parquet ate a geracao nativa desses cenarios ser ampliada.",
     iceberg_seed_warning_template: "A ferramenta atual publica o sample oficial Iceberg do DuckDB sob varios nomes de tabela para manter o prefixo de teste deterministico.",
     avro_preview_failed: "Falha ao ler a pre-visualizacao do Avro: {message}",
@@ -205,6 +209,8 @@ const SERVER_TRANSLATIONS = {
     iceberg_seed_prefix_invalid: "El prefijo de muestras es obligatorio.",
     iceberg_seed_conflict: "El prefijo de muestras ya contiene datos. Elimina {prefix} antes de generar los fixtures nuevamente.",
     iceberg_seed_failed: "Error al generar los datos de ejemplo Iceberg: {message}",
+    directory_name_required: "El nombre del directorio es obligatorio.",
+    directory_name_invalid: "El nombre del directorio debe ser un solo segmento sin barras internas.",
     iceberg_seed_warning_aliases: "Las variantes Avro, ORC, con deletes y vacia son alias temporales del sample respaldado por Parquet hasta ampliar la generacion nativa de fixtures.",
     iceberg_seed_warning_template: "La herramienta actual publica el sample oficial Iceberg de DuckDB bajo varios nombres de tabla para mantener deterministico el prefijo de prueba.",
     avro_preview_failed: "Error al leer la vista previa de Avro: {message}",
@@ -241,6 +247,8 @@ const SERVER_TRANSLATIONS = {
     iceberg_seed_prefix_invalid: "Il prefisso di esempio e obbligatorio.",
     iceberg_seed_conflict: "Il prefisso di esempio contiene gia dati. Rimuovi {prefix} prima di generare di nuovo i fixture.",
     iceberg_seed_failed: "Errore durante la generazione dei dati di esempio Iceberg: {message}",
+    directory_name_required: "Il nome della cartella e obbligatorio.",
+    directory_name_invalid: "Il nome della cartella deve essere un solo segmento senza slash interni.",
     iceberg_seed_warning_aliases: "Le varianti Avro, ORC, con delete e vuota usano temporaneamente il fixture Parquet finche la generazione nativa non verra ampliata.",
     iceberg_seed_warning_template: "Lo strumento corrente pubblica il sample Iceberg ufficiale di DuckDB con vari nomi di tabella per mantenere deterministico il prefisso di test.",
     avro_preview_failed: "Errore durante la lettura dell'anteprima Avro: {message}",
@@ -313,6 +321,11 @@ const requestHandler = async (request, response) => {
 
     if (request.method === "POST" && url.pathname === "/api/delete-file") {
       await handleDeleteFile(request, response);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/create-directory") {
+      await handleCreateDirectory(request, response);
       return;
     }
 
@@ -623,6 +636,23 @@ async function handleDeleteFile(request, response) {
   sendJson(response, 200, {
     deletedCount: 1,
     key,
+  });
+}
+
+async function handleCreateDirectory(request, response) {
+  const locale = getRequestLocale(request);
+  const body = await readJsonBody(request);
+  const session = getSession(typeof body.sessionId === "string" ? body.sessionId : "");
+  const prefix = ensureTrailingSlash(typeof body.prefix === "string" ? body.prefix.trim() : "");
+  const normalizedName = normalizeDirectoryName(body.name, locale);
+  const createdPrefix = prefix ? `${prefix}${normalizedName}/` : `${normalizedName}/`;
+
+  await createStorageDirectory(session, createdPrefix);
+
+  sendJson(response, 200, {
+    created: true,
+    prefix: createdPrefix,
+    name: normalizedName,
   });
 }
 
@@ -1162,6 +1192,20 @@ async function deleteStorageFile(session, key) {
       Key: key,
     }),
   );
+}
+
+async function createStorageDirectory(session, prefix) {
+  if (session.storage.provider === "adls") {
+    const normalizedPath = normalizeAdlsDirectory(prefix);
+    if (!normalizedPath) {
+      throw new LocalizedError("directory_name_invalid");
+    }
+
+    await session.storage.fileSystemClient.getDirectoryClient(normalizedPath).createIfNotExists();
+    return;
+  }
+
+  await ensurePrefixMarkerObject(session, ensureTrailingSlash(prefix));
 }
 
 async function seedIcebergFixtures(session, locale, targetPrefix) {
@@ -1890,6 +1934,19 @@ function isTruthyEnv(value) {
 
 function trimCurrentPrefix(key, prefix) {
   return prefix && key.startsWith(prefix) ? key.slice(prefix.length) : key;
+}
+
+function normalizeDirectoryName(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new LocalizedError("directory_name_required");
+  }
+
+  const normalized = value.trim().replace(/^\/+|\/+$/g, "");
+  if (!normalized || normalized === "." || normalized === ".." || normalized.includes("/")) {
+    throw new LocalizedError("directory_name_invalid");
+  }
+
+  return normalized;
 }
 
 function resolveImmediateFolderKey(prefix, key) {

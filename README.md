@@ -10,6 +10,7 @@ Web application with a local backend for:
 - detecting Iceberg table roots on folder click and previewing selectable snapshots through the backend
 - previewing CSV, JSON, DFM, Markdown, plain text, Parquet, Avro, and ORC files, including `.gz` and `.snappy` compressed variants
 - creating temporary Iceberg sample data under the current browser prefix plus `_sample_data/iceberg/` in the connected storage target when running in local development mode
+- creating a directory inside the current browser prefix across all supported providers
 - downloading files through a local proxy
 - deleting a specific file from the current listing
 - deleting all files under a prefix while preserving the selected folder
@@ -273,6 +274,7 @@ If a MinIO deployment uses a self-signed or otherwise untrusted HTTPS certificat
 - ORC preview uses Apache ORC's Java tooling in the backend and downloads a cached jar on first ORC preview if it is not already available locally
 - setting `DISABLE_DESTRUCTIVE_OPERATIONS=true` disables prefix deletion and single-file deletion server-side and hides delete controls in the UI
 - prefix deletion removes child files but preserves the selected folder across all supported providers
+- directory creation from the Object Browser toolbar always creates one immediate child under the current prefix; S3, MinIO, and GCS materialize a folder marker object while ADLS creates a native directory
 - this solution is intended for local or internal use
 - for production, the preferred approach is to avoid sending credentials through the frontend and use server-side authentication
 - self-signed certificates are acceptable for local/internal use, but browser trust installation is an operator responsibility
