@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.13.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.13.0) - 2026-03-26
+
+### Changes
+- feat(browser): refine iceberg object browser actions (4736aed)
+- chore(changelog): update for v0.12.0 [skip ci] (581b771)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.12.0...v0.13.0)
+
+
 ## [v0.12.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.12.0) - 2026-03-26
 
 ### Changes
