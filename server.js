@@ -640,11 +640,10 @@ async function handleDeleteFile(request, response) {
 }
 
 async function handleCreateDirectory(request, response) {
-  const locale = getRequestLocale(request);
   const body = await readJsonBody(request);
   const session = getSession(typeof body.sessionId === "string" ? body.sessionId : "");
-  const prefix = ensureTrailingSlash(typeof body.prefix === "string" ? body.prefix.trim() : "");
-  const normalizedName = normalizeDirectoryName(body.name, locale);
+  const prefix = normalizeDirectoryParentPrefix(typeof body.prefix === "string" ? body.prefix : "");
+  const normalizedName = normalizeDirectoryName(body.name);
   const createdPrefix = prefix ? `${prefix}${normalizedName}/` : `${normalizedName}/`;
 
   await createStorageDirectory(session, createdPrefix);
@@ -1947,6 +1946,15 @@ function normalizeDirectoryName(value) {
   }
 
   return normalized;
+}
+
+function normalizeDirectoryParentPrefix(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const trimmed = value.trim().replace(/^\/+/, "");
+  return trimmed ? ensureTrailingSlash(trimmed) : "";
 }
 
 function resolveImmediateFolderKey(prefix, key) {
