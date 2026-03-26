@@ -19,6 +19,7 @@ This project is a local web explorer for object and hierarchical cloud storage, 
 The project uses plain ESM JavaScript and no frontend framework. Keep that simplicity unless explicitly asked to change it.
 Folders that contain `metadata/*.metadata.json` should be treated as Iceberg table roots by the frontend and previewed through backend snapshot inspection instead of raw file listing.
 When a prefix is in Iceberg mode, the preview toolbar should expose the table snapshots available in metadata so the user can switch the sampled snapshot explicitly.
+The object browser supports a client-side name filter persisted in browser storage per exact folder context using provider plus stable target/location identity and prefix; the filter applies only in raw folder mode, not in Iceberg mode.
 Directory creation from the object browser must create exactly one immediate child under the current prefix; object-store providers materialize folder marker objects while ADLS creates a native directory, and the action stays unavailable in Iceberg mode.
 The object browser distinguishes between clearing the current folder contents and deleting a child folder entirely: the toolbar destructive action preserves the current folder, while the row-level folder delete removes the selected child folder plus all nested contents across supported providers.
 Temporary Iceberg sample seeding writes only under `<current-prefix>/_sample_data/iceberg/` in the connected storage target and stages the fixture files locally in the backend before upload.

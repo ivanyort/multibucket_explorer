@@ -13,6 +13,8 @@ const state = {
   seedIcebergEnabled: false,
   destructiveOperationsEnabled: true,
   objectItems: [],
+  objectFilter: "",
+  objectFilterContextKey: "",
   sort: {
     column: "name",
     direction: "asc",
@@ -27,6 +29,7 @@ const state = {
 
 const STORAGE_KEY = "multibucket-explorer-connection";
 const LANGUAGE_STORAGE_KEY = "multibucket-explorer-language";
+const OBJECT_FILTERS_STORAGE_KEY = "multibucket-explorer-object-filters";
 const SESSION_VAULT_KEY = "multibucket-explorer-connection-unlock";
 const ENCRYPTED_STORAGE_VERSION = 1;
 const VAULT_SALT_LENGTH = 16;
@@ -86,7 +89,9 @@ const translations = {
     browser: {
       kicker: "Object Browser", title: "Objects", currentPrefix: "Current prefix", refresh: "Refresh",
       clearPrefix: "Clear folder contents", connectToList: "Connect to list storage objects.",
-      noItems: "No items found in this prefix.", loading: "Loading objects...", failed: "Failed to list objects.",
+      noItems: "No items found in this prefix.", noItemsFiltered: "No items match the saved filter for this folder.",
+      loading: "Loading objects...", failed: "Failed to list objects.",
+      filterLabel: "Filter items", filterPlaceholder: "Type to filter folders and files", clearFilter: "Clear filter",
       folder: "Folder", file: "File", actions: "Actions", deleteFile: "Delete file", deleteFolder: "Delete folder",
       createDirectory: "Create directory",
       createDirectoryTitle: "Create directory",
@@ -222,7 +227,9 @@ const translations = {
     browser: {
       kicker: "Navegador de Objetos", title: "Objetos", currentPrefix: "Prefixo atual", refresh: "Atualizar",
       clearPrefix: "Limpar conteudo da pasta", connectToList: "Conecte-se para listar os objetos do storage.",
-      noItems: "Nenhum item encontrado neste prefixo.", loading: "Carregando objetos...", failed: "Falha ao listar objetos.",
+      noItems: "Nenhum item encontrado neste prefixo.", noItemsFiltered: "Nenhum item corresponde ao filtro salvo para esta pasta.",
+      loading: "Carregando objetos...", failed: "Falha ao listar objetos.",
+      filterLabel: "Filtrar itens", filterPlaceholder: "Digite para filtrar pastas e arquivos", clearFilter: "Limpar filtro",
       folder: "Pasta", file: "Arquivo", actions: "Ações", deleteFile: "Apagar arquivo", deleteFolder: "Apagar pasta",
       createDirectory: "Criar diretorio",
       createDirectoryTitle: "Criar diretorio",
@@ -334,7 +341,9 @@ const translations = {
     browser: {
       kicker: "Explorador de Objetos", title: "Objetos", currentPrefix: "Prefijo actual", refresh: "Actualizar",
       clearPrefix: "Limpiar contenido de la carpeta", connectToList: "Conéctate para listar los objetos del storage.",
-      noItems: "No se encontraron elementos en este prefijo.", loading: "Cargando objetos...", failed: "Error al listar objetos.",
+      noItems: "No se encontraron elementos en este prefijo.", noItemsFiltered: "Ningún elemento coincide con el filtro guardado para esta carpeta.",
+      loading: "Cargando objetos...", failed: "Error al listar objetos.",
+      filterLabel: "Filtrar elementos", filterPlaceholder: "Escribe para filtrar carpetas y archivos", clearFilter: "Limpiar filtro",
       folder: "Carpeta", file: "Archivo", actions: "Acciones", deleteFile: "Borrar archivo", deleteFolder: "Borrar carpeta",
       createDirectory: "Crear directorio",
       createDirectoryTitle: "Crear directorio",
@@ -446,7 +455,9 @@ const translations = {
     browser: {
       kicker: "Esploratore Oggetti", title: "Oggetti", currentPrefix: "Prefisso corrente", refresh: "Aggiorna",
       clearPrefix: "Svuota contenuto cartella", connectToList: "Connettiti per elencare gli oggetti dello storage.",
-      noItems: "Nessun elemento trovato in questo prefisso.", loading: "Caricamento oggetti...", failed: "Errore durante l'elenco degli oggetti.",
+      noItems: "Nessun elemento trovato in questo prefisso.", noItemsFiltered: "Nessun elemento corrisponde al filtro salvato per questa cartella.",
+      loading: "Caricamento oggetti...", failed: "Errore durante l'elenco degli oggetti.",
+      filterLabel: "Filtra elementi", filterPlaceholder: "Digita per filtrare cartelle e file", clearFilter: "Cancella filtro",
       folder: "Cartella", file: "File", actions: "Azioni", deleteFile: "Elimina file", deleteFolder: "Elimina cartella",
       createDirectory: "Crea cartella",
       createDirectoryTitle: "Crea cartella",
@@ -548,6 +559,9 @@ const elements = {
   workspace: document.querySelector(".workspace"),
   objectList: document.querySelector("#objectList"),
   currentPrefix: document.querySelector("#currentPrefix"),
+  objectFilterWrap: document.querySelector("#objectFilterWrap"),
+  objectFilterInput: document.querySelector("#objectFilterInput"),
+  clearObjectFilterButton: document.querySelector("#clearObjectFilterButton"),
   toggleIcebergModeButton: document.querySelector("#toggleIcebergModeButton"),
   createDirectoryButton: document.querySelector("#createDirectoryButton"),
   seedIcebergButton: document.querySelector("#seedIcebergButton"),
@@ -697,6 +711,10 @@ elements.createDirectoryButton.addEventListener("click", openCreateDirectoryModa
 elements.seedIcebergButton.addEventListener("click", seedIcebergFixtures);
 elements.refreshButton.addEventListener("click", () => loadObjects(state.prefix));
 elements.clearPrefixButton.addEventListener("click", clearCurrentPrefix);
+elements.objectFilterInput?.addEventListener("input", () => {
+  setObjectFilter(elements.objectFilterInput.value);
+});
+elements.clearObjectFilterButton?.addEventListener("click", clearObjectFilter);
 elements.downloadButton.addEventListener("click", downloadSelectedObject);
 elements.previewMode.addEventListener("change", () => {
   syncPreviewModeAvailability(state.selectedKey);
@@ -801,7 +819,8 @@ function applyLanguage() {
   syncIcebergModeToggle();
   syncIcebergSnapshotControl();
   syncCreateDirectoryControls();
-  if (state.objectItems.length) {
+  syncObjectFilterControls();
+  if (state.objectItems.length && state.browseMode === "raw") {
     renderObjectList();
   }
   syncDestructiveControls();
@@ -1056,9 +1075,11 @@ async function loadObjects(prefix) {
   state.icebergTable = null;
   state.icebergAvailable = false;
   state.icebergSnapshotId = "";
+  restoreObjectFilterForCurrentContext();
   renderCurrentPrefix();
   syncIcebergModeToggle();
   syncIcebergSnapshotControl();
+  syncObjectFilterControls();
   syncDestructiveControls();
   renderObjectPlaceholder(t("browser.loading"));
   resetPreview(t("preview.selectCompatible"));
@@ -1127,7 +1148,13 @@ function renderObjectList() {
     return;
   }
 
-  const items = sortObjectItems(state.objectItems, state.sort);
+  const filteredItems = filterObjectItems(state.objectItems);
+  if (!filteredItems.length) {
+    renderObjectPlaceholder(t("browser.noItemsFiltered"));
+    return;
+  }
+
+  const items = sortObjectItems(filteredItems, state.sort);
   elements.objectList.className = "object-list";
   elements.objectList.innerHTML = "";
   const wrap = document.createElement("div");
@@ -1289,6 +1316,7 @@ async function openIcebergTable(table) {
   renderCurrentPrefix();
   syncIcebergModeToggle();
   syncIcebergSnapshotControl();
+  syncObjectFilterControls();
   syncDestructiveControls();
   renderObjectPlaceholder(
     t("browser.icebergSummary", {
@@ -1820,6 +1848,94 @@ function sortObjectItems(items, sort) {
         return left.name.localeCompare(right.name, "en", { numeric: true }) * direction;
     }
   });
+}
+
+function normalizeObjectFilterValue(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function buildObjectFilterContextKey() {
+  return JSON.stringify([
+    normalizeProvider(state.provider),
+    state.targetName.trim(),
+    state.locationName.trim(),
+    state.prefix,
+  ]);
+}
+
+function readStoredObjectFilters() {
+  const rawValue = window.localStorage.getItem(OBJECT_FILTERS_STORAGE_KEY);
+  if (!rawValue) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    window.localStorage.removeItem(OBJECT_FILTERS_STORAGE_KEY);
+    return {};
+  }
+}
+
+function writeStoredObjectFilters(filters) {
+  const entries = Object.entries(filters).filter(([, value]) => typeof value === "string" && value.trim());
+  if (!entries.length) {
+    window.localStorage.removeItem(OBJECT_FILTERS_STORAGE_KEY);
+    return;
+  }
+
+  window.localStorage.setItem(OBJECT_FILTERS_STORAGE_KEY, JSON.stringify(Object.fromEntries(entries)));
+}
+
+function persistCurrentObjectFilter() {
+  if (!state.objectFilterContextKey) {
+    return;
+  }
+
+  const filters = readStoredObjectFilters();
+  if (state.objectFilter) {
+    filters[state.objectFilterContextKey] = state.objectFilter;
+  } else {
+    delete filters[state.objectFilterContextKey];
+  }
+  writeStoredObjectFilters(filters);
+}
+
+function restoreObjectFilterForCurrentContext() {
+  state.objectFilterContextKey = buildObjectFilterContextKey();
+  const filters = readStoredObjectFilters();
+  state.objectFilter = typeof filters[state.objectFilterContextKey] === "string"
+    ? normalizeObjectFilterValue(filters[state.objectFilterContextKey])
+    : "";
+}
+
+function setObjectFilter(value) {
+  state.objectFilter = normalizeObjectFilterValue(value);
+  persistCurrentObjectFilter();
+  syncObjectFilterControls();
+  renderObjectList();
+}
+
+function clearObjectFilter() {
+  if (!state.objectFilter) {
+    syncObjectFilterControls();
+    return;
+  }
+
+  state.objectFilter = "";
+  persistCurrentObjectFilter();
+  syncObjectFilterControls();
+  renderObjectList();
+}
+
+function filterObjectItems(items) {
+  if (!state.objectFilter) {
+    return items;
+  }
+
+  const query = state.objectFilter.toLocaleLowerCase();
+  return items.filter((item) => (item.name || item.key).toLocaleLowerCase().includes(query));
 }
 
 function setConnectionStatus(message, isError = false) {
@@ -2400,6 +2516,16 @@ function syncCreateDirectoryControls() {
   elements.createDirectoryButton.textContent = t("browser.createDirectory");
 }
 
+function syncObjectFilterControls() {
+  const enabled = Boolean(state.sessionId) && state.browseMode !== "iceberg";
+  elements.objectFilterWrap.hidden = !enabled;
+  elements.objectFilterInput.disabled = !enabled;
+  elements.clearObjectFilterButton.hidden = !enabled;
+  elements.clearObjectFilterButton.disabled = !enabled || !state.objectFilter;
+  elements.clearObjectFilterButton.textContent = t("browser.clearFilter");
+  elements.objectFilterInput.value = state.objectFilter;
+}
+
 function syncIcebergModeToggle() {
   const available = Boolean(state.sessionId) && Boolean(state.prefix) && state.icebergAvailable;
   elements.toggleIcebergModeButton.hidden = !available;
@@ -2407,6 +2533,7 @@ function syncIcebergModeToggle() {
   elements.toggleIcebergModeButton.textContent =
     state.browseMode === "iceberg" ? t("browser.openFolders") : t("browser.openIceberg");
   syncCreateDirectoryControls();
+  syncObjectFilterControls();
 }
 
 function syncSeedControls() {
@@ -2873,6 +3000,8 @@ function clearActiveConnectionState() {
   state.icebergAvailable = false;
   state.icebergSnapshotId = "";
   state.objectItems = [];
+  state.objectFilter = "";
+  state.objectFilterContextKey = "";
   elements.refreshButton.disabled = true;
   elements.clearPrefixButton.disabled = true;
   elements.downloadButton.disabled = true;
@@ -2881,6 +3010,7 @@ function clearActiveConnectionState() {
   resetPreview(t("preview.selectCompatible"), false, t("preview.noFileSelected"));
   syncIcebergModeToggle();
   syncIcebergSnapshotControl();
+  syncObjectFilterControls();
   syncDestructiveControls();
   syncWorkspaceVisibility();
 }

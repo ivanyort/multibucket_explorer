@@ -202,6 +202,13 @@ textarea {
   flex-wrap: wrap;
 }
 
+.toolbar-context {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 360px;
+}
+
 .current-prefix {
   display: flex;
   align-items: center;
@@ -241,6 +248,31 @@ textarea {
   color: var(--muted);
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.95rem;
+}
+
+.browser-filter {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.browser-filter-label {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-dark);
+}
+
+.browser-filter-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.browser-filter-input-row input {
+  min-width: 0;
 }
 
 .preview-actions {
@@ -973,6 +1005,11 @@ tbody tr:nth-child(even) {
     flex-direction: column;
   }
 
+  .toolbar-context,
+  .toolbar-actions {
+    width: 100%;
+  }
+
   .connection-summary {
     flex-direction: column;
     align-items: flex-start;
@@ -1028,6 +1065,15 @@ tbody tr:nth-child(even) {
   }
 
   .modal-actions button {
+    width: 100%;
+  }
+
+  .browser-filter-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .browser-filter-input-row button {
     width: 100%;
   }
 

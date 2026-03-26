@@ -12,6 +12,7 @@ Web application with a local backend for:
 - creating temporary Iceberg sample data under the current browser prefix plus `_sample_data/iceberg/` in the connected storage target when running in local development mode
 - creating a directory inside the current browser prefix across all supported providers
 - downloading files through a local proxy
+- filtering the current object-browser listing by name with a browser-persisted filter saved per provider, target, and folder
 - deleting a specific file from the current listing
 - deleting a child folder from the current listing, including all nested contents
 - clearing all files under the current prefix while preserving the selected folder

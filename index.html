@@ -157,9 +157,34 @@
           </div>
 
           <div class="toolbar">
-            <div>
+            <div class="toolbar-context">
               <span class="toolbar-label" data-i18n="browser.currentPrefix">Current prefix</span>
               <nav id="currentPrefix" class="current-prefix" aria-label="Current prefix" data-i18n-aria-label="browser.currentPrefix">/</nav>
+              <div id="objectFilterWrap" class="browser-filter" hidden>
+                <label class="browser-filter-label" for="objectFilterInput" data-i18n="browser.filterLabel">Filter items</label>
+                <div class="browser-filter-input-row">
+                  <input
+                    id="objectFilterInput"
+                    type="text"
+                    spellcheck="false"
+                    autocomplete="off"
+                    placeholder="Type to filter folders and files"
+                    data-i18n-placeholder="browser.filterPlaceholder"
+                  />
+                  <button
+                    id="clearObjectFilterButton"
+                    class="ghost-button"
+                    type="button"
+                    aria-label="Clear filter"
+                    title="Clear filter"
+                    data-i18n="browser.clearFilter"
+                    data-i18n-aria-label="browser.clearFilter"
+                    data-i18n-title="browser.clearFilter"
+                  >
+                    Clear filter
+                  </button>
+                </div>
+              </div>
             </div>
             <div class="toolbar-actions">
               <button
