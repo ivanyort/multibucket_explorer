@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.11.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.11.0) - 2026-03-26
+
+### Changes
+- feat(browser): add persisted per-folder name filters (972a6ab)
+- chore(changelog): update for v0.10.0 [skip ci] (04ef776)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.10.0...v0.11.0)
+
+
 ## [v0.10.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.10.0) - 2026-03-26
 
 ### Changes
