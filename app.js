@@ -102,8 +102,8 @@ const translations = {
       createDirectoryCreating: "Creating directory {prefix}...",
       createDirectoryCreated: "Directory created at {prefix}.",
       destructiveDisabled: "Delete actions are disabled by the server.",
-      openIceberg: "Open as Iceberg",
-      openFolders: "View folders",
+      openIceberg: "Iceberg mode",
+      openFolders: "Folder mode",
       icebergSummary: "Iceberg table detected. Latest snapshot: {snapshotId}. Data files: {dataFileCount}. Format: {dataFormat}.",
     },
     preview: {
@@ -241,8 +241,8 @@ const translations = {
       createDirectoryCreating: "Criando diretorio {prefix}...",
       createDirectoryCreated: "Diretorio criado em {prefix}.",
       destructiveDisabled: "As ações de exclusão estão desativadas pelo servidor.",
-      openIceberg: "Abrir como Iceberg",
-      openFolders: "Ver pastas",
+      openIceberg: "Modo Iceberg",
+      openFolders: "Modo Pastas",
       icebergSummary: "Tabela Iceberg detectada. Snapshot atual: {snapshotId}. Arquivos de dados: {dataFileCount}. Formato: {dataFormat}.",
     },
     preview: {
@@ -356,8 +356,8 @@ const translations = {
       createDirectoryCreating: "Creando directorio {prefix}...",
       createDirectoryCreated: "Directorio creado en {prefix}.",
       destructiveDisabled: "Las acciones de borrado están deshabilitadas por el servidor.",
-      openIceberg: "Abrir como Iceberg",
-      openFolders: "Ver carpetas",
+      openIceberg: "Modo Iceberg",
+      openFolders: "Modo Carpetas",
       icebergSummary: "Tabla Iceberg detectada. Snapshot actual: {snapshotId}. Archivos de datos: {dataFileCount}. Formato: {dataFormat}.",
     },
     preview: {
@@ -471,8 +471,8 @@ const translations = {
       createDirectoryCreating: "Creazione della cartella {prefix}...",
       createDirectoryCreated: "Cartella creata in {prefix}.",
       destructiveDisabled: "Le azioni di eliminazione sono disabilitate dal server.",
-      openIceberg: "Apri come Iceberg",
-      openFolders: "Vedi cartelle",
+      openIceberg: "Modo Iceberg",
+      openFolders: "Modo Cartelle",
       icebergSummary: "Tabella Iceberg rilevata. Snapshot corrente: {snapshotId}. File dati: {dataFileCount}. Formato: {dataFormat}.",
     },
     preview: {
@@ -1077,6 +1077,7 @@ async function loadObjects(prefix) {
   }
 
   state.prefix = prefix;
+  state.objectItems = [];
   state.browseMode = "raw";
   state.icebergTable = null;
   state.icebergAvailable = false;
@@ -1087,6 +1088,7 @@ async function loadObjects(prefix) {
   syncIcebergSnapshotControl();
   syncObjectFilterControls();
   syncDestructiveControls();
+  syncSeedControls();
   renderObjectPlaceholder(t("browser.loading"));
   resetPreview(t("preview.noFileSelected"));
 
@@ -1095,13 +1097,16 @@ async function loadObjects(prefix) {
       `/api/objects?sessionId=${encodeURIComponent(state.sessionId)}&prefix=${encodeURIComponent(prefix)}`,
     );
     state.objectItems = response.items ?? [];
+    syncSeedControls();
     renderObjectList();
     await refreshIcebergAvailability(prefix);
     setConnectionStatus("");
   } catch (error) {
+    state.objectItems = [];
     renderObjectPlaceholder(t("browser.failed"));
     state.icebergAvailable = false;
     syncIcebergModeToggle();
+    syncSeedControls();
     setConnectionStatus(getErrorMessage(error), true);
     setDiagnosticMessage(buildDiagnosticMessage(error));
   }
@@ -2355,7 +2360,7 @@ async function seedIcebergFixtures() {
 }
 
 function getSeedPrefix() {
-  return `${state.prefix || ""}_sample_data/iceberg/`;
+  return `${state.prefix || ""}iceberg/`;
 }
 
 function normalizeSeedPrefix(value) {
@@ -2671,19 +2676,30 @@ function syncObjectFilterControls() {
 }
 
 function syncIcebergModeToggle() {
-  const available = Boolean(state.sessionId) && Boolean(state.prefix) && state.icebergAvailable;
+  const available = state.browseMode === "iceberg"
+    || (
+      Boolean(state.sessionId)
+      && Boolean(state.prefix)
+      && state.icebergAvailable
+      && state.objectItems.length > 0
+    );
   elements.toggleIcebergModeButton.hidden = !available;
   elements.toggleIcebergModeButton.disabled = !available;
-  elements.toggleIcebergModeButton.textContent =
-    state.browseMode === "iceberg" ? t("browser.openFolders") : t("browser.openIceberg");
+  elements.toggleIcebergModeButton.innerHTML =
+    `${icebergModeIconSvg()}<span>${state.browseMode === "iceberg" ? t("browser.openFolders") : t("browser.openIceberg")}</span>`;
   syncCreateDirectoryControls();
   syncObjectFilterControls();
 }
 
 function syncSeedControls() {
-  const enabled = state.seedIcebergEnabled === true;
-  elements.seedIcebergButton.hidden = !enabled;
-  elements.seedIcebergButton.disabled = !enabled || !state.sessionId;
+  const visible =
+    state.seedIcebergEnabled === true
+    && Boolean(state.sessionId)
+    && state.browseMode !== "iceberg"
+    && state.objectItems.length === 0;
+  elements.seedIcebergButton.hidden = !visible;
+  elements.seedIcebergButton.disabled = !visible;
+  elements.seedIcebergButton.innerHTML = `${icebergSeedIconSvg()}<span>${t("seed.button")}</span>`;
 }
 
 function setStartupDiagnostic() {
@@ -3643,6 +3659,22 @@ function createDirectoryIconSvg() {
   return `
     <svg viewBox="0 0 24 24" focusable="false">
       <path d="M3 6.75A2.25 2.25 0 0 1 5.25 4.5h4.14c.6 0 1.17.24 1.59.66l1.11 1.09h6.66A2.25 2.25 0 0 1 21 8.5v8.25A2.25 2.25 0 0 1 18.75 19H5.25A2.25 2.25 0 0 1 3 16.75zM12 9.25a.75.75 0 0 1 .75.75v1.25H14a.75.75 0 1 1 0 1.5h-1.25V14a.75.75 0 1 1-1.5 0v-1.25H10a.75.75 0 0 1 0-1.5h1.25V10a.75.75 0 0 1 .75-.75m-6.75-.75v8.25c0 .41.34.75.75.75h13.5c.41 0 .75-.34.75-.75V8.5a.75.75 0 0 0-.75-.75h-6.97l-1.55-1.54a.75.75 0 0 0-.53-.22H5.25a.75.75 0 0 0-.75.75"></path>
+    </svg>
+  `;
+}
+
+function icebergModeIconSvg() {
+  return `
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="M5.25 4.5A2.25 2.25 0 0 0 3 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 17.25V6.75a2.25 2.25 0 0 0-2.25-2.25zm0 1.5h13.5a.75.75 0 0 1 .75.75v2.5H4.5v-2.5A.75.75 0 0 1 5.25 6m-.75 4.75h5v7.25h-4.25a.75.75 0 0 1-.75-.75zm6.5 0h8.5v6.5a.75.75 0 0 1-.75.75H11zm1.75 1.5a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5zm0 3a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5z"></path>
+    </svg>
+  `;
+}
+
+function icebergSeedIconSvg() {
+  return `
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="M3 6.75A2.25 2.25 0 0 1 5.25 4.5h4.14c.6 0 1.17.24 1.59.66l1.11 1.09h6.66A2.25 2.25 0 0 1 21 8.5v8.25A2.25 2.25 0 0 1 18.75 19H5.25A2.25 2.25 0 0 1 3 16.75zM12.75 9a.75.75 0 0 1 .75.75v.5h.5a.75.75 0 0 1 0 1.5h-.5v.5a.75.75 0 0 1-1.5 0v-.5h-.5a.75.75 0 0 1 0-1.5h.5v-.5A.75.75 0 0 1 12.75 9m3.84 2.17a.75.75 0 0 1 .83 1.23l-.88.6l.34 1.01a.75.75 0 1 1-1.42.48l-.34-1.01h-1.06a.75.75 0 1 1 0-1.5h1.06l.34-1.01a.75.75 0 1 1 1.42.48l-.34 1.01zm-11.34-2.67v8.25c0 .41.34.75.75.75h13.5c.41 0 .75-.34.75-.75V8.5a.75.75 0 0 0-.75-.75h-6.97l-1.55-1.54a.75.75 0 0 0-.53-.22H5.25a.75.75 0 0 0-.75.75"></path>
     </svg>
   `;
 }

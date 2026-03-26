@@ -30,6 +30,10 @@ body {
     linear-gradient(135deg, var(--bg) 0%, #efe7db 100%);
 }
 
+[hidden] {
+  display: none !important;
+}
+
 button,
 input,
 select,
