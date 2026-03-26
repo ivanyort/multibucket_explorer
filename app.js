@@ -1,3 +1,6 @@
+import { marked } from "./node_modules/marked/lib/marked.esm.js";
+import DOMPurify from "./node_modules/dompurify/dist/purify.es.mjs";
+
 const state = {
   provider: "s3",
   language: "en",
@@ -43,6 +46,11 @@ const DATE_LOCALES = {
   es: "es-ES",
   it: "it-IT",
 };
+
+marked.setOptions({
+  gfm: true,
+  breaks: false,
+});
 const translations = {
   en: {
     language: { label: "Language" },
@@ -107,7 +115,7 @@ const translations = {
       icebergSummary: "Iceberg table detected. Latest snapshot: {snapshotId}. Data files: {dataFileCount}. Format: {dataFormat}.",
     },
     preview: {
-      kicker: "File Preview", title: "Preview", view: "View", table: "Table", raw: "Text", rows: "Rows", all: "All",
+      kicker: "File Preview", title: "Preview", view: "View", render: "Render", table: "Table", raw: "Text", rows: "Rows", all: "All",
       order: "Order", normal: "Normal", reverse: "Newest first", snapshot: "Snapshot", download: "Download file",
       badgeColumns: "{count} col", badgeRows: "{count} rows",
       selectCompatible: "Select a compatible `.csv`, `.json`, `.dfm`, `.md`, `.txt`, `.parquet`, `.avro`, `.orc`, `.gz`, or `.snappy` file to preview.",
@@ -246,7 +254,7 @@ const translations = {
       icebergSummary: "Tabela Iceberg detectada. Snapshot atual: {snapshotId}. Arquivos de dados: {dataFileCount}. Formato: {dataFormat}.",
     },
     preview: {
-      kicker: "Pré-visualização de Arquivo", title: "Prévia", view: "Visualização", table: "Tabela", raw: "Texto", rows: "Linhas", all: "Todas",
+      kicker: "Pré-visualização de Arquivo", title: "Prévia", view: "Visualização", render: "Render", table: "Tabela", raw: "Texto", rows: "Linhas", all: "Todas",
       order: "Ordem", normal: "Normal", reverse: "Invertida", snapshot: "Snapshot", download: "Baixar arquivo",
       badgeColumns: "{count} col", badgeRows: "{count} linhas",
       selectCompatible: "Selecione um arquivo compatível `.csv`, `.json`, `.dfm`, `.md`, `.txt`, `.parquet`, `.avro`, `.orc`, `.gz` ou `.snappy` para visualizar.",
@@ -361,7 +369,7 @@ const translations = {
       icebergSummary: "Tabla Iceberg detectada. Snapshot actual: {snapshotId}. Archivos de datos: {dataFileCount}. Formato: {dataFormat}.",
     },
     preview: {
-      kicker: "Vista Previa de Archivo", title: "Vista previa", view: "Vista", table: "Tabla", raw: "Texto", rows: "Filas", all: "Todas",
+      kicker: "Vista Previa de Archivo", title: "Vista previa", view: "Vista", render: "Render", table: "Tabla", raw: "Texto", rows: "Filas", all: "Todas",
       order: "Orden", normal: "Normal", reverse: "Más nuevos primero", snapshot: "Snapshot", download: "Descargar archivo",
       badgeColumns: "{count} col", badgeRows: "{count} filas",
       selectCompatible: "Selecciona un archivo compatible `.csv`, `.json`, `.dfm`, `.md`, `.txt`, `.parquet`, `.avro`, `.orc`, `.gz` o `.snappy` para previsualizar.",
@@ -476,7 +484,7 @@ const translations = {
       icebergSummary: "Tabella Iceberg rilevata. Snapshot corrente: {snapshotId}. File dati: {dataFileCount}. Formato: {dataFormat}.",
     },
     preview: {
-      kicker: "Anteprima File", title: "Anteprima", view: "Vista", table: "Tabella", raw: "Testo", rows: "Righe", all: "Tutte",
+      kicker: "Anteprima File", title: "Anteprima", view: "Vista", render: "Render", table: "Tabella", raw: "Testo", rows: "Righe", all: "Tutte",
       order: "Ordine", normal: "Normale", reverse: "Più recenti prima", snapshot: "Snapshot", download: "Scarica file",
       badgeColumns: "{count} col", badgeRows: "{count} righe",
       selectCompatible: "Seleziona un file compatibile `.csv`, `.json`, `.dfm`, `.md`, `.txt`, `.parquet`, `.avro`, `.orc`, `.gz` o `.snappy` da visualizzare.",
@@ -1392,6 +1400,7 @@ async function toggleIcebergMode() {
 }
 
 async function previewObject(key) {
+  const selectedFileChanged = state.selectedKey !== key;
   state.selectedKey = key;
   elements.downloadButton.disabled = false;
   state.previewSummary = {
@@ -1409,7 +1418,7 @@ async function previewObject(key) {
     return;
   }
 
-  syncPreviewModeAvailability(key);
+  syncPreviewModeAvailability(key, { preferDefault: selectedFileChanged });
   elements.previewMeta.textContent = "";
   elements.previewMeta.hidden = true;
   elements.previewTableWrap.className = "preview-table-wrap empty-state";
@@ -1425,7 +1434,15 @@ async function previewObject(key) {
     );
 
     if (response.previewMode === "raw") {
-      renderPreviewRaw(response.rawText ?? "", response.previewFormat ?? "");
+      if (isMarkdownPreviewFile(key) && elements.previewMode.value === "render") {
+        try {
+          renderPreviewMarkdown(response.rawText ?? "");
+        } catch {
+          renderPreviewRaw(response.rawText ?? "", response.previewFormat ?? "");
+        }
+      } else {
+        renderPreviewRaw(response.rawText ?? "", response.previewFormat ?? "");
+      }
       displayedLineCount = response.lineCount ?? 0;
     } else {
       const preview = buildPreviewModel(
@@ -1623,6 +1640,25 @@ function renderPreviewRaw(rawText, previewFormat = "") {
   pre.className = "preview-raw";
   pre.textContent = rawText || "";
   elements.previewTableWrap.appendChild(pre);
+}
+
+function renderPreviewMarkdown(rawText) {
+  elements.previewTableWrap.className = "preview-table-wrap";
+  elements.previewTableWrap.innerHTML = "";
+
+  const container = document.createElement("article");
+  container.className = "markdown-preview";
+  const renderedHtml = marked.parse(rawText || "");
+  container.innerHTML = DOMPurify.sanitize(renderedHtml, {
+    USE_PROFILES: { html: true },
+  });
+
+  container.querySelectorAll("a[href]").forEach((link) => {
+    link.setAttribute("target", "_blank");
+    link.setAttribute("rel", "noopener noreferrer");
+  });
+
+  elements.previewTableWrap.appendChild(container);
 }
 
 function shouldRenderJsonTree(previewFormat, rawText) {
@@ -3433,14 +3469,26 @@ function setFieldRequired(names, required) {
 }
 
 function getPreviewRowLimit() {
+  if (isRenderedMarkdownPreviewActive()) {
+    return "all";
+  }
+
   return elements.previewRowLimit.value || "10";
 }
 
 function getPreviewRowOrder() {
+  if (isRenderedMarkdownPreviewActive()) {
+    return "normal";
+  }
+
   return elements.previewRowOrder.value || "normal";
 }
 
 function getPreviewMode(key) {
+  if (isMarkdownPreviewFile(key)) {
+    return "raw";
+  }
+
   return isJsonPreviewFile(key) && elements.previewMode.value === "raw" ? "raw" : "table";
 }
 
@@ -3511,31 +3559,91 @@ function isJsonPreviewFile(key) {
   );
 }
 
-function syncPreviewModeAvailability(key) {
-  const allowRaw = isJsonPreviewFile(key);
-  const rawOnly = isRawOnlyPreviewFile(key);
-  elements.previewMode.disabled = !allowRaw || rawOnly;
+function syncPreviewModeAvailability(key, options = {}) {
+  const renderOption = elements.previewMode.querySelector('option[value="render"]');
+  const tableOption = elements.previewMode.querySelector('option[value="table"]');
+  const rawOption = elements.previewMode.querySelector('option[value="raw"]');
+  const markdown = isMarkdownPreviewFile(key);
+  const json = isJsonPreviewFile(key);
+  const text = isTextPreviewFile(key);
+  const preferDefault = options.preferDefault === true;
 
-  if (rawOnly) {
-    elements.previewMode.value = "raw";
+  if (renderOption instanceof HTMLOptionElement) {
+    renderOption.hidden = !markdown;
+    renderOption.disabled = !markdown;
+  }
+
+  if (tableOption instanceof HTMLOptionElement) {
+    tableOption.hidden = markdown || text;
+    tableOption.disabled = markdown || text;
+  }
+
+  if (rawOption instanceof HTMLOptionElement) {
+    rawOption.hidden = !markdown && !json && !text;
+    rawOption.disabled = !markdown && !json && !text;
+  }
+
+  if (markdown) {
+    elements.previewMode.disabled = false;
+    if (preferDefault || !["render", "raw"].includes(elements.previewMode.value)) {
+      elements.previewMode.value = "render";
+    }
+    syncPreviewWindowControls();
     return;
   }
 
-  if (!allowRaw) {
-    elements.previewMode.value = "table";
+  if (text) {
+    elements.previewMode.disabled = true;
+    elements.previewMode.value = "raw";
+    syncPreviewWindowControls();
+    return;
   }
+
+  if (json) {
+    elements.previewMode.disabled = false;
+    if (!["table", "raw"].includes(elements.previewMode.value)) {
+      elements.previewMode.value = "table";
+    }
+    syncPreviewWindowControls();
+    return;
+  }
+
+  elements.previewMode.disabled = true;
+  elements.previewMode.value = "table";
+  syncPreviewWindowControls();
 }
 
-function isRawOnlyPreviewFile(key) {
+function isMarkdownPreviewFile(key) {
   const normalizedKey = key.toLowerCase();
   return (
     normalizedKey.endsWith(".md") ||
     normalizedKey.endsWith(".md.gz") ||
-    normalizedKey.endsWith(".md.snappy") ||
+    normalizedKey.endsWith(".md.snappy")
+  );
+}
+
+function isTextPreviewFile(key) {
+  const normalizedKey = key.toLowerCase();
+  return (
     normalizedKey.endsWith(".txt") ||
     normalizedKey.endsWith(".txt.gz") ||
     normalizedKey.endsWith(".txt.snappy")
   );
+}
+
+function isRenderedMarkdownPreviewActive() {
+  return isMarkdownPreviewFile(state.selectedKey) && elements.previewMode.value === "render";
+}
+
+function syncPreviewWindowControls() {
+  const markdown = isMarkdownPreviewFile(state.selectedKey);
+  const disabled = isRenderedMarkdownPreviewActive();
+  elements.previewRowLimit.disabled = disabled;
+  elements.previewRowOrder.disabled = disabled;
+
+  if (elements.previewRowOrder.parentElement instanceof HTMLElement) {
+    elements.previewRowOrder.parentElement.hidden = markdown;
+  }
 }
 
 function refreshConnectionSummary() {

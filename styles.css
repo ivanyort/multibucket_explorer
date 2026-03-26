@@ -1148,6 +1148,109 @@ code {
   color: var(--muted);
 }
 
+.markdown-preview {
+  min-height: 220px;
+  padding: 22px 24px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.markdown-preview > :first-child {
+  margin-top: 0;
+}
+
+.markdown-preview > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4,
+.markdown-preview h5,
+.markdown-preview h6 {
+  margin: 1.4em 0 0.7em;
+  color: var(--brand-dark);
+  line-height: 1.2;
+}
+
+.markdown-preview h1,
+.markdown-preview h2 {
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid rgba(67, 49, 31, 0.14);
+}
+
+.markdown-preview p,
+.markdown-preview ul,
+.markdown-preview ol,
+.markdown-preview blockquote,
+.markdown-preview pre,
+.markdown-preview table {
+  margin: 0 0 1rem;
+}
+
+.markdown-preview ul,
+.markdown-preview ol {
+  padding-left: 1.5rem;
+}
+
+.markdown-preview li + li {
+  margin-top: 0.25rem;
+}
+
+.markdown-preview a {
+  color: var(--brand);
+}
+
+.markdown-preview a:hover,
+.markdown-preview a:focus-visible {
+  color: var(--brand-dark);
+}
+
+.markdown-preview blockquote {
+  margin-left: 0;
+  padding: 0.2rem 0 0.2rem 1rem;
+  border-left: 4px solid rgba(181, 84, 45, 0.3);
+  color: var(--muted);
+}
+
+.markdown-preview code {
+  padding: 0.12rem 0.4rem;
+  border-radius: 8px;
+  background: rgba(245, 236, 224, 0.7);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.88em;
+}
+
+.markdown-preview pre {
+  overflow: auto;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(245, 236, 224, 0.7);
+  border: 1px solid rgba(67, 49, 31, 0.12);
+}
+
+.markdown-preview pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.markdown-preview table {
+  display: block;
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+}
+
+.markdown-preview hr {
+  border: 0;
+  border-top: 1px solid rgba(67, 49, 31, 0.14);
+  margin: 1.5rem 0;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

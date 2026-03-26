@@ -13,8 +13,10 @@
     "@google-cloud/storage": "^7.19.0",
     "adm-zip": "^0.5.16",
     "avsc": "^5.7.9",
+    "dompurify": "^3.3.3",
     "hyparquet": "^1.25.1",
     "hyparquet-compressors": "^1.1.1",
+    "marked": "^17.0.5",
     "snappyjs": "^0.7.0"
   }
 }

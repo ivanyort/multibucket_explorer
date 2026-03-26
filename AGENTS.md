@@ -24,6 +24,7 @@ Directory creation from the object browser must create exactly one immediate chi
 The object browser distinguishes between clearing the current folder contents and deleting a child folder entirely: the toolbar destructive action preserves the current folder, while the row-level folder delete removes the selected child folder plus all nested contents across supported providers.
 Temporary Iceberg sample seeding writes only under `<current-prefix>iceberg/` in the connected storage target, stages the fixture files locally in the backend before upload, and the seed action should only be exposed when the current folder is empty.
 The temporary Iceberg sample seed UI must remain disabled when the backend is running inside Docker or with `NODE_ENV=production`; it is a local development-only feature.
+Markdown preview supports both rendered and raw text modes in the frontend; rendered mode must sanitize Markdown client-side before insertion into the DOM and always load the full document instead of honoring the line-count selector.
 Avro preview is handled in the backend for Avro Object Container Files, including files that use the Avro `snappy` codec.
 ORC preview now relies on Java being available on the backend host and caches the Apache ORC tools jar under `.cache/orc-tools/` on first use.
 The Docker image must include a Java runtime so ORC preview works in containerized runs too.

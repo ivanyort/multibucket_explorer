@@ -9,6 +9,7 @@ Web application with a local backend for:
 - listing folders and files
 - detecting Iceberg table roots on folder click and previewing selectable snapshots through the backend
 - previewing CSV, JSON, DFM, Markdown, plain text, Parquet, Avro, and ORC files, including `.gz` and `.snappy` compressed variants
+- rendering Markdown previews in the browser with a switch between rendered and raw text modes; rendered mode always loads the full document and ignores the line-count selector
 - creating temporary Iceberg sample data under `iceberg/` inside the current browser prefix in the connected storage target when running in local development mode and only when the current folder is empty
 - creating a directory inside the current browser prefix across all supported providers
 - downloading files through a local proxy
