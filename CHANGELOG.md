@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.10.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.10.0) - 2026-03-26
+
+### Changes
+- feat(browser): add full child-folder deletion flow (0012042)
+- chore(changelog): update for v0.9.1 [skip ci] (32e8da6)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.9.1...v0.10.0)
+
+
 ## [v0.9.1](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.9.1) - 2026-03-26
 
 ### Changes
