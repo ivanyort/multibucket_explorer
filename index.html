@@ -158,93 +158,98 @@
 
           <div class="toolbar">
             <div class="toolbar-context">
-              <span class="toolbar-label" data-i18n="browser.currentPrefix">Current prefix</span>
-              <nav id="currentPrefix" class="current-prefix" aria-label="Current prefix" data-i18n-aria-label="browser.currentPrefix">/</nav>
+              <div class="toolbar-top-row">
+                <div class="prefix-summary">
+                  <span class="prefix-summary-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                      <path d="M3 6.75A2.25 2.25 0 0 1 5.25 4.5h4.14c.6 0 1.17.24 1.59.66l1.11 1.09h6.66A2.25 2.25 0 0 1 21 8.5v8.25A2.25 2.25 0 0 1 18.75 19H5.25A2.25 2.25 0 0 1 3 16.75zM4.5 8.5v8.25c0 .41.34.75.75.75h13.5c.41 0 .75-.34.75-.75V8.5a.75.75 0 0 0-.75-.75h-6.97l-1.55-1.54a.75.75 0 0 0-.53-.22H5.25a.75.75 0 0 0-.75.75"></path>
+                    </svg>
+                  </span>
+                  <div class="prefix-summary-text">
+                    <span class="toolbar-label" data-i18n="browser.currentPrefix">Current prefix</span>
+                    <nav id="currentPrefix" class="current-prefix" aria-label="Current prefix" data-i18n-aria-label="browser.currentPrefix">/</nav>
+                  </div>
+                </div>
+                <div class="toolbar-actions">
+                  <button
+                    id="createDirectoryButton"
+                    class="ghost-button toolbar-action-button"
+                    type="button"
+                    disabled
+                  >
+                    Create directory
+                  </button>
+                  <button
+                    id="toggleIcebergModeButton"
+                    class="ghost-button"
+                    type="button"
+                    hidden
+                    disabled
+                  >
+                    Open as Iceberg
+                  </button>
+                  <button
+                    id="seedIcebergButton"
+                    class="ghost-button"
+                    type="button"
+                    data-i18n="seed.button"
+                    disabled
+                  >
+                    Create Iceberg samples
+                  </button>
+                  <button
+                    id="refreshButton"
+                    class="ghost-button icon-button toolbar-utility-button"
+                    type="button"
+                    aria-label="Refresh"
+                    title="Refresh"
+                    data-i18n-aria-label="browser.refresh"
+                    data-i18n-title="browser.refresh"
+                    disabled
+                  >
+                    <span aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M12 5.25a6.75 6.75 0 1 0 6.53 8.47 1.125 1.125 0 0 1 2.18.56A9 9 0 1 1 18.4 6.47V4.88a1.125 1.125 0 1 1 2.25 0V9a1.125 1.125 0 0 1-1.125 1.125h-4.13a1.125 1.125 0 1 1 0-2.25h1.42A6.72 6.72 0 0 0 12 5.25"></path>
+                      </svg>
+                    </span>
+                  </button>
+                  <button
+                    id="clearPrefixButton"
+                    class="danger-button icon-button toolbar-utility-button"
+                    type="button"
+                    aria-label="Clear prefix"
+                    title="Clear prefix"
+                    data-i18n-aria-label="browser.clearPrefix"
+                    data-i18n-title="browser.clearPrefix"
+                    disabled
+                  >
+                    <span aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M9 3.75A2.25 2.25 0 0 0 6.75 6v.75H4.88a1.125 1.125 0 1 0 0 2.25h.55l.78 9.14a2.25 2.25 0 0 0 2.24 2.06h7.1a2.25 2.25 0 0 0 2.24-2.06l.78-9.14h.55a1.125 1.125 0 1 0 0-2.25h-1.88V6A2.25 2.25 0 0 0 15 3.75zm6 3H9V6h6zM10.88 10.5A1.125 1.125 0 0 1 12 11.63v4.5a1.125 1.125 0 1 1-2.25 0v-4.5A1.125 1.125 0 0 1 10.88 10.5m3.38 0a1.125 1.125 0 0 1 1.12 1.13v4.5a1.125 1.125 0 1 1-2.25 0v-4.5a1.125 1.125 0 0 1 1.13-1.13"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </div>
+              </div>
               <div id="objectFilterWrap" class="browser-filter" hidden>
-                <label class="browser-filter-label" for="objectFilterInput" data-i18n="browser.filterLabel">Filter items</label>
-                <div class="browser-filter-input-row">
+                <label class="sr-only" for="objectFilterInput" data-i18n="browser.filterLabel">Filter items</label>
+                <div class="browser-filter-input-shell">
+                  <span class="browser-filter-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                      <path d="M10.5 4.5a6 6 0 1 0 3.79 10.65l3.53 3.53a.75.75 0 1 0 1.06-1.06l-3.53-3.53A6 6 0 0 0 10.5 4.5m-4.5 6a4.5 4.5 0 1 1 9 0a4.5 4.5 0 0 1-9 0"></path>
+                    </svg>
+                  </span>
                   <input
                     id="objectFilterInput"
+                    class="browser-filter-input"
                     type="text"
                     spellcheck="false"
                     autocomplete="off"
                     placeholder="Type to filter folders and files"
                     data-i18n-placeholder="browser.filterPlaceholder"
                   />
-                  <button
-                    id="clearObjectFilterButton"
-                    class="ghost-button"
-                    type="button"
-                    aria-label="Clear filter"
-                    title="Clear filter"
-                    data-i18n="browser.clearFilter"
-                    data-i18n-aria-label="browser.clearFilter"
-                    data-i18n-title="browser.clearFilter"
-                  >
-                    Clear filter
-                  </button>
                 </div>
               </div>
-            </div>
-            <div class="toolbar-actions">
-              <button
-                id="createDirectoryButton"
-                class="ghost-button"
-                type="button"
-                disabled
-              >
-                Create directory
-              </button>
-              <button
-                id="toggleIcebergModeButton"
-                class="ghost-button"
-                type="button"
-                hidden
-                disabled
-              >
-                Open as Iceberg
-              </button>
-              <button
-                id="seedIcebergButton"
-                class="ghost-button"
-                type="button"
-                data-i18n="seed.button"
-                disabled
-              >
-                Create Iceberg samples
-              </button>
-              <button
-                id="refreshButton"
-                class="ghost-button icon-button"
-                type="button"
-                aria-label="Refresh"
-                title="Refresh"
-                data-i18n-aria-label="browser.refresh"
-                data-i18n-title="browser.refresh"
-                disabled
-              >
-                <span aria-hidden="true">
-                  <svg viewBox="0 0 24 24" focusable="false">
-                    <path d="M12 5.25a6.75 6.75 0 1 0 6.53 8.47 1.125 1.125 0 0 1 2.18.56A9 9 0 1 1 18.4 6.47V4.88a1.125 1.125 0 1 1 2.25 0V9a1.125 1.125 0 0 1-1.125 1.125h-4.13a1.125 1.125 0 1 1 0-2.25h1.42A6.72 6.72 0 0 0 12 5.25"></path>
-                  </svg>
-                </span>
-              </button>
-              <button
-                id="clearPrefixButton"
-                class="danger-button icon-button"
-                type="button"
-                aria-label="Clear prefix"
-                title="Clear prefix"
-                data-i18n-aria-label="browser.clearPrefix"
-                data-i18n-title="browser.clearPrefix"
-                disabled
-              >
-                <span aria-hidden="true">
-                  <svg viewBox="0 0 24 24" focusable="false">
-                    <path d="M9 3.75A2.25 2.25 0 0 0 6.75 6v.75H4.88a1.125 1.125 0 1 0 0 2.25h.55l.78 9.14a2.25 2.25 0 0 0 2.24 2.06h7.1a2.25 2.25 0 0 0 2.24-2.06l.78-9.14h.55a1.125 1.125 0 1 0 0-2.25h-1.88V6A2.25 2.25 0 0 0 15 3.75zm6 3H9V6h6zM10.88 10.5A1.125 1.125 0 0 1 12 11.63v4.5a1.125 1.125 0 1 1-2.25 0v-4.5A1.125 1.125 0 0 1 10.88 10.5m3.38 0a1.125 1.125 0 0 1 1.12 1.13v4.5a1.125 1.125 0 1 1-2.25 0v-4.5a1.125 1.125 0 0 1 1.13-1.13"></path>
-                  </svg>
-                </span>
-              </button>
             </div>
           </div>
 
@@ -254,21 +259,32 @@
         </div>
 
         <div class="panel preview-panel">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker" data-i18n="preview.kicker">File Preview</p>
-              <h2 data-i18n="preview.title">Preview</h2>
+          <div class="panel-header preview-header">
+            <div class="preview-hero">
+              <div class="preview-hero-main">
+                <span class="preview-hero-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M12 5.25c-4.54 0-8.38 2.73-9.94 6.75C3.62 16.02 7.46 18.75 12 18.75s8.38-2.73 9.94-6.75C20.38 7.98 16.54 5.25 12 5.25m0 12a5.25 5.25 0 1 1 0-10.5a5.25 5.25 0 0 1 0 10.5m0-2.25a3 3 0 1 0 0-6a3 3 0 0 0 0 6"></path>
+                  </svg>
+                </span>
+                <div class="preview-hero-copy">
+                  <div class="preview-hero-title-row">
+                    <span id="previewFileLabel" class="preview-file-label">No file selected.</span>
+                  </div>
+                  <div id="previewBadges" class="preview-badges" hidden></div>
+                </div>
+              </div>
             </div>
             <div class="preview-actions">
               <label class="preview-limit-control">
-                <span data-i18n="preview.view">View</span>
+                <span class="sr-only" data-i18n="preview.view">View</span>
                 <select id="previewMode">
                   <option value="table" selected data-i18n="preview.table">Table</option>
                   <option value="raw" data-i18n="preview.raw">Raw</option>
                 </select>
               </label>
               <label class="preview-limit-control">
-                <span data-i18n="preview.rows">Rows</span>
+                <span class="sr-only" data-i18n="preview.rows">Rows</span>
                 <select id="previewRowLimit">
                   <option value="10" selected>10</option>
                   <option value="25">25</option>
@@ -278,18 +294,31 @@
                 </select>
               </label>
               <label class="preview-limit-control">
-                <span data-i18n="preview.order">Order</span>
+                <span class="sr-only" data-i18n="preview.order">Order</span>
                 <select id="previewRowOrder">
                   <option value="normal" selected data-i18n="preview.normal">Normal</option>
                   <option value="reverse" data-i18n="preview.reverse">Newest first</option>
                 </select>
               </label>
               <label class="preview-limit-control" id="icebergSnapshotControl" hidden>
-                <span data-i18n="preview.snapshot">Snapshot</span>
+                <span class="sr-only" data-i18n="preview.snapshot">Snapshot</span>
                 <select id="icebergSnapshotSelect" aria-label="Iceberg snapshot"></select>
               </label>
-              <button id="downloadButton" class="ghost-button" disabled data-i18n="preview.download">
-                Download file
+              <button
+                id="downloadButton"
+                class="ghost-button icon-button preview-download-button"
+                type="button"
+                aria-label="Download file"
+                title="Download file"
+                data-i18n-aria-label="preview.download"
+                data-i18n-title="preview.download"
+                disabled
+              >
+                <span aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M12 3.75a.75.75 0 0 1 .75.75v8.69l2.47-2.47a.75.75 0 1 1 1.06 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0l-3.75-3.75a.75.75 0 0 1 1.06-1.06l2.47 2.47V4.5a.75.75 0 0 1 .75-.75M5.25 15a.75.75 0 0 1 .75.75v1.5c0 .41.34.75.75.75h10.5c.41 0 .75-.34.75-.75v-1.5a.75.75 0 0 1 1.5 0v1.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 17.25v-1.5a.75.75 0 0 1 .75-.75"></path>
+                  </svg>
+                </span>
               </button>
             </div>
           </div>

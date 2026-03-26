@@ -15,6 +15,7 @@ const state = {
   objectItems: [],
   objectFilter: "",
   objectFilterContextKey: "",
+  previewSummary: null,
   sort: {
     column: "name",
     direction: "asc",
@@ -106,8 +107,9 @@ const translations = {
       icebergSummary: "Iceberg table detected. Latest snapshot: {snapshotId}. Data files: {dataFileCount}. Format: {dataFormat}.",
     },
     preview: {
-      kicker: "File Preview", title: "Preview", view: "View", table: "Table", raw: "Raw", rows: "Rows", all: "All",
+      kicker: "File Preview", title: "Preview", view: "View", table: "Table", raw: "Text", rows: "Rows", all: "All",
       order: "Order", normal: "Normal", reverse: "Newest first", snapshot: "Snapshot", download: "Download file",
+      badgeColumns: "{count} col", badgeRows: "{count} rows",
       selectCompatible: "Select a compatible `.csv`, `.json`, `.dfm`, `.md`, `.txt`, `.parquet`, `.avro`, `.orc`, `.gz`, or `.snappy` file to preview.",
       noFileSelected: "No file selected.", reading: "Reading file...", loadingFor: "Loading preview for {key}...",
       unsupportedFormat: "Unsupported preview format: {key}",
@@ -244,8 +246,9 @@ const translations = {
       icebergSummary: "Tabela Iceberg detectada. Snapshot atual: {snapshotId}. Arquivos de dados: {dataFileCount}. Formato: {dataFormat}.",
     },
     preview: {
-      kicker: "Pré-visualização de Arquivo", title: "Prévia", view: "Visualização", table: "Tabela", raw: "Bruto", rows: "Linhas", all: "Todas",
-      order: "Ordem", normal: "Normal", reverse: "Mais novos primeiro", snapshot: "Snapshot", download: "Baixar arquivo",
+      kicker: "Pré-visualização de Arquivo", title: "Prévia", view: "Visualização", table: "Tabela", raw: "Texto", rows: "Linhas", all: "Todas",
+      order: "Ordem", normal: "Normal", reverse: "Invertida", snapshot: "Snapshot", download: "Baixar arquivo",
+      badgeColumns: "{count} col", badgeRows: "{count} linhas",
       selectCompatible: "Selecione um arquivo compatível `.csv`, `.json`, `.dfm`, `.md`, `.txt`, `.parquet`, `.avro`, `.orc`, `.gz` ou `.snappy` para visualizar.",
       noFileSelected: "Nenhum arquivo selecionado.", reading: "Lendo arquivo...", loadingFor: "Carregando prévia de {key}...",
       unsupportedFormat: "Formato de prévia não suportado: {key}",
@@ -358,8 +361,9 @@ const translations = {
       icebergSummary: "Tabla Iceberg detectada. Snapshot actual: {snapshotId}. Archivos de datos: {dataFileCount}. Formato: {dataFormat}.",
     },
     preview: {
-      kicker: "Vista Previa de Archivo", title: "Vista previa", view: "Vista", table: "Tabla", raw: "Raw", rows: "Filas", all: "Todas",
+      kicker: "Vista Previa de Archivo", title: "Vista previa", view: "Vista", table: "Tabla", raw: "Texto", rows: "Filas", all: "Todas",
       order: "Orden", normal: "Normal", reverse: "Más nuevos primero", snapshot: "Snapshot", download: "Descargar archivo",
+      badgeColumns: "{count} col", badgeRows: "{count} filas",
       selectCompatible: "Selecciona un archivo compatible `.csv`, `.json`, `.dfm`, `.md`, `.txt`, `.parquet`, `.avro`, `.orc`, `.gz` o `.snappy` para previsualizar.",
       noFileSelected: "Ningún archivo seleccionado.", reading: "Leyendo archivo...", loadingFor: "Cargando vista previa de {key}...",
       unsupportedFormat: "Formato de vista previa no compatible: {key}",
@@ -472,8 +476,9 @@ const translations = {
       icebergSummary: "Tabella Iceberg rilevata. Snapshot corrente: {snapshotId}. File dati: {dataFileCount}. Formato: {dataFormat}.",
     },
     preview: {
-      kicker: "Anteprima File", title: "Anteprima", view: "Vista", table: "Tabella", raw: "Raw", rows: "Righe", all: "Tutte",
+      kicker: "Anteprima File", title: "Anteprima", view: "Vista", table: "Tabella", raw: "Testo", rows: "Righe", all: "Tutte",
       order: "Ordine", normal: "Normale", reverse: "Più recenti prima", snapshot: "Snapshot", download: "Scarica file",
+      badgeColumns: "{count} col", badgeRows: "{count} righe",
       selectCompatible: "Seleziona un file compatibile `.csv`, `.json`, `.dfm`, `.md`, `.txt`, `.parquet`, `.avro`, `.orc`, `.gz` o `.snappy` da visualizzare.",
       noFileSelected: "Nessun file selezionato.", reading: "Lettura file...", loadingFor: "Caricamento anteprima di {key}...",
       unsupportedFormat: "Formato di anteprima non supportato: {key}",
@@ -561,13 +566,14 @@ const elements = {
   currentPrefix: document.querySelector("#currentPrefix"),
   objectFilterWrap: document.querySelector("#objectFilterWrap"),
   objectFilterInput: document.querySelector("#objectFilterInput"),
-  clearObjectFilterButton: document.querySelector("#clearObjectFilterButton"),
   toggleIcebergModeButton: document.querySelector("#toggleIcebergModeButton"),
   createDirectoryButton: document.querySelector("#createDirectoryButton"),
   seedIcebergButton: document.querySelector("#seedIcebergButton"),
   refreshButton: document.querySelector("#refreshButton"),
   clearPrefixButton: document.querySelector("#clearPrefixButton"),
   previewMeta: document.querySelector("#previewMeta"),
+  previewFileLabel: document.querySelector("#previewFileLabel"),
+  previewBadges: document.querySelector("#previewBadges"),
   previewTableWrap: document.querySelector("#previewTableWrap"),
   previewMode: document.querySelector("#previewMode"),
   previewRowLimit: document.querySelector("#previewRowLimit"),
@@ -714,7 +720,6 @@ elements.clearPrefixButton.addEventListener("click", clearCurrentPrefix);
 elements.objectFilterInput?.addEventListener("input", () => {
   setObjectFilter(elements.objectFilterInput.value);
 });
-elements.clearObjectFilterButton?.addEventListener("click", clearObjectFilter);
 elements.downloadButton.addEventListener("click", downloadSelectedObject);
 elements.previewMode.addEventListener("change", () => {
   syncPreviewModeAvailability(state.selectedKey);
@@ -813,8 +818,9 @@ function applyLanguage() {
     renderObjectPlaceholder(t("browser.connectToList"));
   }
   if (!state.selectedKey && elements.previewTableWrap.classList.contains("empty-state")) {
-    resetPreview(t("preview.selectCompatible"), false, t("preview.noFileSelected"));
+    resetPreview(t("preview.noFileSelected"), false, t("preview.noFileSelected"));
   }
+  syncPreviewHeader();
   renderCurrentPrefix();
   syncIcebergModeToggle();
   syncIcebergSnapshotControl();
@@ -1082,7 +1088,7 @@ async function loadObjects(prefix) {
   syncObjectFilterControls();
   syncDestructiveControls();
   renderObjectPlaceholder(t("browser.loading"));
-  resetPreview(t("preview.selectCompatible"));
+  resetPreview(t("preview.noFileSelected"));
 
   try {
     const response = await apiFetch(
@@ -1383,6 +1389,11 @@ async function toggleIcebergMode() {
 async function previewObject(key) {
   state.selectedKey = key;
   elements.downloadButton.disabled = false;
+  state.previewSummary = {
+    fileLabel: getPreviewDisplayLabel(key),
+    badges: [],
+  };
+  syncPreviewHeader();
 
   if (!isPreviewableFile(key)) {
     resetPreview(
@@ -1394,7 +1405,8 @@ async function previewObject(key) {
   }
 
   syncPreviewModeAvailability(key);
-  elements.previewMeta.textContent = t("preview.loadingFor", { key });
+  elements.previewMeta.textContent = "";
+  elements.previewMeta.hidden = true;
   elements.previewTableWrap.className = "preview-table-wrap empty-state";
   elements.previewTableWrap.textContent = t("preview.reading");
 
@@ -1402,38 +1414,35 @@ async function previewObject(key) {
     const rowLimit = getPreviewRowLimit();
     const rowOrder = getPreviewRowOrder();
     const previewMode = getPreviewMode(key);
+    let displayedLineCount = 0;
     const response = await apiFetch(
       `/api/preview?sessionId=${encodeURIComponent(state.sessionId)}&key=${encodeURIComponent(key)}&limit=${encodeURIComponent(rowLimit)}&order=${encodeURIComponent(rowOrder)}&mode=${encodeURIComponent(previewMode)}`,
     );
 
     if (response.previewMode === "raw") {
       renderPreviewRaw(response.rawText ?? "", response.previewFormat ?? "");
+      displayedLineCount = response.lineCount ?? 0;
     } else {
       const preview = buildPreviewModel(
         response.rows ?? [],
         response.metadataColumns ?? [],
         response.order ?? rowOrder,
+        {
+          forceGeneratedHeader: isCsvPreviewFormat(response.previewFormat ?? "") && (response.metadataColumns?.length ?? 0) === 0,
+        },
       );
       renderPreviewTable(preview);
+      displayedLineCount = preview.bodyRows.length;
     }
-    const dfmSuffix =
-      response.previewFormat === "csv" || response.previewFormat === "csv.gz" || response.previewFormat === "csv.snappy"
-        ? response.dfmKey
-          ? t("preview.dfmFound", { dfmKey: response.dfmKey, count: response.metadataColumns?.length ?? 0 })
-          : t("preview.dfmNotFound")
-        : "";
-    const modeSuffix = response.previewMode === "raw" ? ` · ${t("preview.rawModeSuffix")}` : "";
-    const formatSuffix = response.previewFormat ? ` · ${t("preview.formatSuffix", { format: response.previewFormat })}` : "";
-    const orderLabel = getPreviewRowOrder() === "reverse" ? ` · ${t("preview.reverseOrder")}` : "";
-    elements.previewMeta.textContent =
-      t("preview.showingRows", {
-        key,
-        count: response.lineCount ?? 0,
-        orderSuffix: orderLabel,
-        modeSuffix,
-        formatSuffix,
-        dfmSuffix,
-      });
+    state.previewSummary = {
+      fileLabel: getPreviewDisplayLabel(key),
+      badges: buildPreviewBadges({
+        format: response.previewFormat ?? "",
+        columnCount: response.metadataColumns?.length ?? 0,
+        lineCount: displayedLineCount,
+      }),
+    };
+    syncPreviewHeader();
   } catch (error) {
     resetPreview(getErrorMessage(error), true, t("preview.failed"));
   }
@@ -1445,7 +1454,13 @@ async function previewIcebergTable() {
   }
 
   const snapshotId = getSelectedIcebergSnapshotId();
-  elements.previewMeta.textContent = t("preview.loadingFor", { key: state.icebergTable.tablePrefix });
+  state.previewSummary = {
+    fileLabel: getPreviewDisplayLabel(state.icebergTable.tablePrefix),
+    badges: [],
+  };
+  syncPreviewHeader();
+  elements.previewMeta.textContent = "";
+  elements.previewMeta.hidden = true;
   elements.previewTableWrap.className = "preview-table-wrap empty-state";
   elements.previewTableWrap.textContent = t("preview.reading");
 
@@ -1460,6 +1475,9 @@ async function previewIcebergTable() {
       response.rows ?? [],
       response.metadataColumns ?? [],
       response.order ?? rowOrder,
+      {
+        forceGeneratedHeader: false,
+      },
     );
     state.icebergTable = {
       ...state.icebergTable,
@@ -1469,14 +1487,15 @@ async function previewIcebergTable() {
     state.icebergSnapshotId = String(response.icebergMeta?.snapshotId ?? snapshotId);
     syncIcebergSnapshotControl();
     renderPreviewTable(preview);
-    elements.previewMeta.textContent = t("preview.showingRows", {
-      key: state.icebergTable.tablePrefix,
-      count: response.lineCount ?? 0,
-      orderSuffix: getPreviewRowOrder() === "reverse" ? ` · ${t("preview.reverseOrder")}` : "",
-      modeSuffix: "",
-      formatSuffix: ` · ${t("preview.formatSuffix", { format: "iceberg" })}${t("preview.snapshotSuffix", { snapshotId: state.icebergSnapshotId })}`,
-      dfmSuffix: "",
-    });
+    state.previewSummary = {
+      fileLabel: getPreviewDisplayLabel(state.icebergTable.tablePrefix),
+      badges: buildPreviewBadges({
+        format: "iceberg",
+        columnCount: response.metadataColumns?.length ?? 0,
+        lineCount: preview.bodyRows.length,
+      }),
+    };
+    syncPreviewHeader();
   } catch (error) {
     resetPreview(getErrorMessage(error), true, t("preview.failed"));
   }
@@ -1500,15 +1519,19 @@ function getSelectedIcebergSnapshotId() {
 function syncIcebergSnapshotControl() {
   const hasSnapshots = state.browseMode === "iceberg" && Array.isArray(state.icebergTable?.snapshots) && state.icebergTable.snapshots.length > 0;
   elements.icebergSnapshotControl.hidden = !hasSnapshots;
+  elements.icebergSnapshotControl.style.display = hasSnapshots ? "" : "none";
+  elements.icebergSnapshotControl.setAttribute("aria-hidden", hasSnapshots ? "false" : "true");
 
   if (!hasSnapshots) {
     elements.icebergSnapshotSelect.innerHTML = "";
     elements.icebergSnapshotSelect.disabled = true;
+    elements.icebergSnapshotSelect.hidden = true;
     return;
   }
 
   const selectedSnapshotId = resolveIcebergSnapshotId(state.icebergTable);
   elements.icebergSnapshotSelect.innerHTML = "";
+  elements.icebergSnapshotSelect.hidden = false;
 
   state.icebergTable.snapshots.forEach((snapshot) => {
     const option = document.createElement("option");
@@ -1550,7 +1573,7 @@ function renderPreviewTable(preview) {
 
   preview.headerRow.forEach((column, index) => {
     const th = document.createElement("th");
-    th.textContent = column || t("table.column", { index: index + 1 });
+    th.textContent = column || getGeneratedColumnLabel(index + 1);
     headerTr.appendChild(th);
   });
 
@@ -1602,7 +1625,20 @@ function shouldRenderJsonTree(previewFormat, rawText) {
     return false;
   }
 
-  return ["dfm", "dfm.gz", "dfm.snappy"].includes(previewFormat);
+  return [
+    "dfm",
+    "dfm.gz",
+    "dfm.snappy",
+    "json",
+    "json.gz",
+    "json.snappy",
+    "jsonl",
+    "jsonl.gz",
+    "jsonl.snappy",
+    "ndjson",
+    "ndjson.gz",
+    "ndjson.snappy",
+  ].includes(previewFormat);
 }
 
 function parseRawJsonPreview(rawText, previewFormat) {
@@ -1613,6 +1649,12 @@ function parseRawJsonPreview(rawText, previewFormat) {
   try {
     return JSON.parse(rawText);
   } catch {
+    const objectSequence = parseJsonObjectSequence(rawText);
+
+    if (objectSequence.length > 1) {
+      return objectSequence;
+    }
+
     const lines = splitJsonLines(rawText);
 
     if (lines.length > 1) {
@@ -1632,6 +1674,64 @@ function splitJsonLines(rawText) {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+function parseJsonObjectSequence(rawText) {
+  const documents = [];
+  let buffer = "";
+  let depth = 0;
+  let insideString = false;
+  let escaping = false;
+
+  for (const char of rawText) {
+    if (!buffer && /\s/.test(char)) {
+      continue;
+    }
+
+    buffer += char;
+
+    if (insideString) {
+      if (escaping) {
+        escaping = false;
+        continue;
+      }
+
+      if (char === "\\") {
+        escaping = true;
+        continue;
+      }
+
+      if (char === "\"") {
+        insideString = false;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      insideString = true;
+      continue;
+    }
+
+    if (char === "{" || char === "[") {
+      depth += 1;
+      continue;
+    }
+
+    if (char === "}" || char === "]") {
+      depth -= 1;
+
+      if (depth === 0) {
+        documents.push(JSON.parse(buffer.trim()));
+        buffer = "";
+      }
+    }
+  }
+
+  if (buffer.trim()) {
+    throw new Error("Raw preview contains trailing partial JSON content.");
+  }
+
+  return documents;
 }
 
 function renderJsonTreeNode(value, depth, keyName = "") {
@@ -1735,7 +1835,7 @@ function renderJsonValue(text, className) {
   return value;
 }
 
-function buildPreviewModel(rows, metadataColumns = [], rowOrder = "normal") {
+function buildPreviewModel(rows, metadataColumns = [], rowOrder = "normal", options = {}) {
   if (!rows.length) {
     return {
       headerRow: [],
@@ -1747,10 +1847,24 @@ function buildPreviewModel(rows, metadataColumns = [], rowOrder = "normal") {
     rows.reduce((currentMax, row) => Math.max(currentMax, row.length), 0),
     metadataColumns.length,
   );
+  const forceGeneratedHeader = options.forceGeneratedHeader === true;
 
   if (metadataColumns.length) {
+    const normalizedHeaderRow = normalizeHeaderRow(metadataColumns, maxColumns);
+    const normalizedBodyRows = rows.map((row) => normalizeRowLength(row, maxColumns));
+    const bodyRows = normalizedBodyRows.length && isArtificialMetadataHeaderRow(normalizedBodyRows[0], normalizedHeaderRow)
+      ? normalizedBodyRows.slice(1)
+      : normalizedBodyRows;
+
     return {
-      headerRow: normalizeHeaderRow(metadataColumns, maxColumns),
+      headerRow: normalizedHeaderRow,
+      bodyRows,
+    };
+  }
+
+  if (forceGeneratedHeader) {
+    return {
+      headerRow: createGeneratedHeader(maxColumns),
       bodyRows: rows.map((row) => normalizeRowLength(row, maxColumns)),
     };
   }
@@ -1779,20 +1893,53 @@ function buildPreviewModel(rows, metadataColumns = [], rowOrder = "normal") {
 }
 
 function createGeneratedHeader(columnCount) {
-  return Array.from({ length: columnCount }, (_, index) => t("table.column", { index: index + 1 }));
+  return Array.from({ length: columnCount }, (_, index) => getGeneratedColumnLabel(index + 1));
 }
 
 function normalizeHeaderRow(headerRow, columnCount) {
-  return Array.from({ length: columnCount }, (_, index) => headerRow[index] || t("table.column", { index: index + 1 }));
+  return Array.from({ length: columnCount }, (_, index) => headerRow[index] || getGeneratedColumnLabel(index + 1));
 }
 
 function normalizeRowLength(row, columnCount) {
   return Array.from({ length: columnCount }, (_, index) => row[index] ?? "");
 }
 
+function isArtificialMetadataHeaderRow(row, headerRow) {
+  if (!Array.isArray(row) || !Array.isArray(headerRow) || row.length !== headerRow.length) {
+    return false;
+  }
+
+  const matches = row.reduce((count, value, index) => {
+    return count + (normalizeHeaderComparisonValue(value) === normalizeHeaderComparisonValue(headerRow[index]) ? 1 : 0);
+  }, 0);
+
+  return matches > 0 && matches === row.length;
+}
+
+function normalizeHeaderComparisonValue(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/^\ufeff/, "")
+    .replace(/^["']+|["']+$/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/[^a-z0-9]+/gi, "")
+    .toLocaleLowerCase();
+}
+
+function getGeneratedColumnLabel(index) {
+  return `col_${String(index).padStart(4, "0")}`;
+}
+
+function isCsvPreviewFormat(format) {
+  return typeof format === "string" && (format === "csv" || format === "csv.gz" || format === "csv.snappy");
+}
+
 function resetPreview(message, isError = false, bodyMessage) {
+  state.previewSummary = null;
+  syncPreviewHeader();
   elements.previewMeta.className = isError ? "preview-meta error-text" : "preview-meta muted";
-  elements.previewMeta.textContent = message;
+  elements.previewMeta.textContent = "";
+  elements.previewMeta.hidden = true;
   elements.previewTableWrap.className = "preview-table-wrap empty-state";
   elements.previewTableWrap.textContent =
     bodyMessage ?? (isError ? t("preview.failed") : t("preview.noFileSelected"));
@@ -2026,7 +2173,7 @@ async function clearCurrentPrefix() {
 
     state.selectedKey = "";
     elements.downloadButton.disabled = true;
-    resetPreview(t("preview.selectCompatible"));
+    resetPreview(t("preview.noFileSelected"));
     setConnectionStatus(
       t("delete.deleted", { count: response.deletedCount ?? 0, prefix: state.prefix }),
     );
@@ -2082,7 +2229,7 @@ async function deleteObjectFile(key) {
       state.selectedKey = "";
       elements.downloadButton.disabled = true;
       syncPreviewModeAvailability("");
-      resetPreview(t("preview.selectCompatible"));
+      resetPreview(t("preview.noFileSelected"));
     }
 
     setConnectionStatus(t("delete.fileDeleted", { key }));
@@ -2141,7 +2288,7 @@ async function deleteObjectFolder(prefix) {
       state.selectedKey = "";
       elements.downloadButton.disabled = true;
       syncPreviewModeAvailability("");
-      resetPreview(t("preview.selectCompatible"));
+      resetPreview(t("preview.noFileSelected"));
     }
 
     setConnectionStatus(t("delete.folderDeleted", { prefix }));
@@ -2513,16 +2660,13 @@ function syncCreateDirectoryControls() {
   const enabled = Boolean(state.sessionId) && state.browseMode !== "iceberg";
   elements.createDirectoryButton.disabled = !enabled;
   elements.createDirectoryButton.hidden = !enabled;
-  elements.createDirectoryButton.textContent = t("browser.createDirectory");
+  elements.createDirectoryButton.innerHTML = `${createDirectoryIconSvg()}<span>${t("browser.createDirectory")}</span>`;
 }
 
 function syncObjectFilterControls() {
   const enabled = Boolean(state.sessionId) && state.browseMode !== "iceberg";
   elements.objectFilterWrap.hidden = !enabled;
   elements.objectFilterInput.disabled = !enabled;
-  elements.clearObjectFilterButton.hidden = !enabled;
-  elements.clearObjectFilterButton.disabled = !enabled || !state.objectFilter;
-  elements.clearObjectFilterButton.textContent = t("browser.clearFilter");
   elements.objectFilterInput.value = state.objectFilter;
 }
 
@@ -3002,17 +3146,57 @@ function clearActiveConnectionState() {
   state.objectItems = [];
   state.objectFilter = "";
   state.objectFilterContextKey = "";
+  state.previewSummary = null;
   elements.refreshButton.disabled = true;
   elements.clearPrefixButton.disabled = true;
   elements.downloadButton.disabled = true;
   renderCurrentPrefix();
   renderObjectPlaceholder(t("browser.connectToList"));
-  resetPreview(t("preview.selectCompatible"), false, t("preview.noFileSelected"));
+  resetPreview(t("preview.noFileSelected"), false, t("preview.noFileSelected"));
   syncIcebergModeToggle();
   syncIcebergSnapshotControl();
   syncObjectFilterControls();
   syncDestructiveControls();
   syncWorkspaceVisibility();
+}
+
+function getPreviewDisplayLabel(key) {
+  if (!key) {
+    return t("preview.noFileSelected");
+  }
+
+  return key.split("/").filter(Boolean).at(-1) || key;
+}
+
+function buildPreviewBadges({ format = "", columnCount = 0, lineCount = 0 }) {
+  const badges = [];
+
+  if (format) {
+    badges.push(String(format).toUpperCase());
+  }
+  if (columnCount > 0) {
+    badges.push(t("preview.badgeColumns", { count: columnCount }));
+  }
+  if (lineCount > 0) {
+    badges.push(t("preview.badgeRows", { count: lineCount }));
+  }
+
+  return badges;
+}
+
+function syncPreviewHeader() {
+  elements.previewFileLabel.textContent = state.previewSummary?.fileLabel || t("preview.noFileSelected");
+  elements.previewBadges.innerHTML = "";
+
+  const badges = Array.isArray(state.previewSummary?.badges) ? state.previewSummary.badges : [];
+  elements.previewBadges.hidden = badges.length === 0;
+
+  badges.forEach((badge) => {
+    const item = document.createElement("span");
+    item.className = "preview-badge";
+    item.textContent = badge;
+    elements.previewBadges.appendChild(item);
+  });
 }
 
 function lockStoredCredentials() {
@@ -3451,6 +3635,14 @@ function trashIconSvg() {
   return `
     <svg viewBox="0 0 24 24" focusable="false">
       <path d="M9.75 3A2.25 2.25 0 0 0 7.5 5.25V6H4.75a.75.75 0 0 0 0 1.5h.58l.71 10.05A2.25 2.25 0 0 0 8.28 19.5h7.44a2.25 2.25 0 0 0 2.24-1.95l.71-10.05h.58a.75.75 0 0 0 0-1.5H16.5v-.75A2.25 2.25 0 0 0 14.25 3h-4.5Zm0 1.5h4.5a.75.75 0 0 1 .75.75V6H9V5.25a.75.75 0 0 1 .75-.75ZM7.54 7.5l.7 9.94a.75.75 0 0 0 .74.56h7.04a.75.75 0 0 0 .74-.56l.7-9.94H7.54Zm2.71 1.75a.75.75 0 0 1 .75.75v5a.75.75 0 0 1-1.5 0v-5a.75.75 0 0 1 .75-.75Zm3.5 0a.75.75 0 0 1 .75.75v5a.75.75 0 0 1-1.5 0v-5a.75.75 0 0 1 .75-.75Z"></path>
+    </svg>
+  `;
+}
+
+function createDirectoryIconSvg() {
+  return `
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="M3 6.75A2.25 2.25 0 0 1 5.25 4.5h4.14c.6 0 1.17.24 1.59.66l1.11 1.09h6.66A2.25 2.25 0 0 1 21 8.5v8.25A2.25 2.25 0 0 1 18.75 19H5.25A2.25 2.25 0 0 1 3 16.75zM12 9.25a.75.75 0 0 1 .75.75v1.25H14a.75.75 0 1 1 0 1.5h-1.25V14a.75.75 0 1 1-1.5 0v-1.25H10a.75.75 0 0 1 0-1.5h1.25V10a.75.75 0 0 1 .75-.75m-6.75-.75v8.25c0 .41.34.75.75.75h13.5c.41 0 .75-.34.75-.75V8.5a.75.75 0 0 0-.75-.75h-6.97l-1.55-1.54a.75.75 0 0 0-.53-.22H5.25a.75.75 0 0 0-.75.75"></path>
     </svg>
   `;
 }

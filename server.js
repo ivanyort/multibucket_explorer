@@ -3546,7 +3546,7 @@ function createCsvCollector(maxRows, options = {}) {
     ? options.quoteChar
     : '"';
   const order = options.order === "reverse" ? "reverse" : "normal";
-  const targetRows = order === "normal" && maxRows !== null ? maxRows + 1 : null;
+  const targetRows = order === "normal" && maxRows !== null ? maxRows : null;
 
   return {
     delimiter,
