@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.8.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.8.0) - 2026-03-26
+
+### Changes
+- feat(security): encrypt saved browser credentials (4463d21)
+- chore(changelog): update for v0.7.1 [skip ci] (c075c1a)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.7.1...v0.8.0)
+
+
 ## [v0.7.1](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.7.1) - 2026-03-18
 
 ### Changes
