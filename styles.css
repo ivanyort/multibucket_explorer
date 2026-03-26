@@ -571,6 +571,13 @@ button:disabled {
   white-space: pre-line;
 }
 
+.credential-security-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
 .workspace {
   grid-template-columns: 1fr;
   min-width: 0;
@@ -693,6 +700,13 @@ code {
 
 .connection-modal-form .status-text {
   margin: 0;
+}
+
+.vault-form-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  text-align: left;
 }
 
 .seed-result-block {

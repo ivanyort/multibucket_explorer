@@ -17,10 +17,21 @@ const state = {
     column: "name",
     direction: "asc",
   },
+  credentialsLocked: false,
+  encryptedCredentialsAvailable: false,
+  legacyCredentialsPending: false,
+  vaultEnvelope: null,
+  sessionVaultKey: null,
+  pendingLegacyPayload: null,
 };
 
 const STORAGE_KEY = "multibucket-explorer-connection";
 const LANGUAGE_STORAGE_KEY = "multibucket-explorer-language";
+const SESSION_VAULT_KEY = "multibucket-explorer-connection-unlock";
+const ENCRYPTED_STORAGE_VERSION = 1;
+const VAULT_SALT_LENGTH = 16;
+const VAULT_IV_LENGTH = 12;
+const VAULT_PBKDF2_ITERATIONS = 250000;
 const SUPPORTED_LANGUAGES = ["en", "pt-BR", "es", "it"];
 const DATE_LOCALES = {
   en: "en-US",
@@ -36,6 +47,8 @@ const translations = {
       title: "Storage Access",
       settings: "Connection settings",
       edit: "Edit credentials",
+      lock: "Lock credentials",
+      unlock: "Unlock saved credentials",
       modalTitle: "Connection settings",
       modalBody: "Review the provider credentials, test access, and save to connect.",
       test: "Test connection",
@@ -133,6 +146,30 @@ const translations = {
       fillAdls: "Fill in account name, container name, and access key.", fillGcs: "Fill in bucket and service account JSON.",
       invalidServiceAccountJson: "Service account JSON must be valid JSON.", fillMinio: "Fill in endpoint, bucket, access key ID, and secret access key.",
       fillS3: "Fill in region, bucket, and credentials.",
+    },
+    vault: {
+      kicker: "Credential Vault",
+      passphrase: "Master passphrase",
+      passphraseConfirm: "Confirm passphrase",
+      unlockTitle: "Unlock saved credentials",
+      unlockBody: "Enter your master passphrase to unlock the encrypted credentials stored in this browser.",
+      unlockAction: "Unlock",
+      setupTitle: "Create a master passphrase",
+      setupBody: "Create a master passphrase to encrypt the saved storage credentials in this browser.",
+      setupAction: "Encrypt and save",
+      migrateTitle: "Migrate saved credentials",
+      migrateBody: "Existing saved credentials are still in plain text. Create a master passphrase to migrate them into encrypted browser storage before continuing.",
+      migrateAction: "Migrate and encrypt",
+      encryptedLocked: "Encrypted credentials are saved in this browser and are currently locked.",
+      encryptedUnlocked: "Encrypted credentials are saved in this browser and unlocked for this tab.",
+      migrationRequired: "Saved credentials must be migrated to encrypted browser storage before continuing.",
+      unlockFailed: "Failed to unlock the encrypted credentials. Check the passphrase and try again.",
+      passphraseMismatch: "The passphrase confirmation does not match.",
+      passphraseRequired: "A master passphrase is required.",
+      storageCorrupted: "Saved encrypted credentials could not be read. The local storage entry may be corrupted.",
+      sessionCleared: "Credential lock restored for this tab.",
+      migrationCancelled: "Credential migration is still required before using saved connections.",
+      setupCancelled: "Master passphrase setup was cancelled. Credentials were not saved.",
     },
     table: { name: "Name", type: "Type", size: "Size", date: "Date", column: "column_{index}" },
   },
@@ -461,6 +498,8 @@ const elements = {
   gcsFields: document.querySelector("#gcsFields"),
   minioFields: document.querySelector("#minioFields"),
   connectionStatus: document.querySelector("#connectionStatus"),
+  unlockCredentialsButton: document.querySelector("#unlockCredentialsButton"),
+  lockCredentialsButton: document.querySelector("#lockCredentialsButton"),
   diagnosticBox: document.querySelector("#diagnosticBox"),
   workspace: document.querySelector(".workspace"),
   objectList: document.querySelector("#objectList"),
@@ -483,6 +522,18 @@ const elements = {
   confirmModalPrefix: document.querySelector("#confirmModalPrefix"),
   confirmModalCancel: document.querySelector("#confirmModalCancel"),
   confirmModalConfirm: document.querySelector("#confirmModalConfirm"),
+  vaultModal: document.querySelector("#vaultModal"),
+  vaultModalKicker: document.querySelector("#vaultModalKicker"),
+  vaultModalTitle: document.querySelector("#vaultModalTitle"),
+  vaultModalBody: document.querySelector("#vaultModalBody"),
+  vaultPassphraseLabel: document.querySelector("#vaultPassphraseLabel"),
+  vaultPassphrase: document.querySelector("#vaultPassphrase"),
+  vaultConfirmWrap: document.querySelector("#vaultConfirmWrap"),
+  vaultConfirmLabel: document.querySelector("#vaultConfirmLabel"),
+  vaultPassphraseConfirm: document.querySelector("#vaultPassphraseConfirm"),
+  vaultModalStatus: document.querySelector("#vaultModalStatus"),
+  vaultModalCancel: document.querySelector("#vaultModalCancel"),
+  vaultModalConfirm: document.querySelector("#vaultModalConfirm"),
   seedConfirmModal: document.querySelector("#seedConfirmModal"),
   seedConfirmTitle: document.querySelector("#seedConfirmTitle"),
   seedConfirmBody: document.querySelector("#seedConfirmBody"),
@@ -508,6 +559,7 @@ const elements = {
 };
 
 let connectionModalPreviousActiveElement = null;
+let vaultModalPreviousActiveElement = null;
 
 state.language = restoreLanguage();
 if (elements.languageSelect instanceof HTMLSelectElement) {
@@ -521,10 +573,14 @@ if (elements.languageSelect instanceof HTMLSelectElement) {
 
 elements.credentialsForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  saveConnectionFromModal();
+  void saveConnectionFromModal();
 });
-elements.credentialsForm.addEventListener("input", persistConnectionForm);
-elements.credentialsForm.addEventListener("change", persistConnectionForm);
+elements.credentialsForm.addEventListener("input", () => {
+  void persistConnectionForm();
+});
+elements.credentialsForm.addEventListener("change", () => {
+  void persistConnectionForm();
+});
 const serviceAccountJsonField = elements.credentialsForm.elements.namedItem("serviceAccountJson");
 if (serviceAccountJsonField instanceof HTMLTextAreaElement) {
   serviceAccountJsonField.addEventListener("input", syncProjectIdFromServiceAccountJson);
@@ -532,18 +588,28 @@ if (serviceAccountJsonField instanceof HTMLTextAreaElement) {
 }
 elements.providerCardTriggers.forEach((trigger) => {
   trigger.addEventListener("click", async () => {
+    if (!(await ensureCredentialAccess())) {
+      return;
+    }
     await handleProviderCardClick(normalizeProvider(trigger.dataset.providerCardTrigger));
   });
 });
 elements.providerEditButtons.forEach((button) => {
-  button.addEventListener("click", (event) => {
+  button.addEventListener("click", async (event) => {
     event.preventDefault();
     event.stopPropagation();
+    if (!(await ensureCredentialAccess())) {
+      return;
+    }
     openConnectionModal(normalizeProvider(button.dataset.providerEdit));
   });
 });
 elements.connectionModalCancel.addEventListener("click", closeConnectionModal);
 elements.testConnectionButton.addEventListener("click", testConnectionFromModal);
+elements.unlockCredentialsButton.addEventListener("click", () => {
+  void unlockSavedCredentials();
+});
+elements.lockCredentialsButton.addEventListener("click", lockStoredCredentials);
 elements.connectionModal.addEventListener("click", (event) => {
   const target = event.target;
   if (target instanceof HTMLElement && target.hasAttribute("data-connection-modal-close")) {
@@ -590,7 +656,6 @@ elements.icebergSnapshotSelect.addEventListener("change", () => {
   }
 });
 
-restoreConnectionForm();
 syncProviderFields();
 applyLanguage();
 loadAppVersion();
@@ -599,6 +664,8 @@ refreshConnectionSummary();
 syncPreviewModeAvailability("");
 syncSeedControls();
 syncWorkspaceVisibility();
+syncCredentialButtons();
+void initializeCredentialVault();
 
 function restoreLanguage() {
   const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
@@ -667,6 +734,7 @@ function applyLanguage() {
   }
   syncDestructiveControls();
   syncWorkspaceVisibility();
+  syncCredentialButtons();
   if (state.selectedKey && state.sessionId) {
     previewObject(state.selectedKey);
   }
@@ -747,7 +815,6 @@ function setConnectionActionState(isBusy) {
 
 async function handleProviderCardClick(provider) {
   selectProvider(provider);
-  persistConnectionForm();
 
   const connection = getConnectionPayload();
   const validationError = validateConnectionPayload(connection);
@@ -772,7 +839,7 @@ async function connectToBucketWithPayload(connection) {
     return false;
   }
 
-  persistConnectionForm();
+  await persistConnectionForm();
   state.provider = connection.provider;
   state.targetName = getConnectionTargetName(connection);
   state.locationName = getConnectionLocationName(connection);
@@ -838,7 +905,7 @@ async function testConnectionFromModal() {
     return;
   }
 
-  persistConnectionForm();
+  await persistConnectionForm();
   setConnectionActionState(true);
   setConnectionModalStatus(t("messages.testingConnection"));
 
@@ -865,8 +932,41 @@ async function testConnectionFromModal() {
   }
 }
 
-function saveConnectionFromModal() {
-  persistConnectionForm();
+async function saveConnectionFromModal() {
+  const payload = getConnectionPayload();
+  const validationError = validateConnectionPayload(payload);
+
+  if (validationError) {
+    setConnectionModalStatus(validationError, true);
+    return;
+  }
+
+  if (state.legacyCredentialsPending) {
+    const migrated = await runLegacyMigrationFlow();
+    if (!migrated) {
+      return;
+    }
+  }
+
+  if (!state.encryptedCredentialsAvailable) {
+    const response = await promptVaultAction({ mode: "setup" });
+    if (!response?.passphrase) {
+      setConnectionModalStatus(t("vault.setupCancelled"), true);
+      return;
+    }
+
+    await createEncryptedVaultFromPayload(payload, response.passphrase);
+    setConnectionStatus(t("vault.encryptedUnlocked"));
+  } else if (state.credentialsLocked) {
+    const unlocked = await unlockSavedCredentials();
+    if (!unlocked) {
+      return;
+    }
+    await persistConnectionForm();
+  } else {
+    await persistConnectionForm();
+  }
+
   setConnectionModalStatus("");
   closeConnectionModal();
 }
@@ -2083,44 +2183,481 @@ function setStartupDiagnostic() {
   setDiagnosticMessage("");
 }
 
-function persistConnectionForm() {
-  const payload = getConnectionPayload();
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+async function initializeCredentialVault() {
+  const storedRecord = readStoredConnectionRecord();
+
+  if (!storedRecord) {
+    state.encryptedCredentialsAvailable = false;
+    state.credentialsLocked = false;
+    state.legacyCredentialsPending = false;
+    state.pendingLegacyPayload = null;
+    state.vaultEnvelope = null;
+    state.sessionVaultKey = null;
+    refreshConnectionSummary();
+    syncCredentialButtons();
+    return;
+  }
+
+  if (storedRecord.kind === "legacy") {
+    state.legacyCredentialsPending = true;
+    state.pendingLegacyPayload = storedRecord.payload;
+    state.encryptedCredentialsAvailable = false;
+    state.credentialsLocked = true;
+    state.vaultEnvelope = null;
+    state.sessionVaultKey = null;
+    clearConnectionForm();
+    refreshConnectionSummary();
+    syncCredentialButtons();
+    setConnectionStatus(t("vault.migrationRequired"));
+    await runLegacyMigrationFlow();
+    return;
+  }
+
+  state.vaultEnvelope = storedRecord.envelope;
+  state.encryptedCredentialsAvailable = true;
+  state.legacyCredentialsPending = false;
+  state.pendingLegacyPayload = null;
+  state.credentialsLocked = true;
+  clearConnectionForm();
   refreshConnectionSummary();
-}
+  syncCredentialButtons();
 
-function restoreConnectionForm() {
-  const rawValue = window.localStorage.getItem(STORAGE_KEY);
-
-  if (!rawValue) {
+  const sessionKeyBase64 = window.sessionStorage.getItem(SESSION_VAULT_KEY);
+  if (!sessionKeyBase64) {
+    setConnectionStatus(t("vault.encryptedLocked"));
     return;
   }
 
   try {
-    const payload = JSON.parse(rawValue);
-    setInputValue("provider", normalizeProvider(payload.provider));
-    setInputValue("region", payload.region);
-    setInputValue("bucket", payload.bucket);
-    setInputValue("accessKeyId", payload.accessKeyId);
-    setInputValue("secretAccessKey", payload.secretAccessKey);
-    setInputValue("accountName", payload.accountName);
-    setInputValue("fileSystem", payload.fileSystem);
-    setInputValue("accountKey", payload.accountKey);
-    setInputValue("gcsBucket", payload.gcsBucket);
-    setInputValue("projectId", payload.projectId);
-    setInputValue("serviceAccountJson", payload.serviceAccountJson);
-    setInputValue("endpoint", payload.endpoint);
-    setInputValue("minioBucket", payload.minioBucket);
-    setInputValue("minioRegion", payload.minioRegion);
-    setInputValue("minioAccessKeyId", payload.minioAccessKeyId);
-    setInputValue("minioSecretAccessKey", payload.minioSecretAccessKey);
-    setCheckboxValue("ignoreTlsErrors", payload.ignoreTlsErrors === true);
-    selectProvider(payload.provider);
-    setConnectionStatus("");
+    const sessionKey = await importSessionVaultKey(sessionKeyBase64);
+    const payload = await decryptStoredEnvelope(storedRecord.envelope, sessionKey);
+    state.sessionVaultKey = sessionKey;
+    state.credentialsLocked = false;
+    hydrateConnectionForm(payload);
+    setConnectionStatus(t("vault.encryptedUnlocked"));
+  } catch {
+    clearSessionVaultKey();
+    state.sessionVaultKey = null;
+    state.credentialsLocked = true;
+    clearConnectionForm();
+    setConnectionStatus(t("vault.encryptedLocked"));
+  } finally {
     refreshConnectionSummary();
+    syncCredentialButtons();
+  }
+}
+
+async function persistConnectionForm() {
+  const payload = getConnectionPayload();
+  refreshConnectionSummary();
+
+  if (state.legacyCredentialsPending || !state.encryptedCredentialsAvailable || state.credentialsLocked || !state.sessionVaultKey) {
+    return;
+  }
+
+  await saveEncryptedConnectionPayload(payload, state.sessionVaultKey, state.vaultEnvelope);
+}
+
+function readStoredConnectionRecord() {
+  const rawValue = window.localStorage.getItem(STORAGE_KEY);
+
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue);
+
+    if (isEncryptedConnectionEnvelope(parsed)) {
+      return { kind: "encrypted", envelope: parsed };
+    }
+
+    if (isLegacyConnectionPayload(parsed)) {
+      return { kind: "legacy", payload: parsed };
+    }
   } catch {
     window.localStorage.removeItem(STORAGE_KEY);
   }
+
+  return null;
+}
+
+function isEncryptedConnectionEnvelope(value) {
+  return Boolean(
+    value &&
+    typeof value === "object" &&
+    value.version === ENCRYPTED_STORAGE_VERSION &&
+    typeof value.salt === "string" &&
+    typeof value.iv === "string" &&
+    typeof value.ciphertext === "string" &&
+    value.kdf?.name === "PBKDF2" &&
+    value.kdf?.hash === "SHA-256" &&
+    typeof value.kdf?.iterations === "number",
+  );
+}
+
+function isLegacyConnectionPayload(value) {
+  return Boolean(value && typeof value === "object" && typeof value.provider === "string");
+}
+
+function hydrateConnectionForm(payload) {
+  setInputValue("provider", normalizeProvider(payload.provider));
+  setInputValue("region", payload.region);
+  setInputValue("bucket", payload.bucket);
+  setInputValue("accessKeyId", payload.accessKeyId);
+  setInputValue("secretAccessKey", payload.secretAccessKey);
+  setInputValue("accountName", payload.accountName);
+  setInputValue("fileSystem", payload.fileSystem);
+  setInputValue("accountKey", payload.accountKey);
+  setInputValue("gcsBucket", payload.gcsBucket);
+  setInputValue("projectId", payload.projectId);
+  setInputValue("serviceAccountJson", payload.serviceAccountJson);
+  setInputValue("endpoint", payload.endpoint);
+  setInputValue("minioBucket", payload.minioBucket);
+  setInputValue("minioRegion", payload.minioRegion);
+  setInputValue("minioAccessKeyId", payload.minioAccessKeyId);
+  setInputValue("minioSecretAccessKey", payload.minioSecretAccessKey);
+  setCheckboxValue("ignoreTlsErrors", payload.ignoreTlsErrors === true);
+  selectProvider(payload.provider);
+  refreshConnectionSummary();
+}
+
+function clearConnectionForm() {
+  setInputValue("provider", "s3");
+  setInputValue("region", "");
+  setInputValue("bucket", "");
+  setInputValue("accessKeyId", "");
+  setInputValue("secretAccessKey", "");
+  setInputValue("accountName", "");
+  setInputValue("fileSystem", "");
+  setInputValue("accountKey", "");
+  setInputValue("gcsBucket", "");
+  setInputValue("projectId", "");
+  setInputValue("serviceAccountJson", "");
+  setInputValue("endpoint", "");
+  setInputValue("minioBucket", "");
+  setInputValue("minioRegion", "");
+  setInputValue("minioAccessKeyId", "");
+  setInputValue("minioSecretAccessKey", "");
+  setCheckboxValue("ignoreTlsErrors", false);
+  selectProvider("s3");
+  refreshConnectionSummary();
+}
+
+function clearSessionVaultKey() {
+  window.sessionStorage.removeItem(SESSION_VAULT_KEY);
+}
+
+function syncCredentialButtons() {
+  const showUnlock = state.encryptedCredentialsAvailable && state.credentialsLocked;
+  const showLock = state.encryptedCredentialsAvailable && !state.credentialsLocked;
+
+  elements.unlockCredentialsButton.hidden = !showUnlock;
+  elements.unlockCredentialsButton.disabled = !showUnlock;
+  elements.unlockCredentialsButton.textContent = t("connection.unlock");
+  elements.lockCredentialsButton.hidden = !showLock;
+  elements.lockCredentialsButton.disabled = !showLock;
+  elements.lockCredentialsButton.textContent = t("connection.lock");
+}
+
+function createRandomBytes(length) {
+  return window.crypto.getRandomValues(new Uint8Array(length));
+}
+
+function bytesToBase64(bytes) {
+  return window.btoa(String.fromCharCode(...bytes));
+}
+
+function base64ToBytes(value) {
+  return Uint8Array.from(window.atob(value), (char) => char.charCodeAt(0));
+}
+
+async function deriveVaultKeyFromPassphrase(passphrase, saltBase64) {
+  const encoder = new TextEncoder();
+  const baseKey = await window.crypto.subtle.importKey(
+    "raw",
+    encoder.encode(passphrase),
+    { name: "PBKDF2" },
+    false,
+    ["deriveKey"],
+  );
+
+  return window.crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: base64ToBytes(saltBase64),
+      iterations: VAULT_PBKDF2_ITERATIONS,
+      hash: "SHA-256",
+    },
+    baseKey,
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "decrypt"],
+  );
+}
+
+async function exportSessionVaultKey(key) {
+  const rawKey = new Uint8Array(await window.crypto.subtle.exportKey("raw", key));
+  return bytesToBase64(rawKey);
+}
+
+async function importSessionVaultKey(rawKeyBase64) {
+  return window.crypto.subtle.importKey(
+    "raw",
+    base64ToBytes(rawKeyBase64),
+    { name: "AES-GCM" },
+    true,
+    ["encrypt", "decrypt"],
+  );
+}
+
+async function encryptConnectionPayload(payload, key) {
+  const iv = createRandomBytes(VAULT_IV_LENGTH);
+  const encodedPayload = new TextEncoder().encode(JSON.stringify(payload));
+  const ciphertext = new Uint8Array(await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encodedPayload));
+  return {
+    iv: bytesToBase64(iv),
+    ciphertext: bytesToBase64(ciphertext),
+  };
+}
+
+async function decryptStoredEnvelope(envelope, key) {
+  const plaintext = await window.crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: base64ToBytes(envelope.iv) },
+    key,
+    base64ToBytes(envelope.ciphertext),
+  );
+  return JSON.parse(new TextDecoder().decode(plaintext));
+}
+
+async function saveEncryptedConnectionPayload(payload, key, existingEnvelope = null) {
+  const envelope = existingEnvelope ?? {
+    version: ENCRYPTED_STORAGE_VERSION,
+    kdf: {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      iterations: VAULT_PBKDF2_ITERATIONS,
+    },
+    salt: bytesToBase64(createRandomBytes(VAULT_SALT_LENGTH)),
+  };
+  const encryptedPayload = await encryptConnectionPayload(payload, key);
+  const nextEnvelope = {
+    ...envelope,
+    ...encryptedPayload,
+  };
+
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextEnvelope));
+  state.vaultEnvelope = nextEnvelope;
+  state.encryptedCredentialsAvailable = true;
+  state.credentialsLocked = false;
+  state.legacyCredentialsPending = false;
+  state.pendingLegacyPayload = null;
+  window.sessionStorage.setItem(SESSION_VAULT_KEY, await exportSessionVaultKey(key));
+  refreshConnectionSummary();
+  syncCredentialButtons();
+}
+
+async function createEncryptedVaultFromPayload(payload, passphrase) {
+  const salt = bytesToBase64(createRandomBytes(VAULT_SALT_LENGTH));
+  const key = await deriveVaultKeyFromPassphrase(passphrase, salt);
+  const envelope = {
+    version: ENCRYPTED_STORAGE_VERSION,
+    kdf: {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      iterations: VAULT_PBKDF2_ITERATIONS,
+    },
+    salt,
+  };
+  state.sessionVaultKey = key;
+  await saveEncryptedConnectionPayload(payload, key, envelope);
+  hydrateConnectionForm(payload);
+}
+
+function resetVaultModalFields() {
+  elements.vaultPassphrase.value = "";
+  elements.vaultPassphraseConfirm.value = "";
+  setVaultModalStatus("");
+}
+
+function setVaultModalStatus(message, isError = false) {
+  elements.vaultModalStatus.className = isError ? "status-text error-text" : "status-text muted";
+  elements.vaultModalStatus.textContent = message;
+}
+
+function promptVaultAction({ mode }) {
+  return new Promise((resolve) => {
+    const needsConfirmation = mode !== "unlock";
+    const titleKey = mode === "unlock" ? "vault.unlockTitle" : mode === "migrate" ? "vault.migrateTitle" : "vault.setupTitle";
+    const bodyKey = mode === "unlock" ? "vault.unlockBody" : mode === "migrate" ? "vault.migrateBody" : "vault.setupBody";
+    const actionKey = mode === "unlock" ? "vault.unlockAction" : mode === "migrate" ? "vault.migrateAction" : "vault.setupAction";
+    vaultModalPreviousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const close = (value = null) => {
+      elements.vaultModal.hidden = true;
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleKeydown);
+      elements.vaultModalCancel.removeEventListener("click", handleCancel);
+      elements.vaultModalConfirm.removeEventListener("click", handleConfirm);
+      if (vaultModalPreviousActiveElement instanceof HTMLElement) {
+        vaultModalPreviousActiveElement.focus();
+      }
+      vaultModalPreviousActiveElement = null;
+      resetVaultModalFields();
+      resolve(value);
+    };
+
+    const handleCancel = () => close(null);
+    const handleConfirm = () => {
+      const passphrase = elements.vaultPassphrase.value;
+      const passphraseConfirm = elements.vaultPassphraseConfirm.value;
+
+      if (!passphrase) {
+        setVaultModalStatus(t("vault.passphraseRequired"), true);
+        return;
+      }
+
+      if (needsConfirmation && passphrase !== passphraseConfirm) {
+        setVaultModalStatus(t("vault.passphraseMismatch"), true);
+        return;
+      }
+
+      close({ passphrase });
+    };
+    const handleKeydown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close(null);
+      }
+    };
+
+    elements.vaultModalKicker.textContent = t("vault.kicker");
+    elements.vaultModalTitle.textContent = t(titleKey);
+    elements.vaultModalBody.textContent = t(bodyKey);
+    elements.vaultPassphraseLabel.textContent = t("vault.passphrase");
+    elements.vaultConfirmLabel.textContent = t("vault.passphraseConfirm");
+    elements.vaultConfirmWrap.hidden = !needsConfirmation;
+    elements.vaultModalCancel.textContent = t("common.cancel");
+    elements.vaultModalConfirm.textContent = t(actionKey);
+    resetVaultModalFields();
+    elements.vaultModal.hidden = false;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeydown);
+    elements.vaultModalCancel.addEventListener("click", handleCancel);
+    elements.vaultModalConfirm.addEventListener("click", handleConfirm);
+    elements.vaultPassphrase.focus();
+  });
+}
+
+async function unlockSavedCredentials() {
+  if (state.legacyCredentialsPending) {
+    return runLegacyMigrationFlow();
+  }
+
+  if (!state.vaultEnvelope || !state.credentialsLocked) {
+    return true;
+  }
+
+  const response = await promptVaultAction({ mode: "unlock" });
+  if (!response?.passphrase) {
+    setConnectionStatus(t("vault.encryptedLocked"));
+    return false;
+  }
+
+  try {
+    const key = await deriveVaultKeyFromPassphrase(response.passphrase, state.vaultEnvelope.salt);
+    const payload = await decryptStoredEnvelope(state.vaultEnvelope, key);
+    state.sessionVaultKey = key;
+    state.credentialsLocked = false;
+    window.sessionStorage.setItem(SESSION_VAULT_KEY, await exportSessionVaultKey(key));
+    hydrateConnectionForm(payload);
+    setConnectionStatus(t("vault.encryptedUnlocked"));
+    refreshConnectionSummary();
+    syncCredentialButtons();
+    return true;
+  } catch {
+    clearSessionVaultKey();
+    state.sessionVaultKey = null;
+    state.credentialsLocked = true;
+    clearConnectionForm();
+    refreshConnectionSummary();
+    syncCredentialButtons();
+    setConnectionStatus(t("vault.unlockFailed"), true);
+    return false;
+  }
+}
+
+async function runLegacyMigrationFlow() {
+  if (!state.pendingLegacyPayload) {
+    return true;
+  }
+
+  const response = await promptVaultAction({ mode: "migrate" });
+  if (!response?.passphrase) {
+    setConnectionStatus(t("vault.migrationCancelled"), true);
+    refreshConnectionSummary();
+    syncCredentialButtons();
+    return false;
+  }
+
+  try {
+    await createEncryptedVaultFromPayload(state.pendingLegacyPayload, response.passphrase);
+    state.pendingLegacyPayload = null;
+    state.legacyCredentialsPending = false;
+    setConnectionStatus(t("vault.encryptedUnlocked"));
+    refreshConnectionSummary();
+    syncCredentialButtons();
+    return true;
+  } catch {
+    setConnectionStatus(t("vault.storageCorrupted"), true);
+    return false;
+  }
+}
+
+async function ensureCredentialAccess() {
+  if (state.legacyCredentialsPending) {
+    return runLegacyMigrationFlow();
+  }
+
+  if (state.encryptedCredentialsAvailable && state.credentialsLocked) {
+    return unlockSavedCredentials();
+  }
+
+  return true;
+}
+
+function clearActiveConnectionState() {
+  state.targetName = "";
+  state.locationName = "";
+  state.prefix = "";
+  state.selectedKey = "";
+  state.sessionId = "";
+  state.browseMode = "raw";
+  state.icebergTable = null;
+  state.icebergAvailable = false;
+  state.icebergSnapshotId = "";
+  state.objectItems = [];
+  elements.refreshButton.disabled = true;
+  elements.clearPrefixButton.disabled = true;
+  elements.downloadButton.disabled = true;
+  renderCurrentPrefix();
+  renderObjectPlaceholder(t("browser.connectToList"));
+  resetPreview(t("preview.selectCompatible"), false, t("preview.noFileSelected"));
+  syncIcebergModeToggle();
+  syncIcebergSnapshotControl();
+  syncDestructiveControls();
+  syncWorkspaceVisibility();
+}
+
+function lockStoredCredentials() {
+  clearSessionVaultKey();
+  state.sessionVaultKey = null;
+  state.credentialsLocked = true;
+  clearConnectionForm();
+  clearActiveConnectionState();
+  syncCredentialButtons();
+  refreshConnectionSummary();
+  setConnectionStatus(t("vault.sessionCleared"));
 }
 
 function setInputValue(name, value) {
@@ -2158,7 +2695,7 @@ function syncProjectIdFromServiceAccountJson() {
   }
 
   projectIdField.value = projectId;
-  persistConnectionForm();
+  void persistConnectionForm();
 }
 
 function extractProjectIdFromServiceAccountJson(value) {
@@ -2436,6 +2973,16 @@ function isRawOnlyPreviewFile(key) {
 }
 
 function refreshConnectionSummary() {
+  if (state.legacyCredentialsPending) {
+    elements.connectionSummaryText.textContent = t("vault.migrationRequired");
+    return;
+  }
+
+  if (state.encryptedCredentialsAvailable && state.credentialsLocked) {
+    elements.connectionSummaryText.textContent = t("vault.encryptedLocked");
+    return;
+  }
+
   const connection = getConnectionPayload();
   const parts = [];
 

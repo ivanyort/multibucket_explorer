@@ -136,6 +136,14 @@
 
           <p id="connectionStatus" class="status-text muted"></p>
           <div id="diagnosticBox" class="diagnostic-box muted"></div>
+          <div class="credential-security-actions">
+            <button id="unlockCredentialsButton" class="ghost-button" type="button" hidden>
+              Unlock saved credentials
+            </button>
+            <button id="lockCredentialsButton" class="ghost-button" type="button" hidden>
+              Lock credentials
+            </button>
+          </div>
         </div>
       </details>
 
@@ -431,6 +439,40 @@
             <button id="saveConnectionButton" class="primary-button" type="submit" data-i18n="connection.saveAndConnect">Save and connect</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <div
+      id="vaultModal"
+      class="modal-shell"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="vaultModalTitle"
+      aria-describedby="vaultModalBody"
+      hidden
+    >
+      <div class="modal-backdrop"></div>
+      <div class="modal-card modal-card-compact" role="document">
+        <p id="vaultModalKicker" class="panel-kicker">Credential Vault</p>
+        <h2 id="vaultModalTitle">Unlock saved credentials</h2>
+        <p id="vaultModalBody" class="modal-copy">
+          Enter your master passphrase to unlock the encrypted credentials stored in this browser.
+        </p>
+        <div class="vault-form-grid">
+          <label>
+            <span id="vaultPassphraseLabel">Master passphrase</span>
+            <input id="vaultPassphrase" type="password" autocomplete="current-password" />
+          </label>
+          <label id="vaultConfirmWrap" hidden>
+            <span id="vaultConfirmLabel">Confirm passphrase</span>
+            <input id="vaultPassphraseConfirm" type="password" autocomplete="new-password" />
+          </label>
+        </div>
+        <p id="vaultModalStatus" class="status-text muted"></p>
+        <div class="modal-actions">
+          <button id="vaultModalCancel" class="ghost-button" type="button">Cancel</button>
+          <button id="vaultModalConfirm" class="primary-button" type="button">Unlock</button>
+        </div>
       </div>
     </div>
 

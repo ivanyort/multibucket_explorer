@@ -260,7 +260,9 @@ If a MinIO deployment uses a self-signed or otherwise untrusted HTTPS certificat
 
 ## Notes
 
-- all connection fields are persisted in browser `localStorage`, including credentials, secret fields, textarea content, and provider-specific toggles
+- all connection fields remain browser-persisted, including credentials, secret fields, textarea content, and provider-specific toggles, but they are now encrypted at rest in `localStorage` behind a master passphrase
+- encrypted credentials can stay unlocked across page reloads in the same tab through `sessionStorage`; this improves convenience but is weaker than asking for the passphrase again after every reload
+- browser-only encryption protects against casual local inspection of `localStorage`, but it does not protect against active same-origin script compromise while the vault is unlocked
 - the backend keeps an in-memory session for 12 hours after connecting
 - the backend now requires `TLS_CERT_FILE` and `TLS_KEY_FILE` to serve HTTPS on port `8086`; `ALLOW_INSECURE_HTTP=true` is an explicit non-default escape hatch
 - preview compression support now includes both `.gz` and `.snappy` variants for supported previewable formats

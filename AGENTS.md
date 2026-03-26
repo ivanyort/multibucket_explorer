@@ -89,7 +89,7 @@ By default the application runs at `https://localhost:8086`.
 12. When destructive operations are disabled by server configuration, the UI should hide or disable delete affordances instead of inviting an action that will always fail.
 
 # Security And Sensitive Data
-1. Storage credentials are entered through the UI and are currently persisted in `localStorage`. All provider-specific connection fields, credentials, secrets, textarea content, and toggles must remain persistable unless the behavior is intentionally redesigned. Any change in this area must consider security impact and be documented.
+1. Storage credentials are entered through the UI and must remain persistable for all provider-specific connection fields, credentials, secrets, textarea content, and toggles unless the behavior is intentionally redesigned. They are now encrypted at rest in browser `localStorage` behind a user-provided master passphrase, with same-tab reload unlock convenience carried through `sessionStorage`. Any change in this area must consider security impact and be documented.
 2. Never log secrets such as AWS secret keys or Azure access keys in logs, error messages, state dumps, or documentation.
 3. Do not commit real credentials, private buckets, private file systems, or customer-sensitive data.
 4. If testing against real cloud storage is necessary, prefer minimally invasive validation and clearly confirm any destructive action.
