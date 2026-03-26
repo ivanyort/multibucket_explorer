@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.9.1](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.9.1) - 2026-03-26
+
+### Changes
+- fix(browser): normalize root directory creation prefixes (2685461)
+- chore(changelog): update for v0.9.0 [skip ci] (6bafbee)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.9.0...v0.9.1)
+
+
 ## [v0.9.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.9.0) - 2026-03-26
 
 ### Changes
