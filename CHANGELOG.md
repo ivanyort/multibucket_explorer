@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.12.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.12.0) - 2026-03-26
+
+### Changes
+- feat(preview): refine object and raw preview experience (5572aef)
+- chore(changelog): update for v0.11.0 [skip ci] (7b1f40e)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.11.0...v0.12.0)
+
+
 ## [v0.11.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.11.0) - 2026-03-26
 
 ### Changes
