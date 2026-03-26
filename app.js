@@ -85,9 +85,9 @@ const translations = {
     },
     browser: {
       kicker: "Object Browser", title: "Objects", currentPrefix: "Current prefix", refresh: "Refresh",
-      clearPrefix: "Clear prefix", connectToList: "Connect to list storage objects.",
+      clearPrefix: "Clear folder contents", connectToList: "Connect to list storage objects.",
       noItems: "No items found in this prefix.", loading: "Loading objects...", failed: "Failed to list objects.",
-      folder: "Folder", file: "File", actions: "Actions", deleteFile: "Delete file",
+      folder: "Folder", file: "File", actions: "Actions", deleteFile: "Delete file", deleteFolder: "Delete folder",
       createDirectory: "Create directory",
       createDirectoryTitle: "Create directory",
       createDirectoryBody: "Create a new directory inside the current prefix.",
@@ -114,15 +114,19 @@ const translations = {
       dfmFound: " · DFM: {dfmKey} ({count} columns)", dfmNotFound: " · DFM not found",
     },
     delete: {
-      confirmKicker: "Destructive Action", confirmTitle: "Delete prefix",
-      confirmBody: "Are you absolutely sure you want to delete all files under this prefix?",
-      confirmAction: "Delete files", progressKicker: "Delete In Progress", progressTitle: "Deleting files",
-      progressBody: "The selected prefix is being deleted. This can take a while when many files are involved.",
-      cancelled: "Prefix deletion cancelled.", deleting: "Deleting all objects under {prefix}...", deleted: "{count} object(s) deleted from {prefix}.",
+      confirmKicker: "Destructive Action", confirmTitle: "Clear folder contents",
+      confirmBody: "Are you absolutely sure you want to delete all files under this folder while keeping the folder itself?",
+      confirmAction: "Clear contents", progressKicker: "Delete In Progress", progressTitle: "Clearing folder contents",
+      progressBody: "The selected folder contents are being deleted. This can take a while when many files are involved.",
+      cancelled: "Folder clear cancelled.", deleting: "Deleting all objects under {prefix}...", deleted: "{count} object(s) deleted from {prefix}.",
       confirmFileTitle: "Delete file", confirmFileBody: "Are you absolutely sure you want to delete this file?",
       confirmFileAction: "Delete file", fileCancelled: "File deletion cancelled.", deletingFile: "Deleting {key}...",
       fileDeleted: "{key} deleted.", progressFileTitle: "Deleting file",
       progressFileBody: "The selected file is being deleted.",
+      confirmFolderTitle: "Delete folder", confirmFolderBody: "Are you absolutely sure you want to delete this folder and everything inside it?",
+      confirmFolderAction: "Delete folder", folderCancelled: "Folder deletion cancelled.", deletingFolder: "Deleting folder {prefix}...",
+      folderDeleted: "Folder deleted: {prefix}.", progressFolderTitle: "Deleting folder",
+      progressFolderBody: "The selected folder and all its contents are being deleted.",
     },
     seed: {
       button: "Create Iceberg samples", kicker: "Sample Data", confirmTitle: "Create Iceberg sample tables",
@@ -217,9 +221,9 @@ const translations = {
     },
     browser: {
       kicker: "Navegador de Objetos", title: "Objetos", currentPrefix: "Prefixo atual", refresh: "Atualizar",
-      clearPrefix: "Limpar prefixo", connectToList: "Conecte-se para listar os objetos do storage.",
+      clearPrefix: "Limpar conteudo da pasta", connectToList: "Conecte-se para listar os objetos do storage.",
       noItems: "Nenhum item encontrado neste prefixo.", loading: "Carregando objetos...", failed: "Falha ao listar objetos.",
-      folder: "Pasta", file: "Arquivo", actions: "Ações", deleteFile: "Apagar arquivo",
+      folder: "Pasta", file: "Arquivo", actions: "Ações", deleteFile: "Apagar arquivo", deleteFolder: "Apagar pasta",
       createDirectory: "Criar diretorio",
       createDirectoryTitle: "Criar diretorio",
       createDirectoryBody: "Crie um novo diretorio dentro do prefixo atual.",
@@ -246,15 +250,19 @@ const translations = {
       dfmFound: " · DFM: {dfmKey} ({count} colunas)", dfmNotFound: " · DFM não encontrado",
     },
     delete: {
-      confirmKicker: "Ação Destrutiva", confirmTitle: "Excluir prefixo",
-      confirmBody: "Você tem certeza absoluta que deseja apagar todos os arquivos sob este prefixo?",
-      confirmAction: "Apagar arquivos", progressKicker: "Exclusão em Andamento", progressTitle: "Apagando arquivos",
-      progressBody: "O prefixo selecionado está sendo apagado. Isso pode demorar quando houver muitos arquivos envolvidos.",
-      cancelled: "Exclusão do prefixo cancelada.", deleting: "Apagando todos os objetos sob {prefix}...", deleted: "{count} objeto(s) apagado(s) de {prefix}.",
+      confirmKicker: "Ação Destrutiva", confirmTitle: "Limpar conteudo da pasta",
+      confirmBody: "Você tem certeza absoluta que deseja apagar todos os arquivos desta pasta mantendo a pasta em si?",
+      confirmAction: "Limpar conteudo", progressKicker: "Exclusão em Andamento", progressTitle: "Limpando conteudo da pasta",
+      progressBody: "O conteudo da pasta selecionada está sendo apagado. Isso pode demorar quando houver muitos arquivos envolvidos.",
+      cancelled: "Limpeza da pasta cancelada.", deleting: "Apagando todos os objetos sob {prefix}...", deleted: "{count} objeto(s) apagado(s) de {prefix}.",
       confirmFileTitle: "Apagar arquivo", confirmFileBody: "Você tem certeza absoluta que deseja apagar este arquivo?",
       confirmFileAction: "Apagar arquivo", fileCancelled: "Exclusão do arquivo cancelada.", deletingFile: "Apagando {key}...",
       fileDeleted: "{key} apagado.", progressFileTitle: "Apagando arquivo",
       progressFileBody: "O arquivo selecionado está sendo apagado.",
+      confirmFolderTitle: "Apagar pasta", confirmFolderBody: "Você tem certeza absoluta que deseja apagar esta pasta e tudo que existe dentro dela?",
+      confirmFolderAction: "Apagar pasta", folderCancelled: "Exclusão da pasta cancelada.", deletingFolder: "Apagando pasta {prefix}...",
+      folderDeleted: "Pasta apagada: {prefix}.", progressFolderTitle: "Apagando pasta",
+      progressFolderBody: "A pasta selecionada e todo o seu conteudo estão sendo apagados.",
     },
     seed: {
       button: "Criar amostras Iceberg", kicker: "Dados de Exemplo", confirmTitle: "Criar tabelas Iceberg de exemplo",
@@ -325,9 +333,9 @@ const translations = {
     },
     browser: {
       kicker: "Explorador de Objetos", title: "Objetos", currentPrefix: "Prefijo actual", refresh: "Actualizar",
-      clearPrefix: "Borrar prefijo", connectToList: "Conéctate para listar los objetos del storage.",
+      clearPrefix: "Limpiar contenido de la carpeta", connectToList: "Conéctate para listar los objetos del storage.",
       noItems: "No se encontraron elementos en este prefijo.", loading: "Cargando objetos...", failed: "Error al listar objetos.",
-      folder: "Carpeta", file: "Archivo", actions: "Acciones", deleteFile: "Borrar archivo",
+      folder: "Carpeta", file: "Archivo", actions: "Acciones", deleteFile: "Borrar archivo", deleteFolder: "Borrar carpeta",
       createDirectory: "Crear directorio",
       createDirectoryTitle: "Crear directorio",
       createDirectoryBody: "Crea un nuevo directorio dentro del prefijo actual.",
@@ -354,15 +362,19 @@ const translations = {
       dfmFound: " · DFM: {dfmKey} ({count} columnas)", dfmNotFound: " · DFM no encontrado",
     },
     delete: {
-      confirmKicker: "Acción Destructiva", confirmTitle: "Eliminar prefijo",
-      confirmBody: "¿Estás absolutamente seguro de que deseas borrar todos los archivos bajo este prefijo?",
-      confirmAction: "Borrar archivos", progressKicker: "Eliminación en Curso", progressTitle: "Borrando archivos",
-      progressBody: "Se está borrando el prefijo seleccionado. Esto puede tardar cuando hay muchos archivos involucrados.",
-      cancelled: "Eliminación del prefijo cancelada.", deleting: "Borrando todos los objetos bajo {prefix}...", deleted: "{count} objeto(s) eliminado(s) de {prefix}.",
+      confirmKicker: "Acción Destructiva", confirmTitle: "Limpiar contenido de la carpeta",
+      confirmBody: "¿Estás absolutamente seguro de que deseas borrar todos los archivos de esta carpeta manteniendo la carpeta en sí?",
+      confirmAction: "Limpiar contenido", progressKicker: "Eliminación en Curso", progressTitle: "Limpiando contenido de la carpeta",
+      progressBody: "Se está borrando el contenido de la carpeta seleccionada. Esto puede tardar cuando hay muchos archivos involucrados.",
+      cancelled: "Limpieza de la carpeta cancelada.", deleting: "Borrando todos los objetos bajo {prefix}...", deleted: "{count} objeto(s) eliminado(s) de {prefix}.",
       confirmFileTitle: "Borrar archivo", confirmFileBody: "¿Estás absolutamente seguro de que deseas borrar este archivo?",
       confirmFileAction: "Borrar archivo", fileCancelled: "Eliminación del archivo cancelada.", deletingFile: "Borrando {key}...",
       fileDeleted: "{key} eliminado.", progressFileTitle: "Borrando archivo",
       progressFileBody: "Se está borrando el archivo seleccionado.",
+      confirmFolderTitle: "Borrar carpeta", confirmFolderBody: "¿Estás absolutamente seguro de que deseas borrar esta carpeta y todo lo que contiene?",
+      confirmFolderAction: "Borrar carpeta", folderCancelled: "Eliminación de la carpeta cancelada.", deletingFolder: "Borrando carpeta {prefix}...",
+      folderDeleted: "Carpeta eliminada: {prefix}.", progressFolderTitle: "Borrando carpeta",
+      progressFolderBody: "La carpeta seleccionada y todo su contenido se están borrando.",
     },
     seed: {
       button: "Crear muestras Iceberg", kicker: "Datos de Muestra", confirmTitle: "Crear tablas Iceberg de ejemplo",
@@ -433,9 +445,9 @@ const translations = {
     },
     browser: {
       kicker: "Esploratore Oggetti", title: "Oggetti", currentPrefix: "Prefisso corrente", refresh: "Aggiorna",
-      clearPrefix: "Cancella prefisso", connectToList: "Connettiti per elencare gli oggetti dello storage.",
+      clearPrefix: "Svuota contenuto cartella", connectToList: "Connettiti per elencare gli oggetti dello storage.",
       noItems: "Nessun elemento trovato in questo prefisso.", loading: "Caricamento oggetti...", failed: "Errore durante l'elenco degli oggetti.",
-      folder: "Cartella", file: "File", actions: "Azioni", deleteFile: "Elimina file",
+      folder: "Cartella", file: "File", actions: "Azioni", deleteFile: "Elimina file", deleteFolder: "Elimina cartella",
       createDirectory: "Crea cartella",
       createDirectoryTitle: "Crea cartella",
       createDirectoryBody: "Crea una nuova cartella dentro il prefisso corrente.",
@@ -462,15 +474,19 @@ const translations = {
       dfmFound: " · DFM: {dfmKey} ({count} colonne)", dfmNotFound: " · DFM non trovato",
     },
     delete: {
-      confirmKicker: "Azione Distruttiva", confirmTitle: "Elimina prefisso",
-      confirmBody: "Sei assolutamente sicuro di voler eliminare tutti i file sotto questo prefisso?",
-      confirmAction: "Elimina file", progressKicker: "Eliminazione in corso", progressTitle: "Eliminazione file",
-      progressBody: "Il prefisso selezionato è in fase di eliminazione. L'operazione può richiedere tempo se coinvolge molti file.",
-      cancelled: "Eliminazione del prefisso annullata.", deleting: "Eliminazione di tutti gli oggetti sotto {prefix}...", deleted: "{count} oggetto/i eliminato/i da {prefix}.",
+      confirmKicker: "Azione Distruttiva", confirmTitle: "Svuota contenuto cartella",
+      confirmBody: "Sei assolutamente sicuro di voler eliminare tutti i file di questa cartella mantenendo la cartella stessa?",
+      confirmAction: "Svuota contenuto", progressKicker: "Eliminazione in corso", progressTitle: "Svuotamento contenuto cartella",
+      progressBody: "Il contenuto della cartella selezionata è in fase di eliminazione. L'operazione può richiedere tempo se coinvolge molti file.",
+      cancelled: "Svuotamento cartella annullato.", deleting: "Eliminazione di tutti gli oggetti sotto {prefix}...", deleted: "{count} oggetto/i eliminato/i da {prefix}.",
       confirmFileTitle: "Elimina file", confirmFileBody: "Sei assolutamente sicuro di voler eliminare questo file?",
       confirmFileAction: "Elimina file", fileCancelled: "Eliminazione del file annullata.", deletingFile: "Eliminazione di {key}...",
       fileDeleted: "{key} eliminato.", progressFileTitle: "Eliminazione file",
       progressFileBody: "Il file selezionato è in fase di eliminazione.",
+      confirmFolderTitle: "Elimina cartella", confirmFolderBody: "Sei assolutamente sicuro di voler eliminare questa cartella e tutto il suo contenuto?",
+      confirmFolderAction: "Elimina cartella", folderCancelled: "Eliminazione della cartella annullata.", deletingFolder: "Eliminazione cartella {prefix}...",
+      folderDeleted: "Cartella eliminata: {prefix}.", progressFolderTitle: "Eliminazione cartella",
+      progressFolderBody: "La cartella selezionata e tutto il suo contenuto sono in fase di eliminazione.",
     },
     seed: {
       button: "Crea campioni Iceberg", kicker: "Dati di Esempio", confirmTitle: "Crea tabelle Iceberg di esempio",
@@ -1175,18 +1191,34 @@ function renderObjectList() {
 
     const actionsCell = document.createElement("td");
     actionsCell.className = "object-actions-cell";
-    if (item.type === "file" && state.destructiveOperationsEnabled) {
-      const deleteButton = document.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.className = "ghost-button danger-ghost-button icon-button row-action-icon-button";
-      deleteButton.setAttribute("aria-label", t("browser.deleteFile"));
-      deleteButton.setAttribute("title", t("browser.deleteFile"));
-      deleteButton.innerHTML = trashIconSvg();
-      deleteButton.addEventListener("click", (event) => {
-        event.stopPropagation();
-        deleteObjectFile(item.key);
-      });
-      actionsCell.appendChild(deleteButton);
+    if (state.destructiveOperationsEnabled && state.browseMode !== "iceberg") {
+      if (item.type === "file") {
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "ghost-button danger-ghost-button icon-button row-action-icon-button";
+        deleteButton.setAttribute("aria-label", t("browser.deleteFile"));
+        deleteButton.setAttribute("title", t("browser.deleteFile"));
+        deleteButton.innerHTML = trashIconSvg();
+        deleteButton.addEventListener("click", (event) => {
+          event.stopPropagation();
+          deleteObjectFile(item.key);
+        });
+        actionsCell.appendChild(deleteButton);
+      } else if (item.type === "folder" && state.browseMode !== "iceberg") {
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "ghost-button danger-ghost-button icon-button row-action-icon-button";
+        deleteButton.setAttribute("aria-label", t("browser.deleteFolder"));
+        deleteButton.setAttribute("title", t("browser.deleteFolder"));
+        deleteButton.innerHTML = trashIconSvg();
+        deleteButton.addEventListener("click", (event) => {
+          event.stopPropagation();
+          deleteObjectFolder(item.key);
+        });
+        actionsCell.appendChild(deleteButton);
+      } else {
+        actionsCell.textContent = "—";
+      }
     } else {
       actionsCell.textContent = "—";
     }
@@ -1938,6 +1970,65 @@ async function deleteObjectFile(key) {
     }
 
     setConnectionStatus(t("delete.fileDeleted", { key }));
+    await loadObjects(state.prefix);
+  } catch (error) {
+    setConnectionStatus(getErrorMessage(error), true);
+    setDiagnosticMessage(buildDiagnosticMessage(error));
+  } finally {
+    hideDeleteProgress();
+  }
+}
+
+async function deleteObjectFolder(prefix) {
+  if (!state.sessionId || !prefix) {
+    return;
+  }
+
+  if (!state.destructiveOperationsEnabled) {
+    setConnectionStatus(t("messages.destructiveDisabled"), true);
+    return;
+  }
+
+  if (state.browseMode === "iceberg") {
+    return;
+  }
+
+  const confirmation = await confirmDeletion({
+    title: t("delete.confirmFolderTitle"),
+    body: t("delete.confirmFolderBody"),
+    actionLabel: t("delete.confirmFolderAction"),
+    target: prefix,
+  });
+
+  if (!confirmation) {
+    setConnectionStatus(t("delete.folderCancelled"));
+    return;
+  }
+
+  showDeleteProgress({
+    title: t("delete.progressFolderTitle"),
+    body: t("delete.progressFolderBody"),
+    target: prefix,
+  });
+  setConnectionStatus(t("delete.deletingFolder", { prefix }));
+
+  try {
+    await apiFetch("/api/delete-folder", {
+      method: "POST",
+      body: JSON.stringify({
+        sessionId: state.sessionId,
+        prefix,
+      }),
+    });
+
+    if (state.selectedKey && state.selectedKey.startsWith(prefix)) {
+      state.selectedKey = "";
+      elements.downloadButton.disabled = true;
+      syncPreviewModeAvailability("");
+      resetPreview(t("preview.selectCompatible"));
+    }
+
+    setConnectionStatus(t("delete.folderDeleted", { prefix }));
     await loadObjects(state.prefix);
   } catch (error) {
     setConnectionStatus(getErrorMessage(error), true);

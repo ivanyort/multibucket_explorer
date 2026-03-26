@@ -20,6 +20,7 @@ The project uses plain ESM JavaScript and no frontend framework. Keep that simpl
 Folders that contain `metadata/*.metadata.json` should be treated as Iceberg table roots by the frontend and previewed through backend snapshot inspection instead of raw file listing.
 When a prefix is in Iceberg mode, the preview toolbar should expose the table snapshots available in metadata so the user can switch the sampled snapshot explicitly.
 Directory creation from the object browser must create exactly one immediate child under the current prefix; object-store providers materialize folder marker objects while ADLS creates a native directory, and the action stays unavailable in Iceberg mode.
+The object browser distinguishes between clearing the current folder contents and deleting a child folder entirely: the toolbar destructive action preserves the current folder, while the row-level folder delete removes the selected child folder plus all nested contents across supported providers.
 Temporary Iceberg sample seeding writes only under `<current-prefix>/_sample_data/iceberg/` in the connected storage target and stages the fixture files locally in the backend before upload.
 The temporary Iceberg sample seed UI must remain disabled when the backend is running inside Docker or with `NODE_ENV=production`; it is a local development-only feature.
 Avro preview is handled in the backend for Avro Object Container Files, including files that use the Avro `snappy` codec.
@@ -106,5 +107,6 @@ By default the application runs at `https://localhost:8086`.
 1. This file should contain only durable project guidance.
 2. Temporary task notes or experiments should not live here.
 3. If a decision changes how the app should be run, developed, or operated, record it in this file.
-4. `DISABLE_DESTRUCTIVE_OPERATIONS=true` is the runtime switch for read-only delete behavior and must block both prefix deletion and single-file deletion.
+4. `DISABLE_DESTRUCTIVE_OPERATIONS=true` is the runtime switch for read-only delete behavior and must block prefix deletion, row-level folder deletion, and single-file deletion.
 5. Prefix deletion must remove only the contents under the selected folder and preserve that folder across all supported providers.
+6. Row-level folder deletion must fully remove the selected child folder, including nested contents and any marker object used by object-store providers.

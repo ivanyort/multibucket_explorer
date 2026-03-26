@@ -324,6 +324,11 @@ const requestHandler = async (request, response) => {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/delete-folder") {
+      await handleDeleteFolder(request, response);
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/api/create-directory") {
       await handleCreateDirectory(request, response);
       return;
@@ -636,6 +641,25 @@ async function handleDeleteFile(request, response) {
   sendJson(response, 200, {
     deletedCount: 1,
     key,
+  });
+}
+
+async function handleDeleteFolder(request, response) {
+  ensureDestructiveOperationsEnabled();
+  const body = await readJsonBody(request);
+  const session = getSession(typeof body.sessionId === "string" ? body.sessionId : "");
+  const prefix = typeof body.prefix === "string" ? body.prefix.trim() : "";
+
+  if (!prefix) {
+    throw new LocalizedError("delete_root_forbidden");
+  }
+
+  const deletedCount = await deleteStorageFolder(session, prefix);
+
+  sendJson(response, 200, {
+    deletedCount,
+    prefix,
+    deletedFolder: true,
   });
 }
 
@@ -1171,6 +1195,81 @@ async function deleteStoragePrefix(session, prefix) {
   } while (continuationToken);
 
   await ensurePrefixMarkerObject(session, normalizedPrefix);
+  return deletedCount;
+}
+
+async function deleteStorageFolder(session, prefix) {
+  if (session.storage.provider === "adls") {
+    const normalizedPrefix = normalizeAdlsDirectory(prefix);
+
+    if (!normalizedPrefix) {
+      throw new LocalizedError("delete_root_forbidden");
+    }
+
+    const paths = await listStoragePaths(session, prefix, true);
+    const childPaths = paths.filter((item) => item.name && item.name !== normalizedPrefix);
+    const files = childPaths.filter((item) => !item.isDirectory);
+    const directories = childPaths
+      .filter((item) => item.isDirectory)
+      .sort((left, right) => getPathDepth(right.name) - getPathDepth(left.name));
+
+    await Promise.all(files.map((item) => session.storage.fileSystemClient.getFileClient(item.name).delete()));
+
+    for (const directory of directories) {
+      await session.storage.fileSystemClient.getDirectoryClient(directory.name).delete();
+    }
+
+    await session.storage.fileSystemClient.getDirectoryClient(normalizedPrefix).delete();
+    return files.length;
+  }
+
+  if (session.storage.provider === "gcs") {
+    const normalizedPrefix = ensureTrailingSlash(prefix);
+    if (!normalizedPrefix) {
+      throw new LocalizedError("delete_root_forbidden");
+    }
+
+    const files = await listStoragePaths(session, normalizedPrefix, true);
+    await Promise.all(files.map((file) => file.delete()));
+    return files.length;
+  }
+
+  const normalizedPrefix = ensureTrailingSlash(prefix);
+  if (!normalizedPrefix) {
+    throw new LocalizedError("delete_root_forbidden");
+  }
+
+  let continuationToken;
+  let deletedCount = 0;
+
+  do {
+    const listResult = await session.storage.client.send(
+      new ListObjectsV2Command({
+        Bucket: session.storage.bucket,
+        Prefix: normalizedPrefix,
+        ContinuationToken: continuationToken,
+      }),
+    );
+
+    const objects =
+      listResult.Contents?.map((item) => item.Key).filter((key) => typeof key === "string" && key.length) ?? [];
+
+    if (objects.length) {
+      await session.storage.client.send(
+        new DeleteObjectsCommand({
+          Bucket: session.storage.bucket,
+          Delete: {
+            Objects: objects.map((key) => ({ Key: key })),
+            Quiet: true,
+          },
+        }),
+      );
+      deletedCount += objects.length;
+    }
+
+    continuationToken = listResult.IsTruncated ? listResult.NextContinuationToken : undefined;
+  } while (continuationToken);
+
   return deletedCount;
 }
 

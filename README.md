@@ -13,7 +13,8 @@ Web application with a local backend for:
 - creating a directory inside the current browser prefix across all supported providers
 - downloading files through a local proxy
 - deleting a specific file from the current listing
-- deleting all files under a prefix while preserving the selected folder
+- deleting a child folder from the current listing, including all nested contents
+- clearing all files under the current prefix while preserving the selected folder
 - switching the frontend language between English, Brazilian Portuguese, Spanish, and Italian
 
 For AWS S3, MinIO, and Google Cloud Storage, folder modification dates are derived from the most recently updated object found under each immediate child prefix, including a real folder marker object such as `path/to/folder/` when present. This requires an extra recursive listing of the current prefix, so pages with many nested objects can load more slowly than providers with native directory timestamps.
