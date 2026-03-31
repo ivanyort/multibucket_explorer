@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.15.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.15.0) - 2026-03-31
+
+### Changes
+- feat: add provider-scoped saved profiles (a111c5e)
+- chore(changelog): update for v0.14.0 [skip ci] (5fdf119)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.14.0...v0.15.0)
+
+
 ## [v0.14.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.14.0) - 2026-03-26
 
 ### Changes
