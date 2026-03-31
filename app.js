@@ -6,6 +6,9 @@ const state = {
   language: "en",
   targetName: "",
   locationName: "",
+  activeProfileLabel: "",
+  activeProfileId: "",
+  activeProfileProvider: "",
   prefix: "",
   selectedKey: "",
   sessionId: "",
@@ -29,17 +32,23 @@ const state = {
   vaultEnvelope: null,
   sessionVaultKey: null,
   pendingLegacyPayload: null,
+  vaultData: null,
+  editingProfileId: "",
+  editingProfileProvider: "",
+  profilePickerProvider: "s3",
+  profileSearchTerm: "",
 };
 
 const STORAGE_KEY = "multibucket-explorer-connection";
 const LANGUAGE_STORAGE_KEY = "multibucket-explorer-language";
 const OBJECT_FILTERS_STORAGE_KEY = "multibucket-explorer-object-filters";
 const SESSION_VAULT_KEY = "multibucket-explorer-connection-unlock";
-const ENCRYPTED_STORAGE_VERSION = 1;
+const ENCRYPTED_STORAGE_VERSION = 2;
 const VAULT_SALT_LENGTH = 16;
 const VAULT_IV_LENGTH = 12;
 const VAULT_PBKDF2_ITERATIONS = 250000;
 const SUPPORTED_LANGUAGES = ["en", "pt-BR", "es", "it"];
+const SUPPORTED_PROVIDERS = ["s3", "adls", "gcs", "minio"];
 const DATE_LOCALES = {
   en: "en-US",
   "pt-BR": "pt-BR",
@@ -62,9 +71,10 @@ const translations = {
       lock: "Lock credentials",
       unlock: "Unlock saved credentials",
       modalTitle: "Connection settings",
-      modalBody: "Review the provider credentials, test access, and save to connect.",
+      modalBody: "Review the provider profile, test access, and save it securely in this browser.",
       test: "Test connection",
-      saveAndConnect: "Save",
+      saveProfile: "Save profile",
+      saveAndConnect: "Save and connect",
     },
     providers: {
       kicker: "Providers",
@@ -84,13 +94,14 @@ const translations = {
       ignoreTlsErrors: "Ignore HTTPS certificate errors for this MinIO connection",
     },
     fields: {
+      profileLabel: "Profile name",
       region: "Region", bucket: "Bucket", accessKeyId: "Access Key ID", secretAccessKey: "Secret Access Key",
       accountName: "Account Name", containerName: "Container Name", accessKey: "Access Key",
       bucketOrUrl: "Bucket or URL", projectId: "Project ID (auto-filled from the JSON when present)",
       serviceAccountJson: "Service Account JSON", endpoint: "Endpoint",
     },
     placeholders: {
-      region: "us-east-1", bucket: "my-bucket", accessKeyId: "AKIA...", secretAccessKey: "********",
+      profileLabel: "Production analytics", region: "us-east-1", bucket: "my-bucket", accessKeyId: "AKIA...", secretAccessKey: "********",
       accountName: "myaccount", fileSystem: "my-filesystem", gcsBucket: "gs://my-bucket or my-bucket",
       projectId: "my-project-id", serviceAccountJson: '{"type":"service_account", ...}', endpoint: "http://localhost:9000",
       minioAccessKeyId: "minioadmin",
@@ -172,6 +183,34 @@ const translations = {
       fillAdls: "Fill in account name, container name, and access key.", fillGcs: "Fill in bucket and service account JSON.",
       invalidServiceAccountJson: "Service account JSON must be valid JSON.", fillMinio: "Fill in endpoint, bucket, access key ID, and secret access key.",
       fillS3: "Fill in region, bucket, and credentials.",
+      profileNameRequired: "Enter a profile name before saving.",
+      profileSaved: "Profile saved: {label}.",
+      profileDeleted: "Profile deleted: {label}.",
+      activeProfileDeleted: "The active profile was deleted. Connect again using another saved profile.",
+      profileDefaultSet: "{label} is now the default profile for {provider}.",
+    },
+    profiles: {
+      title: "{provider} profiles",
+      body: "Choose a saved profile for this provider or create a new one.",
+      add: "Add profile",
+      search: "Search profiles",
+      searchPlaceholder: "Search by profile, target, or location",
+      none: "No saved profiles for this provider yet.",
+      connect: "Connect",
+      edit: "Edit",
+      duplicate: "Duplicate",
+      delete: "Delete",
+      setDefault: "Set default",
+      defaultBadge: "Default",
+      lastUsed: "Last used {date}",
+      neverUsed: "Never used",
+      duplicateSuffix: "Copy",
+      createTitle: "Create profile",
+      editTitle: "Edit profile",
+      createBody: "Create a named saved profile for this provider.",
+      editBody: "Update this saved provider profile.",
+      deleteTitle: "Delete profile",
+      deleteBody: "Are you absolutely sure you want to delete this saved profile?",
     },
     vault: {
       kicker: "Credential Vault",
@@ -207,9 +246,10 @@ const translations = {
       settings: "Configurações da conexão",
       edit: "Editar credenciais",
       modalTitle: "Configurações da conexão",
-      modalBody: "Revise as credenciais do provedor, teste o acesso e salve para conectar.",
+      modalBody: "Revise o perfil do provedor, teste o acesso e salve com seguranca neste navegador.",
       test: "Testar conexão",
-      saveAndConnect: "Salvar",
+      saveProfile: "Salvar perfil",
+      saveAndConnect: "Salvar e conectar",
     },
     providers: {
       kicker: "Provedores", ariaLabel: "Provedor de storage",
@@ -223,13 +263,14 @@ const translations = {
     gcs: { ariaLabel: "Configurações de conexão GCS", kicker: "Conexão GCS", copy: "Use um bucket Google Cloud Storage e uma chave JSON de service account." },
     minio: { ariaLabel: "Configurações de conexão MinIO", kicker: "Conexão MinIO", copy: "Use um endpoint MinIO customizado com chaves compatíveis com S3.", ignoreTlsErrors: "Ignorar erros de certificado HTTPS nesta conexão MinIO" },
     fields: {
+      profileLabel: "Nome do perfil",
       region: "Região", bucket: "Bucket", accessKeyId: "Access Key ID", secretAccessKey: "Secret Access Key",
       accountName: "Nome da conta", containerName: "Nome do container", accessKey: "Access Key",
       bucketOrUrl: "Bucket ou URL", projectId: "Project ID (preenchido automaticamente a partir do JSON quando presente)",
       serviceAccountJson: "Service Account JSON", endpoint: "Endpoint",
     },
     placeholders: {
-      region: "us-east-1", bucket: "meu-bucket", accessKeyId: "AKIA...", secretAccessKey: "********",
+      profileLabel: "Analytics producao", region: "us-east-1", bucket: "meu-bucket", accessKeyId: "AKIA...", secretAccessKey: "********",
       accountName: "minhaconta", fileSystem: "meu-container", gcsBucket: "gs://meu-bucket ou meu-bucket",
       projectId: "meu-projeto", serviceAccountJson: '{"type":"service_account", ...}', endpoint: "http://localhost:9000",
       minioAccessKeyId: "minioadmin",
@@ -311,6 +352,34 @@ const translations = {
       fillAdls: "Preencha nome da conta, nome do container e access key.", fillGcs: "Preencha bucket e service account JSON.",
       invalidServiceAccountJson: "O service account JSON deve ser um JSON válido.", fillMinio: "Preencha endpoint, bucket, access key ID e secret access key.",
       fillS3: "Preencha região, bucket e credenciais.",
+      profileNameRequired: "Informe um nome para o perfil antes de salvar.",
+      profileSaved: "Perfil salvo: {label}.",
+      profileDeleted: "Perfil apagado: {label}.",
+      activeProfileDeleted: "O perfil ativo foi apagado. Conecte novamente usando outro perfil salvo.",
+      profileDefaultSet: "{label} agora e o perfil padrao de {provider}.",
+    },
+    profiles: {
+      title: "Perfis de {provider}",
+      body: "Escolha um perfil salvo para este provedor ou crie um novo.",
+      add: "Adicionar perfil",
+      search: "Buscar perfis",
+      searchPlaceholder: "Busque por perfil, destino ou localizacao",
+      none: "Ainda nao ha perfis salvos para este provedor.",
+      connect: "Conectar",
+      edit: "Editar",
+      duplicate: "Duplicar",
+      delete: "Apagar",
+      setDefault: "Definir padrao",
+      defaultBadge: "Padrao",
+      lastUsed: "Ultimo uso {date}",
+      neverUsed: "Nunca usado",
+      duplicateSuffix: "Copia",
+      createTitle: "Criar perfil",
+      editTitle: "Editar perfil",
+      createBody: "Crie um perfil salvo com nome para este provedor.",
+      editBody: "Atualize este perfil salvo do provedor.",
+      deleteTitle: "Apagar perfil",
+      deleteBody: "Voce tem certeza absoluta que deseja apagar este perfil salvo?",
     },
     table: { name: "Nome", type: "Tipo", size: "Tamanho", date: "Data", column: "coluna_{index}" },
   },
@@ -322,9 +391,10 @@ const translations = {
       settings: "Configuración de la conexión",
       edit: "Editar credenciales",
       modalTitle: "Configuración de la conexión",
-      modalBody: "Revisa las credenciales del proveedor, prueba el acceso y guarda para conectar.",
+      modalBody: "Revisa el perfil del proveedor, prueba el acceso y guardalo de forma segura en este navegador.",
       test: "Probar conexión",
-      saveAndConnect: "Guardar",
+      saveProfile: "Guardar perfil",
+      saveAndConnect: "Guardar y conectar",
     },
     providers: {
       kicker: "Proveedores", ariaLabel: "Proveedor de storage",
@@ -338,13 +408,14 @@ const translations = {
     gcs: { ariaLabel: "Configuración de conexión GCS", kicker: "Conexión GCS", copy: "Usa un bucket de Google Cloud Storage y una clave JSON de service account." },
     minio: { ariaLabel: "Configuración de conexión MinIO", kicker: "Conexión MinIO", copy: "Usa un endpoint MinIO personalizado con claves compatibles con S3.", ignoreTlsErrors: "Ignorar errores de certificado HTTPS para esta conexión MinIO" },
     fields: {
+      profileLabel: "Nombre del perfil",
       region: "Región", bucket: "Bucket", accessKeyId: "Access Key ID", secretAccessKey: "Secret Access Key",
       accountName: "Nombre de la cuenta", containerName: "Nombre del contenedor", accessKey: "Access Key",
       bucketOrUrl: "Bucket o URL", projectId: "Project ID (se completa automáticamente desde el JSON cuando está presente)",
       serviceAccountJson: "Service Account JSON", endpoint: "Endpoint",
     },
     placeholders: {
-      region: "us-east-1", bucket: "mi-bucket", accessKeyId: "AKIA...", secretAccessKey: "********",
+      profileLabel: "Analytics produccion", region: "us-east-1", bucket: "mi-bucket", accessKeyId: "AKIA...", secretAccessKey: "********",
       accountName: "micuenta", fileSystem: "mi-contenedor", gcsBucket: "gs://mi-bucket o mi-bucket",
       projectId: "mi-proyecto", serviceAccountJson: '{"type":"service_account", ...}', endpoint: "http://localhost:9000",
       minioAccessKeyId: "minioadmin",
@@ -426,6 +497,34 @@ const translations = {
       fillAdls: "Completa el nombre de la cuenta, el nombre del contenedor y la access key.", fillGcs: "Completa bucket y service account JSON.",
       invalidServiceAccountJson: "El service account JSON debe ser un JSON válido.", fillMinio: "Completa endpoint, bucket, access key ID y secret access key.",
       fillS3: "Completa región, bucket y credenciales.",
+      profileNameRequired: "Indica un nombre de perfil antes de guardarlo.",
+      profileSaved: "Perfil guardado: {label}.",
+      profileDeleted: "Perfil eliminado: {label}.",
+      activeProfileDeleted: "El perfil activo fue eliminado. Vuelve a conectarte con otro perfil guardado.",
+      profileDefaultSet: "{label} ahora es el perfil predeterminado de {provider}.",
+    },
+    profiles: {
+      title: "Perfiles de {provider}",
+      body: "Elige un perfil guardado para este proveedor o crea uno nuevo.",
+      add: "Agregar perfil",
+      search: "Buscar perfiles",
+      searchPlaceholder: "Busca por perfil, destino o ubicacion",
+      none: "Todavia no hay perfiles guardados para este proveedor.",
+      connect: "Conectar",
+      edit: "Editar",
+      duplicate: "Duplicar",
+      delete: "Eliminar",
+      setDefault: "Predeterminar",
+      defaultBadge: "Predeterminado",
+      lastUsed: "Ultimo uso {date}",
+      neverUsed: "Nunca usado",
+      duplicateSuffix: "Copia",
+      createTitle: "Crear perfil",
+      editTitle: "Editar perfil",
+      createBody: "Crea un perfil guardado con nombre para este proveedor.",
+      editBody: "Actualiza este perfil guardado del proveedor.",
+      deleteTitle: "Eliminar perfil",
+      deleteBody: "Estas absolutamente seguro de que deseas eliminar este perfil guardado?",
     },
     table: { name: "Nombre", type: "Tipo", size: "Tamaño", date: "Fecha", column: "columna_{index}" },
   },
@@ -437,9 +536,10 @@ const translations = {
       settings: "Impostazioni della connessione",
       edit: "Modifica credenziali",
       modalTitle: "Impostazioni della connessione",
-      modalBody: "Controlla le credenziali del provider, testa l'accesso e salva per connetterti.",
+      modalBody: "Controlla il profilo del provider, testa l'accesso e salvalo in modo sicuro in questo browser.",
       test: "Testa connessione",
-      saveAndConnect: "Salva",
+      saveProfile: "Salva profilo",
+      saveAndConnect: "Salva e connetti",
     },
     providers: {
       kicker: "Provider", ariaLabel: "Provider di storage",
@@ -453,13 +553,14 @@ const translations = {
     gcs: { ariaLabel: "Impostazioni di connessione GCS", kicker: "Connessione GCS", copy: "Usa un bucket Google Cloud Storage e una chiave JSON del service account." },
     minio: { ariaLabel: "Impostazioni di connessione MinIO", kicker: "Connessione MinIO", copy: "Usa un endpoint MinIO personalizzato con chiavi compatibili con S3.", ignoreTlsErrors: "Ignora gli errori del certificato HTTPS per questa connessione MinIO" },
     fields: {
+      profileLabel: "Nome profilo",
       region: "Regione", bucket: "Bucket", accessKeyId: "Access Key ID", secretAccessKey: "Secret Access Key",
       accountName: "Nome account", containerName: "Nome contenitore", accessKey: "Access Key",
       bucketOrUrl: "Bucket o URL", projectId: "Project ID (compilato automaticamente dal JSON quando presente)",
       serviceAccountJson: "Service Account JSON", endpoint: "Endpoint",
     },
     placeholders: {
-      region: "us-east-1", bucket: "mio-bucket", accessKeyId: "AKIA...", secretAccessKey: "********",
+      profileLabel: "Analytics produzione", region: "us-east-1", bucket: "mio-bucket", accessKeyId: "AKIA...", secretAccessKey: "********",
       accountName: "mioaccount", fileSystem: "mio-contenitore", gcsBucket: "gs://mio-bucket o mio-bucket",
       projectId: "mio-progetto", serviceAccountJson: '{"type":"service_account", ...}', endpoint: "http://localhost:9000",
       minioAccessKeyId: "minioadmin",
@@ -541,6 +642,34 @@ const translations = {
       fillAdls: "Compila nome account, nome contenitore e access key.", fillGcs: "Compila bucket e service account JSON.",
       invalidServiceAccountJson: "Il service account JSON deve essere un JSON valido.", fillMinio: "Compila endpoint, bucket, access key ID e secret access key.",
       fillS3: "Compila regione, bucket e credenziali.",
+      profileNameRequired: "Inserisci un nome profilo prima di salvare.",
+      profileSaved: "Profilo salvato: {label}.",
+      profileDeleted: "Profilo eliminato: {label}.",
+      activeProfileDeleted: "Il profilo attivo e stato eliminato. Connettiti di nuovo usando un altro profilo salvato.",
+      profileDefaultSet: "{label} e ora il profilo predefinito per {provider}.",
+    },
+    profiles: {
+      title: "Profili {provider}",
+      body: "Scegli un profilo salvato per questo provider o creane uno nuovo.",
+      add: "Aggiungi profilo",
+      search: "Cerca profili",
+      searchPlaceholder: "Cerca per profilo, destinazione o posizione",
+      none: "Non ci sono ancora profili salvati per questo provider.",
+      connect: "Connetti",
+      edit: "Modifica",
+      duplicate: "Duplica",
+      delete: "Elimina",
+      setDefault: "Imposta default",
+      defaultBadge: "Default",
+      lastUsed: "Ultimo uso {date}",
+      neverUsed: "Mai usato",
+      duplicateSuffix: "Copia",
+      createTitle: "Crea profilo",
+      editTitle: "Modifica profilo",
+      createBody: "Crea un profilo salvato con nome per questo provider.",
+      editBody: "Aggiorna questo profilo salvato del provider.",
+      deleteTitle: "Elimina profilo",
+      deleteBody: "Sei assolutamente sicuro di voler eliminare questo profilo salvato?",
     },
     table: { name: "Nome", type: "Tipo", size: "Dimensione", date: "Data", column: "colonna_{index}" },
   },
@@ -552,15 +681,28 @@ const elements = {
   languageSelect: document.querySelector("#languageSelect"),
   connectionSummaryText: document.querySelector("#connectionSummaryText"),
   connectionModal: document.querySelector("#connectionModal"),
+  connectionModalTitle: document.querySelector("#connectionModalTitle"),
+  connectionModalBody: document.querySelector("#connectionModalBody"),
   connectionModalStatus: document.querySelector("#connectionModalStatus"),
   connectionModalCancel: document.querySelector("#connectionModalCancel"),
   testConnectionButton: document.querySelector("#testConnectionButton"),
+  saveProfileButton: document.querySelector("#saveProfileButton"),
   saveConnectionButton: document.querySelector("#saveConnectionButton"),
   credentialsForm: document.querySelector("#credentialsForm"),
   provider: document.querySelector("#provider"),
+  profileLabel: document.querySelector("#profileLabel"),
   providerCards: document.querySelectorAll("[data-provider-card]"),
   providerCardTriggers: document.querySelectorAll("[data-provider-card-trigger]"),
   providerEditButtons: document.querySelectorAll("[data-provider-edit]"),
+  profilePickerModal: document.querySelector("#profilePickerModal"),
+  profilePickerKicker: document.querySelector("#profilePickerKicker"),
+  profilePickerTitle: document.querySelector("#profilePickerTitle"),
+  profilePickerBody: document.querySelector("#profilePickerBody"),
+  profileSearchLabel: document.querySelector("#profileSearchLabel"),
+  profileSearchInput: document.querySelector("#profileSearchInput"),
+  profilePickerAddButton: document.querySelector("#profilePickerAddButton"),
+  profilePickerList: document.querySelector("#profilePickerList"),
+  profilePickerClose: document.querySelector("#profilePickerClose"),
   s3Fields: document.querySelector("#s3Fields"),
   adlsFields: document.querySelector("#adlsFields"),
   gcsFields: document.querySelector("#gcsFields"),
@@ -657,13 +799,7 @@ if (elements.languageSelect instanceof HTMLSelectElement) {
 
 elements.credentialsForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  void saveConnectionFromModal();
-});
-elements.credentialsForm.addEventListener("input", () => {
-  void persistConnectionForm();
-});
-elements.credentialsForm.addEventListener("change", () => {
-  void persistConnectionForm();
+  void saveConnectionFromModal({ connectAfterSave: true });
 });
 const serviceAccountJsonField = elements.credentialsForm.elements.namedItem("serviceAccountJson");
 if (serviceAccountJsonField instanceof HTMLTextAreaElement) {
@@ -685,11 +821,28 @@ elements.providerEditButtons.forEach((button) => {
     if (!(await ensureCredentialAccess())) {
       return;
     }
-    openConnectionModal(normalizeProvider(button.dataset.providerEdit));
+    openProfilePicker(normalizeProvider(button.dataset.providerEdit));
   });
 });
 elements.connectionModalCancel.addEventListener("click", closeConnectionModal);
 elements.testConnectionButton.addEventListener("click", testConnectionFromModal);
+elements.saveProfileButton.addEventListener("click", () => {
+  void saveConnectionFromModal({ connectAfterSave: false });
+});
+elements.profilePickerAddButton.addEventListener("click", () => {
+  openConnectionModal(state.profilePickerProvider, { mode: "create" });
+});
+elements.profilePickerClose.addEventListener("click", closeProfilePicker);
+elements.profilePickerModal.addEventListener("click", (event) => {
+  const target = event.target;
+  if (target instanceof HTMLElement && target.hasAttribute("data-profile-picker-close")) {
+    closeProfilePicker();
+  }
+});
+elements.profileSearchInput.addEventListener("input", () => {
+  state.profileSearchTerm = elements.profileSearchInput.value.trim().toLowerCase();
+  renderProfilePickerList();
+});
 elements.unlockCredentialsButton.addEventListener("click", () => {
   void unlockSavedCredentials();
 });
@@ -714,6 +867,10 @@ document.addEventListener("keydown", (event) => {
   if (!elements.connectionModal.hidden && event.key === "Escape") {
     event.preventDefault();
     closeConnectionModal();
+  }
+  if (!elements.profilePickerModal.hidden && event.key === "Escape") {
+    event.preventDefault();
+    closeProfilePicker();
   }
   if (!elements.createDirectoryModal.hidden && event.key === "Escape") {
     event.preventDefault();
@@ -840,6 +997,15 @@ function applyLanguage() {
   syncDestructiveControls();
   syncWorkspaceVisibility();
   syncCredentialButtons();
+  if (!elements.profilePickerModal.hidden) {
+    openProfilePicker(state.profilePickerProvider);
+  }
+  if (!elements.connectionModal.hidden) {
+    elements.connectionModalTitle.textContent = t(state.editingProfileId ? "profiles.editTitle" : "profiles.createTitle");
+    elements.connectionModalBody.textContent = t(state.editingProfileId ? "profiles.editBody" : "profiles.createBody");
+    elements.saveProfileButton.textContent = t("connection.saveProfile");
+    elements.saveConnectionButton.textContent = t("connection.saveAndConnect");
+  }
   if (state.selectedKey && state.sessionId) {
     previewObject(state.selectedKey);
   }
@@ -860,15 +1026,301 @@ function selectProvider(provider) {
   syncProviderFields();
 }
 
+function createEmptyVaultData() {
+  return {
+    profilesByProvider: Object.fromEntries(SUPPORTED_PROVIDERS.map((provider) => [provider, []])),
+    defaultsByProvider: Object.fromEntries(SUPPORTED_PROVIDERS.map((provider) => [provider, ""])),
+    activeProfileRef: null,
+  };
+}
+
+function buildConnectionPayloadFromProfile(profile) {
+  return {
+    provider: normalizeProvider(profile.provider),
+    region: profile.region ?? "",
+    bucket: profile.bucket ?? "",
+    accessKeyId: profile.accessKeyId ?? "",
+    secretAccessKey: profile.secretAccessKey ?? "",
+    accountName: profile.accountName ?? "",
+    fileSystem: profile.fileSystem ?? "",
+    accountKey: profile.accountKey ?? "",
+    gcsBucket: profile.gcsBucket ?? "",
+    projectId: profile.projectId ?? "",
+    serviceAccountJson: profile.serviceAccountJson ?? "",
+    endpoint: profile.endpoint ?? "",
+    minioBucket: profile.minioBucket ?? "",
+    minioRegion: profile.minioRegion ?? "",
+    minioAccessKeyId: profile.minioAccessKeyId ?? "",
+    minioSecretAccessKey: profile.minioSecretAccessKey ?? "",
+    ignoreTlsErrors: profile.ignoreTlsErrors === true,
+  };
+}
+
+function slugifyLabel(value) {
+  return String(value ?? "").trim().replace(/\s+/g, " ");
+}
+
+function generateProfileId() {
+  return `profile_${window.crypto.randomUUID()}`;
+}
+
+function buildDefaultProfileLabel(payload) {
+  const targetName = getConnectionTargetName(payload);
+  const locationName = getConnectionLocationName(payload);
+  return [targetName, locationName].filter(Boolean).join(" · ") || payload.provider.toUpperCase();
+}
+
+function createProfileFromPayload(payload, overrides = {}) {
+  const provider = normalizeProvider(payload.provider);
+  return {
+    id: overrides.id ?? generateProfileId(),
+    provider,
+    label: slugifyLabel(overrides.label ?? buildDefaultProfileLabel(payload)),
+    ...buildConnectionPayloadFromProfile(payload),
+    lastUsedAt: overrides.lastUsedAt ?? "",
+  };
+}
+
+function migrateLegacyPayloadToVaultData(payload) {
+  const vaultData = createEmptyVaultData();
+  const profile = createProfileFromPayload(payload);
+  vaultData.profilesByProvider[profile.provider] = [profile];
+  vaultData.defaultsByProvider[profile.provider] = profile.id;
+  vaultData.activeProfileRef = { provider: profile.provider, profileId: profile.id };
+  return vaultData;
+}
+
+function normalizeVaultData(payload) {
+  if (!payload || typeof payload !== "object") {
+    return createEmptyVaultData();
+  }
+
+  if (!payload.profilesByProvider || !payload.defaultsByProvider) {
+    return migrateLegacyPayloadToVaultData(payload);
+  }
+
+  const normalized = createEmptyVaultData();
+  SUPPORTED_PROVIDERS.forEach((provider) => {
+    const profiles = Array.isArray(payload.profilesByProvider?.[provider]) ? payload.profilesByProvider[provider] : [];
+    normalized.profilesByProvider[provider] = profiles
+      .filter((profile) => profile && typeof profile === "object")
+      .map((profile) => createProfileFromPayload({ provider, ...profile }, {
+        id: typeof profile.id === "string" && profile.id ? profile.id : generateProfileId(),
+        label: typeof profile.label === "string" && profile.label.trim() ? profile.label : buildDefaultProfileLabel({ provider, ...profile }),
+        lastUsedAt: typeof profile.lastUsedAt === "string" ? profile.lastUsedAt : "",
+      }));
+    normalized.defaultsByProvider[provider] =
+      typeof payload.defaultsByProvider?.[provider] === "string" ? payload.defaultsByProvider[provider] : "";
+  });
+
+  const activeProvider = normalizeProvider(payload.activeProfileRef?.provider);
+  const activeProfileId = typeof payload.activeProfileRef?.profileId === "string" ? payload.activeProfileRef.profileId : "";
+  normalized.activeProfileRef = activeProfileId ? { provider: activeProvider, profileId: activeProfileId } : null;
+  ensureDefaultProfiles(normalized);
+  return normalized;
+}
+
+function ensureDefaultProfiles(vaultData) {
+  SUPPORTED_PROVIDERS.forEach((provider) => {
+    const profiles = vaultData.profilesByProvider[provider] ?? [];
+    const defaultId = vaultData.defaultsByProvider[provider];
+    if (!profiles.length) {
+      vaultData.defaultsByProvider[provider] = "";
+      if (vaultData.activeProfileRef?.provider === provider) {
+        vaultData.activeProfileRef = null;
+      }
+      return;
+    }
+
+    if (!profiles.some((profile) => profile.id === defaultId)) {
+      vaultData.defaultsByProvider[provider] = profiles[0].id;
+    }
+  });
+}
+
+function getProfilesForProvider(provider) {
+  if (!state.vaultData) {
+    return [];
+  }
+
+  const normalizedProvider = normalizeProvider(provider);
+  const profiles = state.vaultData.profilesByProvider[normalizedProvider] ?? [];
+  const defaultId = state.vaultData.defaultsByProvider[normalizedProvider];
+  return [...profiles].sort((left, right) => {
+    const leftDefault = left.id === defaultId ? 0 : 1;
+    const rightDefault = right.id === defaultId ? 0 : 1;
+    if (leftDefault !== rightDefault) {
+      return leftDefault - rightDefault;
+    }
+
+    const leftLastUsed = left.lastUsedAt || "";
+    const rightLastUsed = right.lastUsedAt || "";
+    if (leftLastUsed !== rightLastUsed) {
+      return rightLastUsed.localeCompare(leftLastUsed);
+    }
+
+    return left.label.localeCompare(right.label);
+  });
+}
+
+function findProfile(provider, profileId) {
+  return getProfilesForProvider(provider).find((profile) => profile.id === profileId) ?? null;
+}
+
+function setEditingProfile(provider, profile = null) {
+  state.editingProfileProvider = normalizeProvider(provider);
+  state.editingProfileId = profile?.id ?? "";
+}
+
+function populateConnectionFormFromProfile(provider, profile = null) {
+  const source = profile ? buildConnectionPayloadFromProfile(profile) : { provider };
+  clearConnectionForm();
+  setInputValue("provider", normalizeProvider(provider));
+  setInputValue("profileLabel", profile?.label ?? "");
+  hydrateConnectionForm(source);
+  setEditingProfile(provider, profile);
+}
+
+function buildDraftProfileFromForm() {
+  const payload = getConnectionPayload();
+  const label = slugifyLabel(elements.profileLabel.value);
+  return {
+    ...payload,
+    label,
+    provider: normalizeProvider(payload.provider),
+  };
+}
+
+function openProfilePicker(provider) {
+  state.profilePickerProvider = normalizeProvider(provider);
+  state.profileSearchTerm = "";
+  elements.profileSearchInput.value = "";
+  const profileCount = getProfilesForProvider(state.profilePickerProvider).length;
+  elements.profilePickerKicker.textContent = t("providers.kicker");
+  elements.profilePickerTitle.textContent = t("profiles.title", { provider: state.profilePickerProvider.toUpperCase() });
+  elements.profilePickerBody.textContent = t("profiles.body");
+  elements.profileSearchInput.placeholder = t("profiles.searchPlaceholder");
+  elements.profileSearchInput.hidden = profileCount <= 5;
+  elements.profileSearchLabel.hidden = profileCount <= 5;
+  if (elements.profileSearchInput.parentElement instanceof HTMLElement) {
+    elements.profileSearchInput.parentElement.hidden = profileCount <= 5;
+  }
+  elements.profilePickerAddButton.textContent = t("profiles.add");
+  elements.profilePickerClose.textContent = t("common.close");
+  elements.profileSearchLabel.textContent = t("profiles.search");
+  renderProfilePickerList();
+  elements.profilePickerModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  if (!elements.profileSearchInput.hidden) {
+    elements.profileSearchInput.focus();
+  } else {
+    elements.profilePickerAddButton.focus();
+  }
+}
+
+function closeProfilePicker() {
+  if (elements.profilePickerModal.hidden) {
+    return;
+  }
+
+  elements.profilePickerModal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function renderProfilePickerList() {
+  elements.profilePickerList.innerHTML = "";
+  const profiles = getProfilesForProvider(state.profilePickerProvider).filter((profile) => {
+    if (!state.profileSearchTerm) {
+      return true;
+    }
+
+    const haystack = [profile.label, getConnectionTargetName(profile), getConnectionLocationName(profile)]
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(state.profileSearchTerm);
+  });
+
+  if (!profiles.length) {
+    const empty = document.createElement("div");
+    empty.className = "profile-picker-empty";
+    empty.textContent = t("profiles.none");
+    elements.profilePickerList.appendChild(empty);
+    return;
+  }
+
+  const defaultId = state.vaultData?.defaultsByProvider?.[state.profilePickerProvider] ?? "";
+  profiles.forEach((profile) => {
+    const card = document.createElement("article");
+    card.className = "profile-card";
+
+    const header = document.createElement("div");
+    header.className = "profile-card-header";
+    const label = document.createElement("strong");
+    label.className = "profile-card-label";
+    label.textContent = profile.label;
+    header.appendChild(label);
+
+    if (profile.id === defaultId) {
+      const badge = document.createElement("span");
+      badge.className = "profile-card-badge";
+      badge.textContent = t("profiles.defaultBadge");
+      header.appendChild(badge);
+    }
+
+    const meta = document.createElement("div");
+    meta.className = "profile-card-meta";
+    const target = document.createElement("span");
+    target.textContent = getConnectionTargetName(profile) || "—";
+    const location = document.createElement("span");
+    location.textContent = getConnectionLocationName(profile) || "—";
+    const lastUsed = document.createElement("span");
+    lastUsed.textContent = profile.lastUsedAt
+      ? t("profiles.lastUsed", { date: new Date(profile.lastUsedAt).toLocaleString(DATE_LOCALES[state.language] ?? "en-US") })
+      : t("profiles.neverUsed");
+    meta.append(target, location, lastUsed);
+
+    const actions = document.createElement("div");
+    actions.className = "profile-card-actions";
+    actions.append(
+      buildProfileActionButton(t("profiles.connect"), "primary-button", () => void connectSavedProfile(profile)),
+      buildProfileActionButton(t("profiles.edit"), "ghost-button", () => {
+        openConnectionModal(profile.provider, { mode: "edit", profileId: profile.id });
+      }),
+      buildProfileActionButton(t("profiles.duplicate"), "ghost-button", () => void duplicateSavedProfile(profile)),
+      buildProfileActionButton(t("profiles.setDefault"), "ghost-button", () => void setDefaultProfile(profile.provider, profile.id)),
+      buildProfileActionButton(t("profiles.delete"), "ghost-button danger-ghost-button", () => void deleteSavedProfile(profile)),
+    );
+
+    card.append(header, meta, actions);
+    elements.profilePickerList.appendChild(card);
+  });
+}
+
+function buildProfileActionButton(label, className, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = label;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
 function openConnectionModal(provider, options = {}) {
-  const { status = "", isError = false } = options;
+  const { status = "", isError = false, mode = "create", profileId = "" } = options;
+  const profile = profileId ? findProfile(provider, profileId) : null;
 
   connectionModalPreviousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  selectProvider(provider);
+  populateConnectionFormFromProfile(provider, profile);
+  elements.connectionModalTitle.textContent = t(mode === "edit" ? "profiles.editTitle" : "profiles.createTitle");
+  elements.connectionModalBody.textContent = t(mode === "edit" ? "profiles.editBody" : "profiles.createBody");
+  elements.saveProfileButton.textContent = t("connection.saveProfile");
+  elements.saveConnectionButton.textContent = t("connection.saveAndConnect");
   setConnectionModalStatus(status, isError);
   elements.connectionModal.hidden = false;
   document.body.style.overflow = "hidden";
-  const firstField = getFirstProviderInput(elements.provider.value);
+  const firstField = elements.profileLabel instanceof HTMLInputElement && !elements.profileLabel.value.trim()
+    ? elements.profileLabel
+    : getFirstProviderInput(elements.provider.value);
   if (firstField) {
     firstField.focus();
   } else {
@@ -884,6 +1336,7 @@ function closeConnectionModal() {
   elements.connectionModal.hidden = true;
   document.body.style.overflow = "";
   setConnectionModalStatus("");
+  setEditingProfile(state.provider, null);
   if (connectionModalPreviousActiveElement instanceof HTMLElement) {
     connectionModalPreviousActiveElement.focus();
   }
@@ -909,6 +1362,7 @@ function setConnectionModalStatus(message, isError = false) {
 function setConnectionActionState(isBusy) {
   elements.connectionModalCancel.disabled = isBusy;
   elements.testConnectionButton.disabled = isBusy;
+  elements.saveProfileButton.disabled = isBusy;
   elements.saveConnectionButton.disabled = isBusy;
   elements.providerCardTriggers.forEach((button) => {
     button.disabled = isBusy;
@@ -916,26 +1370,16 @@ function setConnectionActionState(isBusy) {
   elements.providerEditButtons.forEach((button) => {
     button.disabled = isBusy;
   });
+  elements.profilePickerAddButton.disabled = isBusy;
 }
 
 async function handleProviderCardClick(provider) {
-  selectProvider(provider);
-
-  const connection = getConnectionPayload();
-  const validationError = validateConnectionPayload(connection);
-
-  if (validationError) {
-    openConnectionModal(provider, {
-      status: t("messages.savedCredentialsMissing"),
-      isError: true,
-    });
-    return;
-  }
-
-  await connectToBucketWithPayload(connection);
+  state.provider = normalizeProvider(provider);
+  openProfilePicker(provider);
 }
 
-async function connectToBucketWithPayload(connection) {
+async function connectToBucketWithPayload(connection, options = {}) {
+  const { profileRef = null } = options;
   const validationError = validateConnectionPayload(connection);
 
   if (validationError) {
@@ -944,7 +1388,6 @@ async function connectToBucketWithPayload(connection) {
     return false;
   }
 
-  await persistConnectionForm();
   state.provider = connection.provider;
   state.targetName = getConnectionTargetName(connection);
   state.locationName = getConnectionLocationName(connection);
@@ -978,6 +1421,16 @@ async function connectToBucketWithPayload(connection) {
     state.provider = response.provider ?? connection.provider;
     state.targetName = response.targetName ?? state.targetName;
     state.locationName = response.locationName ?? state.locationName;
+    if (profileRef?.provider && profileRef?.profileId) {
+      state.activeProfileProvider = normalizeProvider(profileRef.provider);
+      state.activeProfileId = profileRef.profileId;
+      state.activeProfileLabel = findProfile(profileRef.provider, profileRef.profileId)?.label ?? "";
+      await touchProfileUsage(profileRef.provider, profileRef.profileId);
+    } else {
+      state.activeProfileProvider = "";
+      state.activeProfileId = "";
+      state.activeProfileLabel = "";
+    }
     state.destructiveOperationsEnabled = response.destructiveOperationsEnabled !== false;
     syncWorkspaceVisibility();
     elements.refreshButton.disabled = false;
@@ -1005,7 +1458,8 @@ async function connectToBucketWithPayload(connection) {
 }
 
 async function testConnectionFromModal() {
-  const connection = getConnectionPayload();
+  const draft = buildDraftProfileFromForm();
+  const connection = buildConnectionPayloadFromProfile(draft);
   const validationError = validateConnectionPayload(connection);
 
   if (validationError) {
@@ -1013,7 +1467,6 @@ async function testConnectionFromModal() {
     return;
   }
 
-  await persistConnectionForm();
   setConnectionActionState(true);
   setConnectionModalStatus(t("messages.testingConnection"));
 
@@ -1040,8 +1493,14 @@ async function testConnectionFromModal() {
   }
 }
 
-async function saveConnectionFromModal() {
-  const payload = getConnectionPayload();
+async function saveConnectionFromModal({ connectAfterSave = false } = {}) {
+  const draft = buildDraftProfileFromForm();
+  if (!draft.label) {
+    setConnectionModalStatus(t("messages.profileNameRequired"), true);
+    return;
+  }
+
+  const payload = buildConnectionPayloadFromProfile(draft);
   const validationError = validateConnectionPayload(payload);
 
   if (validationError) {
@@ -1063,20 +1522,29 @@ async function saveConnectionFromModal() {
       return;
     }
 
-    await createEncryptedVaultFromPayload(payload, response.passphrase);
+    const initialVault = createEmptyVaultData();
+    state.vaultData = initialVault;
+    await createEncryptedVaultFromPayload(initialVault, response.passphrase);
     setConnectionStatus(t("vault.encryptedUnlocked"));
   } else if (state.credentialsLocked) {
     const unlocked = await unlockSavedCredentials();
     if (!unlocked) {
       return;
     }
-    await persistConnectionForm();
-  } else {
-    await persistConnectionForm();
   }
 
+  const savedProfile = await saveDraftProfile(draft);
   setConnectionModalStatus("");
   closeConnectionModal();
+  renderProfilePickerList();
+  setConnectionStatus(t("messages.profileSaved", { label: savedProfile.label }));
+
+  if (connectAfterSave) {
+    closeProfilePicker();
+    await connectToBucketWithPayload(buildConnectionPayloadFromProfile(savedProfile), {
+      profileRef: { provider: savedProfile.provider, profileId: savedProfile.id },
+    });
+  }
 }
 
 async function loadObjects(prefix) {
@@ -2738,6 +3206,126 @@ function syncSeedControls() {
   elements.seedIcebergButton.innerHTML = `${icebergSeedIconSvg()}<span>${t("seed.button")}</span>`;
 }
 
+async function persistVaultData() {
+  if (!state.vaultData || !state.sessionVaultKey) {
+    return;
+  }
+
+  ensureDefaultProfiles(state.vaultData);
+  await saveEncryptedConnectionPayload(state.vaultData, state.sessionVaultKey, state.vaultEnvelope);
+}
+
+async function saveDraftProfile(draft) {
+  if (!state.vaultData) {
+    state.vaultData = createEmptyVaultData();
+  }
+
+  const provider = normalizeProvider(draft.provider);
+  const profiles = state.vaultData.profilesByProvider[provider] ?? [];
+  const nextProfile = createProfileFromPayload(draft, {
+    id: state.editingProfileId || undefined,
+    label: draft.label,
+    lastUsedAt: findProfile(provider, state.editingProfileId)?.lastUsedAt ?? "",
+  });
+  const existingIndex = profiles.findIndex((profile) => profile.id === nextProfile.id);
+
+  if (existingIndex >= 0) {
+    profiles.splice(existingIndex, 1, nextProfile);
+  } else {
+    profiles.push(nextProfile);
+  }
+
+  state.vaultData.profilesByProvider[provider] = profiles;
+  if (!state.vaultData.defaultsByProvider[provider]) {
+    state.vaultData.defaultsByProvider[provider] = nextProfile.id;
+  }
+  await persistVaultData();
+  return nextProfile;
+}
+
+async function touchProfileUsage(provider, profileId) {
+  const profile = findProfile(provider, profileId);
+  if (!profile) {
+    return;
+  }
+
+  profile.lastUsedAt = new Date().toISOString();
+  state.vaultData.activeProfileRef = { provider: normalizeProvider(provider), profileId };
+  await persistVaultData();
+  refreshConnectionSummary();
+}
+
+async function connectSavedProfile(profile) {
+  closeProfilePicker();
+  await connectToBucketWithPayload(buildConnectionPayloadFromProfile(profile), {
+    profileRef: { provider: profile.provider, profileId: profile.id },
+  });
+}
+
+async function duplicateSavedProfile(profile) {
+  if (!(await ensureCredentialAccess())) {
+    return;
+  }
+
+  const duplicate = createProfileFromPayload(profile, {
+    id: undefined,
+    label: `${profile.label} ${t("profiles.duplicateSuffix")}`.trim(),
+    lastUsedAt: "",
+  });
+  state.vaultData.profilesByProvider[profile.provider].push(duplicate);
+  await persistVaultData();
+  renderProfilePickerList();
+}
+
+async function setDefaultProfile(provider, profileId) {
+  if (!state.vaultData) {
+    return;
+  }
+
+  state.vaultData.defaultsByProvider[normalizeProvider(provider)] = profileId;
+  await persistVaultData();
+  renderProfilePickerList();
+  const profile = findProfile(provider, profileId);
+  if (profile) {
+    setConnectionStatus(t("messages.profileDefaultSet", {
+      label: profile.label,
+      provider: normalizeProvider(provider).toUpperCase(),
+    }));
+  }
+}
+
+async function deleteSavedProfile(profile) {
+  const confirmed = await confirmDeletion({
+    title: t("profiles.deleteTitle"),
+    body: t("profiles.deleteBody"),
+    actionLabel: t("profiles.delete"),
+    target: profile.label,
+  });
+
+  if (!confirmed || !state.vaultData) {
+    return;
+  }
+
+  const provider = normalizeProvider(profile.provider);
+  state.vaultData.profilesByProvider[provider] = (state.vaultData.profilesByProvider[provider] ?? [])
+    .filter((entry) => entry.id !== profile.id);
+  if (state.vaultData.defaultsByProvider[provider] === profile.id) {
+    state.vaultData.defaultsByProvider[provider] = state.vaultData.profilesByProvider[provider][0]?.id ?? "";
+  }
+  if (state.vaultData.activeProfileRef?.provider === provider && state.vaultData.activeProfileRef?.profileId === profile.id) {
+    state.vaultData.activeProfileRef = null;
+    state.activeProfileProvider = "";
+    state.activeProfileId = "";
+    state.activeProfileLabel = "";
+    clearActiveConnectionState();
+    setConnectionStatus(t("messages.activeProfileDeleted"), true);
+  } else {
+    setConnectionStatus(t("messages.profileDeleted", { label: profile.label }));
+  }
+  await persistVaultData();
+  renderProfilePickerList();
+}
+
 function setStartupDiagnostic() {
   setDiagnosticMessage("");
 }
@@ -2752,6 +3340,7 @@ async function initializeCredentialVault() {
     state.pendingLegacyPayload = null;
     state.vaultEnvelope = null;
     state.sessionVaultKey = null;
+    state.vaultData = null;
     refreshConnectionSummary();
     syncCredentialButtons();
     return;
@@ -2764,6 +3353,7 @@ async function initializeCredentialVault() {
     state.credentialsLocked = true;
     state.vaultEnvelope = null;
     state.sessionVaultKey = null;
+    state.vaultData = null;
     clearConnectionForm();
     refreshConnectionSummary();
     syncCredentialButtons();
@@ -2777,6 +3367,7 @@ async function initializeCredentialVault() {
   state.legacyCredentialsPending = false;
   state.pendingLegacyPayload = null;
   state.credentialsLocked = true;
+  state.vaultData = null;
   clearConnectionForm();
   refreshConnectionSummary();
   syncCredentialButtons();
@@ -2790,14 +3381,23 @@ async function initializeCredentialVault() {
   try {
     const sessionKey = await importSessionVaultKey(sessionKeyBase64);
     const payload = await decryptStoredEnvelope(storedRecord.envelope, sessionKey);
+    const normalizedPayload = normalizeVaultData(payload);
     state.sessionVaultKey = sessionKey;
     state.credentialsLocked = false;
-    hydrateConnectionForm(payload);
+    state.vaultData = normalizedPayload;
+    const activeProfile = normalizedPayload.activeProfileRef
+      ? findProfile(normalizedPayload.activeProfileRef.provider, normalizedPayload.activeProfileRef.profileId)
+      : null;
+    state.activeProfileProvider = activeProfile?.provider ?? "";
+    state.activeProfileId = activeProfile?.id ?? "";
+    state.activeProfileLabel = activeProfile?.label ?? "";
     setConnectionStatus(t("vault.encryptedUnlocked"));
+    await persistVaultData();
   } catch {
     clearSessionVaultKey();
     state.sessionVaultKey = null;
     state.credentialsLocked = true;
+    state.vaultData = null;
     clearConnectionForm();
     setConnectionStatus(t("vault.encryptedLocked"));
   } finally {
@@ -2807,14 +3407,7 @@ async function initializeCredentialVault() {
 }
 
 async function persistConnectionForm() {
-  const payload = getConnectionPayload();
   refreshConnectionSummary();
-
-  if (state.legacyCredentialsPending || !state.encryptedCredentialsAvailable || state.credentialsLocked || !state.sessionVaultKey) {
-    return;
-  }
-
-  await saveEncryptedConnectionPayload(payload, state.sessionVaultKey, state.vaultEnvelope);
 }
 
 function readStoredConnectionRecord() {
@@ -2845,7 +3438,7 @@ function isEncryptedConnectionEnvelope(value) {
   return Boolean(
     value &&
     typeof value === "object" &&
-    value.version === ENCRYPTED_STORAGE_VERSION &&
+    typeof value.version === "number" &&
     typeof value.salt === "string" &&
     typeof value.iv === "string" &&
     typeof value.ciphertext === "string" &&
@@ -2878,11 +3471,11 @@ function hydrateConnectionForm(payload) {
   setInputValue("minioSecretAccessKey", payload.minioSecretAccessKey);
   setCheckboxValue("ignoreTlsErrors", payload.ignoreTlsErrors === true);
   selectProvider(payload.provider);
-  refreshConnectionSummary();
 }
 
 function clearConnectionForm() {
   setInputValue("provider", "s3");
+  setInputValue("profileLabel", "");
   setInputValue("region", "");
   setInputValue("bucket", "");
   setInputValue("accessKeyId", "");
@@ -2900,7 +3493,6 @@ function clearConnectionForm() {
   setInputValue("minioSecretAccessKey", "");
   setCheckboxValue("ignoreTlsErrors", false);
   selectProvider("s3");
-  refreshConnectionSummary();
 }
 
 function clearSessionVaultKey() {
@@ -2990,14 +3582,22 @@ async function decryptStoredEnvelope(envelope, key) {
 }
 
 async function saveEncryptedConnectionPayload(payload, key, existingEnvelope = null) {
-  const envelope = existingEnvelope ?? {
+  const envelope = {
+    ...(existingEnvelope ?? {
+      kdf: {
+        name: "PBKDF2",
+        hash: "SHA-256",
+        iterations: VAULT_PBKDF2_ITERATIONS,
+      },
+      salt: bytesToBase64(createRandomBytes(VAULT_SALT_LENGTH)),
+    }),
     version: ENCRYPTED_STORAGE_VERSION,
-    kdf: {
+    kdf: existingEnvelope?.kdf ?? {
       name: "PBKDF2",
       hash: "SHA-256",
       iterations: VAULT_PBKDF2_ITERATIONS,
     },
-    salt: bytesToBase64(createRandomBytes(VAULT_SALT_LENGTH)),
+    salt: existingEnvelope?.salt ?? bytesToBase64(createRandomBytes(VAULT_SALT_LENGTH)),
   };
   const encryptedPayload = await encryptConnectionPayload(payload, key);
   const nextEnvelope = {
@@ -3030,7 +3630,7 @@ async function createEncryptedVaultFromPayload(payload, passphrase) {
   };
   state.sessionVaultKey = key;
   await saveEncryptedConnectionPayload(payload, key, envelope);
-  hydrateConnectionForm(payload);
+  state.vaultData = normalizeVaultData(payload);
 }
 
 function resetVaultModalFields() {
@@ -3126,18 +3726,27 @@ async function unlockSavedCredentials() {
   try {
     const key = await deriveVaultKeyFromPassphrase(response.passphrase, state.vaultEnvelope.salt);
     const payload = await decryptStoredEnvelope(state.vaultEnvelope, key);
+    const normalizedPayload = normalizeVaultData(payload);
     state.sessionVaultKey = key;
     state.credentialsLocked = false;
     window.sessionStorage.setItem(SESSION_VAULT_KEY, await exportSessionVaultKey(key));
-    hydrateConnectionForm(payload);
+    state.vaultData = normalizedPayload;
+    const activeProfile = normalizedPayload.activeProfileRef
+      ? findProfile(normalizedPayload.activeProfileRef.provider, normalizedPayload.activeProfileRef.profileId)
+      : null;
+    state.activeProfileProvider = activeProfile?.provider ?? "";
+    state.activeProfileId = activeProfile?.id ?? "";
+    state.activeProfileLabel = activeProfile?.label ?? "";
     setConnectionStatus(t("vault.encryptedUnlocked"));
     refreshConnectionSummary();
     syncCredentialButtons();
+    renderProfilePickerList();
     return true;
   } catch {
     clearSessionVaultKey();
     state.sessionVaultKey = null;
     state.credentialsLocked = true;
+    state.vaultData = null;
     clearConnectionForm();
     refreshConnectionSummary();
     syncCredentialButtons();
@@ -3160,7 +3769,8 @@ async function runLegacyMigrationFlow() {
   }
 
   try {
-    await createEncryptedVaultFromPayload(state.pendingLegacyPayload, response.passphrase);
+    const migratedPayload = migrateLegacyPayloadToVaultData(state.pendingLegacyPayload);
+    await createEncryptedVaultFromPayload(migratedPayload, response.passphrase);
     state.pendingLegacyPayload = null;
     state.legacyCredentialsPending = false;
     setConnectionStatus(t("vault.encryptedUnlocked"));
@@ -3186,6 +3796,9 @@ async function ensureCredentialAccess() {
 }
 
 function clearActiveConnectionState() {
+  state.activeProfileLabel = "";
+  state.activeProfileId = "";
+  state.activeProfileProvider = "";
   state.targetName = "";
   state.locationName = "";
   state.prefix = "";
@@ -3255,8 +3868,11 @@ function lockStoredCredentials() {
   clearSessionVaultKey();
   state.sessionVaultKey = null;
   state.credentialsLocked = true;
+  state.vaultData = null;
   clearConnectionForm();
   clearActiveConnectionState();
+  closeConnectionModal();
+  closeProfilePicker();
   syncCredentialButtons();
   refreshConnectionSummary();
   setConnectionStatus(t("vault.sessionCleared"));
@@ -3297,7 +3913,6 @@ function syncProjectIdFromServiceAccountJson() {
   }
 
   projectIdField.value = projectId;
-  void persistConnectionForm();
 }
 
 function extractProjectIdFromServiceAccountJson(value) {
@@ -3657,13 +4272,21 @@ function refreshConnectionSummary() {
     return;
   }
 
-  const connection = getConnectionPayload();
+  const activeProfile =
+    state.activeProfileProvider && state.activeProfileId
+      ? findProfile(state.activeProfileProvider, state.activeProfileId)
+      : null;
+  const connection = activeProfile ? buildConnectionPayloadFromProfile(activeProfile) : getConnectionPayload();
   const parts = [];
-
-  parts.push(connection.provider.toUpperCase());
 
   const targetName = getConnectionTargetName(connection);
   const locationName = getConnectionLocationName(connection);
+  if (activeProfile?.label || targetName || locationName) {
+    parts.push(connection.provider.toUpperCase());
+  }
+  if (activeProfile?.label) {
+    parts.push(activeProfile.label);
+  }
 
   if (targetName) {
     parts.push(targetName);

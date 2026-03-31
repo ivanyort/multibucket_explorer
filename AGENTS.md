@@ -18,6 +18,7 @@ This project is a local web explorer for object and hierarchical cloud storage, 
 
 The project uses plain ESM JavaScript and no frontend framework. Keep that simplicity unless explicitly asked to change it.
 Folders that contain `metadata/*.metadata.json` should be treated as Iceberg table roots by the frontend and previewed through backend snapshot inspection instead of raw file listing.
+Iceberg metadata inspection must tolerate metadata JSON objects whose stored bytes are gzip-compressed even when the object key itself does not end with `.gz`.
 When a prefix is in Iceberg mode, the preview toolbar should expose the table snapshots available in metadata so the user can switch the sampled snapshot explicitly.
 The object browser supports a client-side name filter persisted in browser storage per exact folder context using provider plus stable target/location identity and prefix; the filter applies only in raw folder mode, not in Iceberg mode.
 Directory creation from the object browser must create exactly one immediate child under the current prefix; object-store providers materialize folder marker objects while ADLS creates a native directory, and the action stays unavailable in Iceberg mode.
@@ -80,12 +81,12 @@ By default the application runs at `https://localhost:8086`.
 
 # Frontend Rules
 1. Keep the interface in English unless the user explicitly requests localization.
-2. Preserve the current local-app experience: provider card quick-connect, credential modal editing/testing, object browser, and preview panel.
+2. Preserve the current local-app experience: provider cards, encrypted credential management, object browser, and preview panel.
 3. Avoid frameworks, bundlers, or build steps if the problem can be solved within the current HTML/CSS/JS setup.
 4. When adding controls, wire state, visual feedback, and error handling consistently with the rest of `app.js`.
 5. Provider selection must remain explicit in the UI when behavior or required credentials differ across backends.
-6. Provider selection must stay explicit through the provider cards; clicking a card is the quick-connect path and the pencil action opens the credential modal for that provider.
-7. The credential modal must show only the selected provider's fields; users should not have to infer which fields belong to which backend.
+6. Provider selection must stay explicit through the provider cards; clicking a card opens that provider's saved-profile picker and the pencil action opens the same provider-specific profile management flow.
+7. The credential modal must show only the selected provider's fields plus the profile name; users should not have to infer which fields belong to which backend.
 8. Destructive actions in the UI should prefer first-class confirmation modals over browser-native dialogs, and the default focused action must be the safe non-destructive option.
 9. Long-running destructive actions should show explicit in-progress feedback in the UI even when the backend only provides completion status.
 10. The frontend must remain multilingual with English as the default plus Brazilian Portuguese (`pt-BR`), Spanish (`es`), and Italian (`it`) for user-facing UI text and frontend-generated messages.
@@ -93,7 +94,7 @@ By default the application runs at `https://localhost:8086`.
 12. When destructive operations are disabled by server configuration, the UI should hide or disable delete affordances instead of inviting an action that will always fail.
 
 # Security And Sensitive Data
-1. Storage credentials are entered through the UI and must remain persistable for all provider-specific connection fields, credentials, secrets, textarea content, and toggles unless the behavior is intentionally redesigned. They are now encrypted at rest in browser `localStorage` behind a user-provided master passphrase, with same-tab reload unlock convenience carried through `sessionStorage`. Any change in this area must consider security impact and be documented.
+1. Storage credentials are entered through the UI and must remain persistable for all provider-specific connection fields, credentials, secrets, textarea content, and toggles unless the behavior is intentionally redesigned. They are now stored as multiple named provider profiles encrypted at rest in browser `localStorage` behind a user-provided master passphrase, with same-tab reload unlock convenience carried through `sessionStorage`. Any change in this area must consider security impact and be documented.
 2. Never log secrets such as AWS secret keys or Azure access keys in logs, error messages, state dumps, or documentation.
 3. Do not commit real credentials, private buckets, private file systems, or customer-sensitive data.
 4. If testing against real cloud storage is necessary, prefer minimally invasive validation and clearly confirm any destructive action.
@@ -112,3 +113,4 @@ By default the application runs at `https://localhost:8086`.
 4. `DISABLE_DESTRUCTIVE_OPERATIONS=true` is the runtime switch for read-only delete behavior and must block prefix deletion, row-level folder deletion, and single-file deletion.
 5. Prefix deletion must remove only the contents under the selected folder and preserve that folder across all supported providers.
 6. Row-level folder deletion must fully remove the selected child folder, including nested contents and any marker object used by object-store providers.
+7. Provider cards now open a provider-scoped saved-profile picker rather than connecting immediately; each provider can store multiple named encrypted profiles with one default profile.

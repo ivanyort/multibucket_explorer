@@ -335,6 +335,42 @@
     </main>
 
     <div
+      id="profilePickerModal"
+      class="modal-shell"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="profilePickerTitle"
+      aria-describedby="profilePickerBody"
+      hidden
+    >
+      <div class="modal-backdrop" data-profile-picker-close></div>
+      <div class="modal-card connection-modal-card" role="document">
+        <div class="profile-picker-header">
+          <p class="panel-kicker" id="profilePickerKicker">Providers</p>
+          <h2 id="profilePickerTitle">Profiles</h2>
+          <p id="profilePickerBody" class="modal-copy">Choose a saved profile or create a new one.</p>
+        </div>
+        <div class="profile-picker-toolbar">
+          <label class="profile-picker-search-wrap">
+            <span class="sr-only" id="profileSearchLabel">Search profiles</span>
+            <input
+              id="profileSearchInput"
+              type="text"
+              spellcheck="false"
+              autocomplete="off"
+              placeholder="Search by profile, target, or location"
+            />
+          </label>
+          <button id="profilePickerAddButton" class="primary-button" type="button">Add profile</button>
+        </div>
+        <div id="profilePickerList" class="profile-picker-list"></div>
+        <div class="modal-actions">
+          <button id="profilePickerClose" class="ghost-button" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div
       id="connectionModal"
       class="modal-shell"
       role="dialog"
@@ -353,6 +389,16 @@
           <p id="connectionModalBody" class="modal-copy" data-i18n="connection.modalBody">
             Review the provider credentials, test access, and save to connect.
           </p>
+          <label>
+            <span data-i18n="fields.profileLabel">Profile name</span>
+            <input
+              id="profileLabel"
+              name="profileLabel"
+              placeholder="Production analytics"
+              data-i18n-placeholder="placeholders.profileLabel"
+              autocomplete="off"
+            />
+          </label>
 
           <section id="s3Fields" class="provider-fields" aria-label="S3 connection settings" data-i18n-aria-label="s3.ariaLabel">
             <div class="provider-fields-header">
@@ -500,6 +546,7 @@
           <div class="modal-actions">
             <button id="connectionModalCancel" class="ghost-button" type="button" data-i18n="common.cancel">Cancel</button>
             <button id="testConnectionButton" class="ghost-button" type="button" data-i18n="connection.test">Test connection</button>
+            <button id="saveProfileButton" class="ghost-button" type="button" data-i18n="connection.saveProfile">Save profile</button>
             <button id="saveConnectionButton" class="primary-button" type="submit" data-i18n="connection.saveAndConnect">Save and connect</button>
           </div>
         </form>

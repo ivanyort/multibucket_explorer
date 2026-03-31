@@ -1601,7 +1601,7 @@ async function inspectIcebergTable(session, prefix, locale = "en", requestedSnap
     }
 
     const metadataFile = pickLatestIcebergMetadataFile(metadataFiles);
-    const metadata = JSON.parse(await readObjectText(session, metadataFile.key));
+    const metadata = JSON.parse(await readObjectTextAuto(session, metadataFile.key));
     const currentSnapshotId = metadata["current-snapshot-id"] ?? null;
     const snapshotId = requestedSnapshotId ?? currentSnapshotId;
 
@@ -1883,6 +1883,23 @@ function ensureTrailingSlash(value) {
 async function readObjectText(session, key, compression = "none") {
   const buffer = await readObjectBuffer(session, key, compression);
   const text = buffer.toString("utf-8");
+
+  if (!text) {
+    throw new LocalizedError("file_empty");
+  }
+
+  return text;
+}
+
+async function readObjectTextAuto(session, key) {
+  const buffer = await readObjectBufferRaw(session, key);
+
+  if (!buffer.length) {
+    throw new LocalizedError("file_empty");
+  }
+
+  const normalizedBuffer = isGzipBuffer(buffer) ? gunzipSync(buffer) : buffer;
+  const text = normalizedBuffer.toString("utf-8");
 
   if (!text) {
     throw new LocalizedError("file_empty");
@@ -3364,6 +3381,10 @@ function getCompressionKind(key) {
   }
 
   return "none";
+}
+
+function isGzipBuffer(buffer) {
+  return Buffer.isBuffer(buffer) && buffer.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b;
 }
 
 function decompressBuffer(buffer, compression) {

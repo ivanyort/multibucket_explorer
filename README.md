@@ -6,8 +6,10 @@ Web application with a local backend for:
 - browsing prefixes in Azure Data Lake Storage Gen2 containers
 - browsing prefixes in Google Cloud Storage buckets
 - browsing prefixes in MinIO buckets
+- storing multiple named connection profiles per provider in encrypted browser storage, with provider-scoped default profiles
 - listing folders and files
 - detecting Iceberg table roots on folder click and previewing selectable snapshots through the backend
+- reading Iceberg metadata JSON even when the storage object body is gzip-compressed without a `.gz` suffix
 - previewing CSV, JSON, DFM, Markdown, plain text, Parquet, Avro, and ORC files, including `.gz` and `.snappy` compressed variants
 - rendering Markdown previews in the browser with a switch between rendered and raw text modes; rendered mode always loads the full document and ignores the line-count selector
 - creating temporary Iceberg sample data under `iceberg/` inside the current browser prefix in the connected storage target when running in local development mode and only when the current folder is empty
@@ -187,10 +189,11 @@ The author is not liable for data loss, downtime, service disruption, cloud char
 
 Fill these fields in the interface:
 
-- click the provider card to connect immediately with the saved credentials for that provider
-- use the pencil icon on the provider card to open the credential modal
+- click the provider card to open the saved profile picker for that provider
+- use the pencil icon on the provider card to open the same provider profile manager
+- in the profile picker, connect, edit, duplicate, delete, or mark a saved profile as the default for that provider
 - in the credential modal, use `Test connection` to validate access without replacing the active session
-- use `Save and connect` to persist the credentials and connect immediately
+- use `Save profile` to persist a named profile without connecting, or `Save and connect` to persist and connect immediately
 
 - `Region`
 - `Bucket`
@@ -208,10 +211,10 @@ Minimum permissions:
 
 Fill these fields in the interface:
 
-- click the provider card to connect immediately with the saved credentials for that provider
-- use the pencil icon on the provider card to open the credential modal
+- click the provider card to open the saved profile picker for that provider
+- use the pencil icon on the provider card to open the same provider profile manager
 - in the credential modal, use `Test connection` to validate access without replacing the active session
-- use `Save and connect` to persist the credentials and connect immediately
+- use `Save profile` to persist a named profile without connecting, or `Save and connect` to persist and connect immediately
 
 - `Account Name`
 - `Container Name`
@@ -230,10 +233,11 @@ Minimum effective permissions:
 
 Fill these fields in the interface:
 
-- click the provider card to connect immediately with the saved credentials for that provider
-- use the pencil icon on the provider card to open the credential modal
+- click the provider card to open the saved profile picker for that provider
+- use the pencil icon on the provider card to open the same provider profile manager
+- in the profile picker, connect, edit, duplicate, delete, or mark a saved profile as the default for that provider
 - in the credential modal, use `Test connection` to validate access without replacing the active session
-- use `Save and connect` to persist the credentials and connect immediately
+- use `Save profile` to persist a named profile without connecting, or `Save and connect` to persist and connect immediately
 
 - `Bucket`
 - `Project ID (get it in the first lines of the JSON)` (optional if already present in the service account JSON)
@@ -247,16 +251,27 @@ The current implementation uses a service account JSON key loaded directly in th
 
 Fill these fields in the interface:
 
-- click the provider card to connect immediately with the saved credentials for that provider
-- use the pencil icon on the provider card to open the credential modal
+- click the provider card to open the saved profile picker for that provider
+- use the pencil icon on the provider card to open the same provider profile manager
+- in the profile picker, connect, edit, duplicate, delete, or mark a saved profile as the default for that provider
 - in the credential modal, use `Test connection` to validate access without replacing the active session
-- use `Save and connect` to persist the credentials and connect immediately
+- use `Save profile` to persist a named profile without connecting, or `Save and connect` to persist and connect immediately
 
 - `Endpoint`
 - `Bucket`
 - `Region` (optional, defaults to `us-east-1`)
 - `Access Key ID`
 - `Secret Access Key`
+
+## Saved Credential Profiles
+
+Saved connection profiles are encrypted at rest in browser `localStorage` behind the existing master passphrase flow.
+
+- each provider can store multiple named profiles
+- one profile can be marked as the default per provider
+- provider cards now open the profile picker instead of connecting blindly
+- existing single-profile saved credentials are migrated into the new vault structure the next time they are unlocked or migrated
+- the active connection summary shows provider, active profile label, target, and location when available
 
 The current implementation uses the AWS S3 SDK in S3-compatible mode with a custom endpoint and path-style access.
 
