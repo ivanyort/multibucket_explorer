@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.16.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.16.0) - 2026-07-15
+
+### Changes
+- feat(credentials): add JSON profile imports (0a930d9)
+- chore(changelog): update for v0.15.0 [skip ci] (1941392)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.15.0...v0.16.0)
+
+
 ## [v0.15.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.15.0) - 2026-03-31
 
 ### Changes
