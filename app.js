@@ -37,6 +37,7 @@ const state = {
   editingProfileProvider: "",
   profilePickerProvider: "s3",
   profileSearchTerm: "",
+  profileImportReview: null,
 };
 
 const STORAGE_KEY = "multibucket-explorer-connection";
@@ -212,6 +213,39 @@ const translations = {
       deleteTitle: "Delete profile",
       deleteBody: "Are you absolutely sure you want to delete this saved profile?",
     },
+    imports: {
+      kicker: "Credential Vault",
+      openAction: "Import profiles",
+      title: "Import credential profiles",
+      body: "Choose a JSON file or paste a versioned profile document, then review every change before saving.",
+      fileLabel: "JSON file",
+      jsonLabel: "JSON content",
+      jsonPlaceholder: "Paste a version 1 profile document",
+      reviewAction: "Review import",
+      confirmAction: "Import profiles",
+      fileReadFailed: "The selected file could not be read.",
+      invalidJson: "The content is not valid JSON.",
+      invalidDocument: "The import document must be a JSON object.",
+      unsupportedVersion: "Only import document version 1 is supported.",
+      profilesRequired: "The import document must contain a non-empty profiles array.",
+      profileObjectRequired: "Profile {index} must be a JSON object.",
+      invalidProvider: "Profile {index} has an unsupported provider.",
+      requiredField: "Profile {index} requires a non-empty {field} field.",
+      invalidBoolean: "Profile {index} requires {field} to be a boolean.",
+      invalidString: "Profile {index} requires {field} to be a string.",
+      serviceAccountObjectRequired: "Profile {index} requires serviceAccountJson to be a JSON object.",
+      duplicateProfile: "Profile {index} duplicates {provider} profile {label} in this document.",
+      multipleDefaults: "Only one imported {provider} profile can be marked as default.",
+      validationFailed: "Import blocked by {count} validation error(s).",
+      ready: "{count} profile(s) are ready to import.",
+      errorsTitle: "Import errors",
+      reviewTitle: "Profiles to import: {count}",
+      replaceBadge: "Replace",
+      newBadge: "New",
+      saving: "Encrypting and saving imported profiles...",
+      completed: "Profile import completed: {created} created and {replaced} replaced.",
+      saveFailed: "The imported profiles could not be saved. The credential vault was not changed.",
+    },
     vault: {
       kicker: "Credential Vault",
       passphrase: "Master passphrase",
@@ -381,6 +415,39 @@ const translations = {
       deleteTitle: "Apagar perfil",
       deleteBody: "Voce tem certeza absoluta que deseja apagar este perfil salvo?",
     },
+    imports: {
+      kicker: "Cofre de Credenciais",
+      openAction: "Importar perfis",
+      title: "Importar perfis de credenciais",
+      body: "Escolha um arquivo JSON ou cole um documento versionado de perfis e revise todas as alteracoes antes de salvar.",
+      fileLabel: "Arquivo JSON",
+      jsonLabel: "Conteudo JSON",
+      jsonPlaceholder: "Cole um documento de perfis na versao 1",
+      reviewAction: "Revisar importacao",
+      confirmAction: "Importar perfis",
+      fileReadFailed: "Nao foi possivel ler o arquivo selecionado.",
+      invalidJson: "O conteudo nao e um JSON valido.",
+      invalidDocument: "O documento de importacao deve ser um objeto JSON.",
+      unsupportedVersion: "Somente a versao 1 do documento de importacao e suportada.",
+      profilesRequired: "O documento de importacao deve conter um array profiles nao vazio.",
+      profileObjectRequired: "O perfil {index} deve ser um objeto JSON.",
+      invalidProvider: "O perfil {index} possui um provedor nao suportado.",
+      requiredField: "O perfil {index} exige o campo {field} preenchido.",
+      invalidBoolean: "O perfil {index} exige que {field} seja booleano.",
+      invalidString: "O perfil {index} exige que {field} seja uma string.",
+      serviceAccountObjectRequired: "O perfil {index} exige que serviceAccountJson seja um objeto JSON.",
+      duplicateProfile: "O perfil {index} duplica o perfil {provider} {label} neste documento.",
+      multipleDefaults: "Somente um perfil {provider} importado pode ser marcado como padrao.",
+      validationFailed: "Importacao bloqueada por {count} erro(s) de validacao.",
+      ready: "{count} perfil(is) pronto(s) para importar.",
+      errorsTitle: "Erros da importacao",
+      reviewTitle: "Perfis a importar: {count}",
+      replaceBadge: "Substituir",
+      newBadge: "Novo",
+      saving: "Criptografando e salvando os perfis importados...",
+      completed: "Importacao concluida: {created} criado(s) e {replaced} substituido(s).",
+      saveFailed: "Nao foi possivel salvar os perfis importados. O cofre de credenciais nao foi alterado.",
+    },
     table: { name: "Nome", type: "Tipo", size: "Tamanho", date: "Data", column: "coluna_{index}" },
   },
   es: {
@@ -525,6 +592,39 @@ const translations = {
       editBody: "Actualiza este perfil guardado del proveedor.",
       deleteTitle: "Eliminar perfil",
       deleteBody: "Estas absolutamente seguro de que deseas eliminar este perfil guardado?",
+    },
+    imports: {
+      kicker: "Almacen de Credenciales",
+      openAction: "Importar perfiles",
+      title: "Importar perfiles de credenciales",
+      body: "Elige un archivo JSON o pega un documento versionado de perfiles y revisa todos los cambios antes de guardar.",
+      fileLabel: "Archivo JSON",
+      jsonLabel: "Contenido JSON",
+      jsonPlaceholder: "Pega un documento de perfiles version 1",
+      reviewAction: "Revisar importacion",
+      confirmAction: "Importar perfiles",
+      fileReadFailed: "No se pudo leer el archivo seleccionado.",
+      invalidJson: "El contenido no es un JSON valido.",
+      invalidDocument: "El documento de importacion debe ser un objeto JSON.",
+      unsupportedVersion: "Solo se admite la version 1 del documento de importacion.",
+      profilesRequired: "El documento de importacion debe contener un array profiles no vacio.",
+      profileObjectRequired: "El perfil {index} debe ser un objeto JSON.",
+      invalidProvider: "El perfil {index} tiene un proveedor no compatible.",
+      requiredField: "El perfil {index} requiere el campo {field} completo.",
+      invalidBoolean: "El perfil {index} requiere que {field} sea booleano.",
+      invalidString: "El perfil {index} requiere que {field} sea una cadena.",
+      serviceAccountObjectRequired: "El perfil {index} requiere que serviceAccountJson sea un objeto JSON.",
+      duplicateProfile: "El perfil {index} duplica el perfil {provider} {label} en este documento.",
+      multipleDefaults: "Solo un perfil {provider} importado puede marcarse como predeterminado.",
+      validationFailed: "Importacion bloqueada por {count} error(es) de validacion.",
+      ready: "{count} perfil(es) listos para importar.",
+      errorsTitle: "Errores de importacion",
+      reviewTitle: "Perfiles para importar: {count}",
+      replaceBadge: "Reemplazar",
+      newBadge: "Nuevo",
+      saving: "Cifrando y guardando los perfiles importados...",
+      completed: "Importacion completada: {created} creado(s) y {replaced} reemplazado(s).",
+      saveFailed: "No se pudieron guardar los perfiles importados. El almacen de credenciales no cambio.",
     },
     table: { name: "Nombre", type: "Tipo", size: "Tamaño", date: "Fecha", column: "columna_{index}" },
   },
@@ -671,6 +771,39 @@ const translations = {
       deleteTitle: "Elimina profilo",
       deleteBody: "Sei assolutamente sicuro di voler eliminare questo profilo salvato?",
     },
+    imports: {
+      kicker: "Vault delle Credenziali",
+      openAction: "Importa profili",
+      title: "Importa profili di credenziali",
+      body: "Scegli un file JSON o incolla un documento di profili con versione, quindi controlla tutte le modifiche prima di salvare.",
+      fileLabel: "File JSON",
+      jsonLabel: "Contenuto JSON",
+      jsonPlaceholder: "Incolla un documento di profili versione 1",
+      reviewAction: "Controlla importazione",
+      confirmAction: "Importa profili",
+      fileReadFailed: "Impossibile leggere il file selezionato.",
+      invalidJson: "Il contenuto non e un JSON valido.",
+      invalidDocument: "Il documento di importazione deve essere un oggetto JSON.",
+      unsupportedVersion: "E supportata solo la versione 1 del documento di importazione.",
+      profilesRequired: "Il documento di importazione deve contenere un array profiles non vuoto.",
+      profileObjectRequired: "Il profilo {index} deve essere un oggetto JSON.",
+      invalidProvider: "Il profilo {index} ha un provider non supportato.",
+      requiredField: "Il profilo {index} richiede il campo {field} compilato.",
+      invalidBoolean: "Il profilo {index} richiede che {field} sia booleano.",
+      invalidString: "Il profilo {index} richiede che {field} sia una stringa.",
+      serviceAccountObjectRequired: "Il profilo {index} richiede che serviceAccountJson sia un oggetto JSON.",
+      duplicateProfile: "Il profilo {index} duplica il profilo {provider} {label} in questo documento.",
+      multipleDefaults: "Solo un profilo {provider} importato puo essere impostato come predefinito.",
+      validationFailed: "Importazione bloccata da {count} errore/i di validazione.",
+      ready: "{count} profilo/i pronto/i per l'importazione.",
+      errorsTitle: "Errori di importazione",
+      reviewTitle: "Profili da importare: {count}",
+      replaceBadge: "Sostituisci",
+      newBadge: "Nuovo",
+      saving: "Crittografia e salvataggio dei profili importati...",
+      completed: "Importazione completata: {created} creato/i e {replaced} sostituito/i.",
+      saveFailed: "Impossibile salvare i profili importati. Il vault delle credenziali non e stato modificato.",
+    },
     table: { name: "Nome", type: "Tipo", size: "Dimensione", date: "Data", column: "colonna_{index}" },
   },
 };
@@ -701,8 +834,22 @@ const elements = {
   profileSearchLabel: document.querySelector("#profileSearchLabel"),
   profileSearchInput: document.querySelector("#profileSearchInput"),
   profilePickerAddButton: document.querySelector("#profilePickerAddButton"),
+  profileImportButton: document.querySelector("#profileImportButton"),
   profilePickerList: document.querySelector("#profilePickerList"),
   profilePickerClose: document.querySelector("#profilePickerClose"),
+  profileImportModal: document.querySelector("#profileImportModal"),
+  profileImportKicker: document.querySelector("#profileImportKicker"),
+  profileImportTitle: document.querySelector("#profileImportTitle"),
+  profileImportBody: document.querySelector("#profileImportBody"),
+  profileImportFileLabel: document.querySelector("#profileImportFileLabel"),
+  profileImportFile: document.querySelector("#profileImportFile"),
+  profileImportJsonLabel: document.querySelector("#profileImportJsonLabel"),
+  profileImportJson: document.querySelector("#profileImportJson"),
+  profileImportReview: document.querySelector("#profileImportReview"),
+  profileImportStatus: document.querySelector("#profileImportStatus"),
+  profileImportCancel: document.querySelector("#profileImportCancel"),
+  profileImportAnalyze: document.querySelector("#profileImportAnalyze"),
+  profileImportConfirm: document.querySelector("#profileImportConfirm"),
   s3Fields: document.querySelector("#s3Fields"),
   adlsFields: document.querySelector("#adlsFields"),
   gcsFields: document.querySelector("#gcsFields"),
@@ -786,6 +933,7 @@ const elements = {
 let connectionModalPreviousActiveElement = null;
 let vaultModalPreviousActiveElement = null;
 let createDirectoryPreviousActiveElement = null;
+let profileImportPreviousActiveElement = null;
 
 state.language = restoreLanguage();
 if (elements.languageSelect instanceof HTMLSelectElement) {
@@ -832,6 +980,7 @@ elements.saveProfileButton.addEventListener("click", () => {
 elements.profilePickerAddButton.addEventListener("click", () => {
   openConnectionModal(state.profilePickerProvider, { mode: "create" });
 });
+elements.profileImportButton.addEventListener("click", openProfileImportModal);
 elements.profilePickerClose.addEventListener("click", closeProfilePicker);
 elements.profilePickerModal.addEventListener("click", (event) => {
   const target = event.target;
@@ -842,6 +991,21 @@ elements.profilePickerModal.addEventListener("click", (event) => {
 elements.profileSearchInput.addEventListener("input", () => {
   state.profileSearchTerm = elements.profileSearchInput.value.trim().toLowerCase();
   renderProfilePickerList();
+});
+elements.profileImportFile.addEventListener("change", () => {
+  void loadProfileImportFile();
+});
+elements.profileImportJson.addEventListener("input", resetProfileImportReview);
+elements.profileImportAnalyze.addEventListener("click", analyzeProfileImport);
+elements.profileImportConfirm.addEventListener("click", () => {
+  void confirmProfileImport();
+});
+elements.profileImportCancel.addEventListener("click", closeProfileImportModal);
+elements.profileImportModal.addEventListener("click", (event) => {
+  const target = event.target;
+  if (target instanceof HTMLElement && target.hasAttribute("data-profile-import-close")) {
+    closeProfileImportModal();
+  }
 });
 elements.unlockCredentialsButton.addEventListener("click", () => {
   void unlockSavedCredentials();
@@ -864,6 +1028,9 @@ elements.createDirectoryModal.addEventListener("click", (event) => {
   }
 });
 document.addEventListener("keydown", (event) => {
+  if (!elements.vaultModal.hidden) {
+    return;
+  }
   if (!elements.connectionModal.hidden && event.key === "Escape") {
     event.preventDefault();
     closeConnectionModal();
@@ -871,6 +1038,10 @@ document.addEventListener("keydown", (event) => {
   if (!elements.profilePickerModal.hidden && event.key === "Escape") {
     event.preventDefault();
     closeProfilePicker();
+  }
+  if (!elements.profileImportModal.hidden && event.key === "Escape") {
+    event.preventDefault();
+    closeProfileImportModal();
   }
   if (!elements.createDirectoryModal.hidden && event.key === "Escape") {
     event.preventDefault();
@@ -999,6 +1170,9 @@ function applyLanguage() {
   syncCredentialButtons();
   if (!elements.profilePickerModal.hidden) {
     openProfilePicker(state.profilePickerProvider);
+  }
+  if (!elements.profileImportModal.hidden) {
+    refreshProfileImportTranslations();
   }
   if (!elements.connectionModal.hidden) {
     elements.connectionModalTitle.textContent = t(state.editingProfileId ? "profiles.editTitle" : "profiles.createTitle");
@@ -1206,6 +1380,7 @@ function openProfilePicker(provider) {
     elements.profileSearchInput.parentElement.hidden = profileCount <= 5;
   }
   elements.profilePickerAddButton.textContent = t("profiles.add");
+  elements.profileImportButton.textContent = t("imports.openAction");
   elements.profilePickerClose.textContent = t("common.close");
   elements.profileSearchLabel.textContent = t("profiles.search");
   renderProfilePickerList();
@@ -1225,6 +1400,386 @@ function closeProfilePicker() {
 
   elements.profilePickerModal.hidden = true;
   document.body.style.overflow = "";
+}
+
+function openProfileImportModal() {
+  profileImportPreviousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  state.profileImportReview = null;
+  elements.profileImportFile.value = "";
+  elements.profileImportJson.value = "";
+  elements.profileImportReview.innerHTML = "";
+  elements.profileImportReview.hidden = true;
+  elements.profileImportConfirm.disabled = true;
+  setProfileImportStatus("");
+  refreshProfileImportTranslations();
+  elements.profileImportModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  elements.profileImportFile.focus();
+}
+
+function closeProfileImportModal() {
+  if (elements.profileImportModal.hidden) {
+    return;
+  }
+
+  elements.profileImportModal.hidden = true;
+  document.body.style.overflow = elements.profilePickerModal.hidden ? "" : "hidden";
+  state.profileImportReview = null;
+  if (profileImportPreviousActiveElement instanceof HTMLElement) {
+    profileImportPreviousActiveElement.focus();
+  }
+  profileImportPreviousActiveElement = null;
+}
+
+function refreshProfileImportTranslations() {
+  elements.profileImportKicker.textContent = t("imports.kicker");
+  elements.profileImportTitle.textContent = t("imports.title");
+  elements.profileImportBody.textContent = t("imports.body");
+  elements.profileImportFileLabel.textContent = t("imports.fileLabel");
+  elements.profileImportJsonLabel.textContent = t("imports.jsonLabel");
+  elements.profileImportJson.placeholder = t("imports.jsonPlaceholder");
+  elements.profileImportCancel.textContent = t("common.cancel");
+  elements.profileImportAnalyze.textContent = t("imports.reviewAction");
+  elements.profileImportConfirm.textContent = t("imports.confirmAction");
+  elements.profileImportButton.textContent = t("imports.openAction");
+  if (state.profileImportReview) {
+    renderProfileImportReview(state.profileImportReview);
+  }
+}
+
+function resetProfileImportReview() {
+  state.profileImportReview = null;
+  elements.profileImportReview.innerHTML = "";
+  elements.profileImportReview.hidden = true;
+  elements.profileImportConfirm.disabled = true;
+  setProfileImportStatus("");
+}
+
+function setProfileImportStatus(message, isError = false) {
+  elements.profileImportStatus.className = isError ? "status-text error-text" : "status-text muted";
+  elements.profileImportStatus.textContent = message;
+}
+
+async function loadProfileImportFile() {
+  const [file] = elements.profileImportFile.files ?? [];
+  if (!file) {
+    return;
+  }
+
+  try {
+    elements.profileImportJson.value = await file.text();
+    resetProfileImportReview();
+    analyzeProfileImport();
+  } catch {
+    resetProfileImportReview();
+    setProfileImportStatus(t("imports.fileReadFailed"), true);
+  }
+}
+
+function analyzeProfileImport() {
+  const analysis = parseProfileImportDocument(elements.profileImportJson.value);
+  state.profileImportReview = analysis;
+  renderProfileImportReview(analysis);
+  elements.profileImportConfirm.disabled = analysis.errors.length > 0 || analysis.profiles.length === 0;
+  setProfileImportStatus(
+    analysis.errors.length
+      ? t("imports.validationFailed", { count: analysis.errors.length })
+      : t("imports.ready", { count: analysis.profiles.length }),
+    analysis.errors.length > 0,
+  );
+}
+
+function parseProfileImportDocument(source) {
+  const result = { profiles: [], errors: [] };
+  let documentPayload;
+
+  try {
+    documentPayload = JSON.parse(source);
+  } catch {
+    result.errors.push(t("imports.invalidJson"));
+    return result;
+  }
+
+  if (!isPlainObject(documentPayload)) {
+    result.errors.push(t("imports.invalidDocument"));
+    return result;
+  }
+  if (documentPayload.version !== 1) {
+    result.errors.push(t("imports.unsupportedVersion"));
+  }
+  if (!Array.isArray(documentPayload.profiles) || documentPayload.profiles.length === 0) {
+    result.errors.push(t("imports.profilesRequired"));
+    return result;
+  }
+
+  documentPayload.profiles.forEach((entry, index) => {
+    const parsed = parseImportedProfile(entry, index + 1);
+    if (parsed.error) {
+      result.errors.push(parsed.error);
+    } else {
+      result.profiles.push(parsed.profile);
+    }
+  });
+
+  const seenProfiles = new Set();
+  const defaultProviders = new Set();
+  result.profiles.forEach((record, index) => {
+    const conflictKey = getImportedProfileConflictKey(record);
+    if (seenProfiles.has(conflictKey)) {
+      result.errors.push(t("imports.duplicateProfile", {
+        index: record.sourceIndex,
+        provider: record.provider.toUpperCase(),
+        label: record.label,
+      }));
+    }
+    seenProfiles.add(conflictKey);
+
+    if (record.makeDefault) {
+      if (defaultProviders.has(record.provider)) {
+        result.errors.push(t("imports.multipleDefaults", { provider: record.provider.toUpperCase() }));
+      }
+      defaultProviders.add(record.provider);
+    }
+
+    record.action = findImportedProfileConflict(state.vaultData, record) ? "replace" : "new";
+  });
+
+  return result;
+}
+
+function parseImportedProfile(entry, displayIndex) {
+  if (!isPlainObject(entry)) {
+    return { error: t("imports.profileObjectRequired", { index: displayIndex }) };
+  }
+
+  const provider = typeof entry.provider === "string" ? entry.provider.trim().toLowerCase() : "";
+  if (!SUPPORTED_PROVIDERS.includes(provider)) {
+    return { error: t("imports.invalidProvider", { index: displayIndex }) };
+  }
+
+  const label = slugifyLabel(entry.label);
+  if (!label) {
+    return { error: t("imports.requiredField", { index: displayIndex, field: "label" }) };
+  }
+  if (entry.default !== undefined && typeof entry.default !== "boolean") {
+    return { error: t("imports.invalidBoolean", { index: displayIndex, field: "default" }) };
+  }
+
+  const requiredFieldsByProvider = {
+    s3: ["region", "bucket", "accessKeyId", "secretAccessKey"],
+    adls: ["accountName", "fileSystem", "accountKey"],
+    gcs: ["gcsBucket"],
+    minio: ["endpoint", "minioBucket", "minioAccessKeyId", "minioSecretAccessKey"],
+  };
+  for (const field of requiredFieldsByProvider[provider]) {
+    if (typeof entry[field] !== "string" || !entry[field].trim()) {
+      return { error: t("imports.requiredField", { index: displayIndex, field }) };
+    }
+  }
+
+  if (provider === "gcs" && !isPlainObject(entry.serviceAccountJson)) {
+    return { error: t("imports.serviceAccountObjectRequired", { index: displayIndex }) };
+  }
+  if (entry.projectId !== undefined && typeof entry.projectId !== "string") {
+    return { error: t("imports.invalidString", { index: displayIndex, field: "projectId" }) };
+  }
+  if (entry.minioRegion !== undefined && typeof entry.minioRegion !== "string") {
+    return { error: t("imports.invalidString", { index: displayIndex, field: "minioRegion" }) };
+  }
+  if (entry.ignoreTlsErrors !== undefined && typeof entry.ignoreTlsErrors !== "boolean") {
+    return { error: t("imports.invalidBoolean", { index: displayIndex, field: "ignoreTlsErrors" }) };
+  }
+
+  const serviceAccountJson = provider === "gcs" ? JSON.stringify(entry.serviceAccountJson) : "";
+  const inferredProjectId = provider === "gcs" && typeof entry.serviceAccountJson.project_id === "string"
+    ? entry.serviceAccountJson.project_id.trim()
+    : "";
+  const payload = buildConnectionPayloadFromProfile({
+    provider,
+    region: stringImportField(entry.region),
+    bucket: stringImportField(entry.bucket),
+    accessKeyId: stringImportField(entry.accessKeyId),
+    secretAccessKey: stringImportField(entry.secretAccessKey),
+    accountName: stringImportField(entry.accountName),
+    fileSystem: stringImportField(entry.fileSystem),
+    accountKey: stringImportField(entry.accountKey),
+    gcsBucket: normalizeGcsBucketName(stringImportField(entry.gcsBucket)),
+    projectId: stringImportField(entry.projectId) || inferredProjectId,
+    serviceAccountJson,
+    endpoint: stringImportField(entry.endpoint),
+    minioBucket: stringImportField(entry.minioBucket),
+    minioRegion: stringImportField(entry.minioRegion),
+    minioAccessKeyId: stringImportField(entry.minioAccessKeyId),
+    minioSecretAccessKey: stringImportField(entry.minioSecretAccessKey),
+    ignoreTlsErrors: entry.ignoreTlsErrors === true,
+  });
+
+  return {
+    profile: {
+      ...payload,
+      label,
+      sourceIndex: displayIndex,
+      makeDefault: entry.default === true,
+      action: "new",
+    },
+  };
+}
+
+function isPlainObject(value) {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function stringImportField(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getImportedProfileConflictKey(profile) {
+  return `${profile.provider}\u0000${slugifyLabel(profile.label).toLocaleLowerCase("en-US")}`;
+}
+
+function findImportedProfileConflict(vaultData, importedProfile) {
+  return (vaultData?.profilesByProvider?.[importedProfile.provider] ?? [])
+    .find((profile) => getImportedProfileConflictKey(profile) === getImportedProfileConflictKey(importedProfile)) ?? null;
+}
+
+function renderProfileImportReview(analysis) {
+  elements.profileImportReview.innerHTML = "";
+  elements.profileImportReview.hidden = false;
+
+  if (analysis.errors.length) {
+    const title = document.createElement("strong");
+    title.textContent = t("imports.errorsTitle");
+    const list = document.createElement("ul");
+    analysis.errors.forEach((message) => {
+      const item = document.createElement("li");
+      item.textContent = message;
+      list.appendChild(item);
+    });
+    elements.profileImportReview.append(title, list);
+    return;
+  }
+
+  const title = document.createElement("strong");
+  title.textContent = t("imports.reviewTitle", { count: analysis.profiles.length });
+  elements.profileImportReview.appendChild(title);
+  const list = document.createElement("div");
+  list.className = "profile-import-review-list";
+  analysis.profiles.forEach((profile) => {
+    const item = document.createElement("article");
+    item.className = "profile-import-review-item";
+    const header = document.createElement("div");
+    const label = document.createElement("strong");
+    label.textContent = profile.label;
+    const badge = document.createElement("span");
+    badge.className = `profile-card-badge${profile.action === "replace" ? " is-replacement" : ""}`;
+    badge.textContent = t(profile.action === "replace" ? "imports.replaceBadge" : "imports.newBadge");
+    header.append(label, badge);
+    const meta = document.createElement("span");
+    meta.textContent = [profile.provider.toUpperCase(), getConnectionTargetName(profile), getConnectionLocationName(profile)]
+      .filter(Boolean)
+      .join(" · ");
+    item.append(header, meta);
+    list.appendChild(item);
+  });
+  elements.profileImportReview.appendChild(list);
+}
+
+function mergeImportedProfiles(vaultData, importedProfiles) {
+  const nextVault = normalizeVaultData(JSON.parse(JSON.stringify(vaultData ?? createEmptyVaultData())));
+
+  importedProfiles.forEach((imported) => {
+    const profiles = nextVault.profilesByProvider[imported.provider];
+    const existingIndex = profiles.findIndex(
+      (profile) => getImportedProfileConflictKey(profile) === getImportedProfileConflictKey(imported),
+    );
+    const existingProfile = existingIndex >= 0 ? profiles[existingIndex] : null;
+    const nextProfile = createProfileFromPayload(imported, {
+      id: existingProfile?.id,
+      label: imported.label,
+      lastUsedAt: existingProfile?.lastUsedAt ?? "",
+    });
+
+    if (existingIndex >= 0) {
+      profiles.splice(existingIndex, 1, nextProfile);
+    } else {
+      profiles.push(nextProfile);
+    }
+    if (imported.makeDefault) {
+      nextVault.defaultsByProvider[imported.provider] = nextProfile.id;
+    }
+  });
+
+  ensureDefaultProfiles(nextVault);
+  return nextVault;
+}
+
+async function confirmProfileImport() {
+  const analysis = state.profileImportReview;
+  if (!analysis || analysis.errors.length || !analysis.profiles.length) {
+    return;
+  }
+
+  elements.profileImportCancel.disabled = true;
+  elements.profileImportAnalyze.disabled = true;
+  elements.profileImportConfirm.disabled = true;
+  setProfileImportStatus(t("imports.saving"));
+
+  try {
+    if (state.legacyCredentialsPending) {
+      const migrated = await runLegacyMigrationFlow();
+      restoreProfileImportModalOverflow();
+      if (!migrated) {
+        return;
+      }
+    }
+    if (state.encryptedCredentialsAvailable && state.credentialsLocked) {
+      const unlocked = await unlockSavedCredentials();
+      restoreProfileImportModalOverflow();
+      if (!unlocked) {
+        return;
+      }
+    }
+
+    const nextVault = mergeImportedProfiles(state.vaultData, analysis.profiles);
+    if (!state.encryptedCredentialsAvailable) {
+      const response = await promptVaultAction({ mode: "setup" });
+      restoreProfileImportModalOverflow();
+      if (!response?.passphrase) {
+        setProfileImportStatus(t("vault.setupCancelled"), true);
+        return;
+      }
+      await createEncryptedVaultFromPayload(nextVault, response.passphrase);
+    } else {
+      const previousVault = state.vaultData;
+      state.vaultData = nextVault;
+      try {
+        await persistVaultData();
+      } catch (error) {
+        state.vaultData = previousVault;
+        throw error;
+      }
+    }
+
+    const replaced = analysis.profiles.filter((profile) => profile.action === "replace").length;
+    const created = analysis.profiles.length - replaced;
+    closeProfileImportModal();
+    renderProfilePickerList();
+    setConnectionStatus(t("imports.completed", { created, replaced }));
+  } catch {
+    setProfileImportStatus(t("imports.saveFailed"), true);
+  } finally {
+    elements.profileImportCancel.disabled = false;
+    elements.profileImportAnalyze.disabled = false;
+    elements.profileImportConfirm.disabled = Boolean(
+      !state.profileImportReview || state.profileImportReview.errors.length || !state.profileImportReview.profiles.length,
+    );
+  }
+}
+
+function restoreProfileImportModalOverflow() {
+  if (!elements.profileImportModal.hidden) {
+    document.body.style.overflow = "hidden";
+  }
 }
 
 function renderProfilePickerList() {
@@ -1371,6 +1926,7 @@ function setConnectionActionState(isBusy) {
     button.disabled = isBusy;
   });
   elements.profilePickerAddButton.disabled = isBusy;
+  elements.profileImportButton.disabled = isBusy;
 }
 
 async function handleProviderCardClick(provider) {

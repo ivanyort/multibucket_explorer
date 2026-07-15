@@ -905,6 +905,12 @@ code {
   flex: 1 1 auto;
 }
 
+.profile-picker-toolbar-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .profile-picker-list {
   display: grid;
   gap: 12px;
@@ -956,6 +962,78 @@ code {
   font-family: "IBM Plex Mono", monospace;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.profile-card-badge.is-replacement {
+  background: rgba(159, 51, 51, 0.1);
+  color: var(--danger);
+}
+
+.profile-import-inputs {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.profile-import-inputs label {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-import-inputs textarea {
+  min-height: 220px;
+  resize: vertical;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.86rem;
+}
+
+.profile-import-review {
+  display: grid;
+  gap: 12px;
+  max-height: 34vh;
+  margin-top: 18px;
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.profile-import-review[hidden] {
+  display: none;
+}
+
+.profile-import-review ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--danger);
+}
+
+.profile-import-review-list {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-import-review-item {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.profile-import-review-item > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.profile-import-review-item > span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
 }
 
 .profile-card-meta {
@@ -1428,6 +1506,14 @@ tbody tr:nth-child(even) {
   .profile-picker-toolbar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .profile-picker-toolbar-actions {
+    width: 100%;
+  }
+
+  .profile-picker-toolbar-actions button {
+    flex: 1 1 auto;
   }
 
   .profile-card-actions {

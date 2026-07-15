@@ -277,6 +277,74 @@ The current implementation uses the AWS S3 SDK in S3-compatible mode with a cust
 
 If a MinIO deployment uses a self-signed or otherwise untrusted HTTPS certificate, the UI now exposes an explicit option to ignore TLS certificate errors for that MinIO connection only.
 
+### Importing Credential Profiles
+
+The provider profile picker includes an `Import profiles` action. Imports can be read from a local `.json` file or pasted directly into the browser. The file contents are parsed locally and are not uploaded to the backend. Before anything is saved, the UI shows which profiles will be created or replaced without displaying secret values.
+
+Import documents use this versioned format:
+
+```json
+{
+  "version": 1,
+  "profiles": [
+    {
+      "provider": "s3",
+      "label": "Production analytics",
+      "region": "us-east-1",
+      "bucket": "example-s3-bucket",
+      "accessKeyId": "example-access-key-id",
+      "secretAccessKey": "example-secret-access-key",
+      "default": true
+    },
+    {
+      "provider": "adls",
+      "label": "Data lake",
+      "accountName": "exampleaccount",
+      "fileSystem": "example-container",
+      "accountKey": "example-account-key"
+    },
+    {
+      "provider": "gcs",
+      "label": "GCS reports",
+      "gcsBucket": "example-gcs-bucket",
+      "projectId": "example-project",
+      "serviceAccountJson": {
+        "type": "service_account",
+        "project_id": "example-project",
+        "private_key_id": "example-private-key-id",
+        "private_key": "-----BEGIN PRIVATE KEY-----\nexample\n-----END PRIVATE KEY-----\n",
+        "client_email": "example@example-project.iam.gserviceaccount.com",
+        "client_id": "000000000000000000000"
+      }
+    },
+    {
+      "provider": "minio",
+      "label": "Local MinIO",
+      "endpoint": "https://minio.example.test:9000",
+      "minioBucket": "example-minio-bucket",
+      "minioRegion": "us-east-1",
+      "minioAccessKeyId": "example-minio-access-key",
+      "minioSecretAccessKey": "example-minio-secret-key",
+      "ignoreTlsErrors": false
+    }
+  ]
+}
+```
+
+Rules:
+
+- `version` must be `1`, and `profiles` must be a non-empty array
+- every profile requires a supported `provider` and a non-empty `label`
+- S3 requires `region`, `bucket`, `accessKeyId`, and `secretAccessKey`
+- ADLS requires `accountName`, `fileSystem`, and `accountKey`
+- GCS requires `gcsBucket` and `serviceAccountJson` as a JSON object; `projectId` is optional and is inferred from `project_id` when omitted
+- MinIO requires `endpoint`, `minioBucket`, `minioAccessKeyId`, and `minioSecretAccessKey`; `minioRegion` and `ignoreTlsErrors` are optional
+- `default: true` may appear on at most one imported profile per provider
+- a profile with the same provider and case-insensitive normalized label replaces the saved profile while preserving its internal ID, default status, and last-used timestamp; an explicit `default: true` may intentionally select it as the new provider default
+- the import is atomic: any invalid profile prevents the complete document from being saved
+
+On first import, the application asks for a master passphrase. Otherwise, the existing credential vault must be unlocked. Successfully imported credentials are stored only inside the existing encrypted browser vault.
+
 ## Notes
 
 - all connection fields remain browser-persisted, including credentials, secret fields, textarea content, and provider-specific toggles, but they are now encrypted at rest in `localStorage` behind a master passphrase

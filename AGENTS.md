@@ -114,3 +114,4 @@ By default the application runs at `https://localhost:8086`.
 5. Prefix deletion must remove only the contents under the selected folder and preserve that folder across all supported providers.
 6. Row-level folder deletion must fully remove the selected child folder, including nested contents and any marker object used by object-store providers.
 7. Provider cards now open a provider-scoped saved-profile picker rather than connecting immediately; each provider can store multiple named encrypted profiles with one default profile.
+8. Credential profile imports use the versioned browser-side JSON contract documented in `README.md`; imports are atomic, replace conflicts by normalized provider plus profile label, never import internal profile IDs, and persist only through the encrypted credential vault.
