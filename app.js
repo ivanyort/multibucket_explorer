@@ -934,6 +934,7 @@ let connectionModalPreviousActiveElement = null;
 let vaultModalPreviousActiveElement = null;
 let createDirectoryPreviousActiveElement = null;
 let profileImportPreviousActiveElement = null;
+let credentialVaultInitializationPromise = null;
 
 state.language = restoreLanguage();
 if (elements.languageSelect instanceof HTMLSelectElement) {
@@ -1095,7 +1096,7 @@ syncPreviewModeAvailability("");
 syncSeedControls();
 syncWorkspaceVisibility();
 syncCredentialButtons();
-void initializeCredentialVault();
+credentialVaultInitializationPromise = initializeCredentialVault();
 
 function restoreLanguage() {
   const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
@@ -4349,6 +4350,10 @@ async function runLegacyMigrationFlow() {
 }
 
 async function ensureCredentialAccess() {
+  if (credentialVaultInitializationPromise) {
+    await credentialVaultInitializationPromise;
+  }
+
   if (state.legacyCredentialsPending) {
     return runLegacyMigrationFlow();
   }
