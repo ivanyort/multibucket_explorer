@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.16.1](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.16.1) - 2026-07-16
+
+### Changes
+- fix(ui): keep profile import actions accessible (7e64959)
+- chore(changelog): update for v0.16.0 [skip ci] (a68851b)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.16.0...v0.16.1)
+
+
 ## [v0.16.0](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.16.0) - 2026-07-15
 
 ### Changes
