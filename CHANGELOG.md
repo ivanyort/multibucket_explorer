@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.16.2](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.16.2) - 2026-07-16
+
+### Changes
+- fix(credentials): refresh profiles after import (437a466)
+- chore(changelog): update for v0.16.1 [skip ci] (8b47271)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.16.1...v0.16.2)
+
+
 ## [v0.16.1](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.16.1) - 2026-07-16
 
 ### Changes
