@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [v0.16.3](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.16.3) - 2026-07-16
+
+### Changes
+- fix(credentials): await vault initialization (6d99dd3)
+- chore(changelog): update for v0.16.2 [skip ci] (684be80)
+
+[Full diff](https://github.com/ivanyort/multibucket_explorer/compare/v0.16.2...v0.16.3)
+
+
 ## [v0.16.2](https://github.com/ivanyort/multibucket_explorer/releases/tag/v0.16.2) - 2026-07-16
 
 ### Changes
