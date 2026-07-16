@@ -884,6 +884,25 @@ code {
   width: min(100%, 820px);
 }
 
+.profile-import-modal-card {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  overflow: hidden;
+}
+
+.profile-import-scroll-area {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.profile-import-modal-card > .modal-actions {
+  flex: 0 0 auto;
+}
+
 .connection-modal-form {
   display: grid;
   gap: 16px;
@@ -990,10 +1009,8 @@ code {
 .profile-import-review {
   display: grid;
   gap: 12px;
-  max-height: 34vh;
   margin-top: 18px;
   padding: 16px;
-  overflow: auto;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.48);

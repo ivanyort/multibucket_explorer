@@ -383,24 +383,26 @@
       hidden
     >
       <div class="modal-backdrop" data-profile-import-close></div>
-      <div class="modal-card connection-modal-card" role="document">
+      <div class="modal-card connection-modal-card profile-import-modal-card" role="document">
         <p id="profileImportKicker" class="panel-kicker">Credential Vault</p>
         <h2 id="profileImportTitle">Import profiles</h2>
-        <p id="profileImportBody" class="modal-copy">
-          Choose a JSON file or paste a versioned profile document, then review every change before saving.
-        </p>
-        <div class="profile-import-inputs">
-          <label>
-            <span id="profileImportFileLabel">JSON file</span>
-            <input id="profileImportFile" type="file" accept=".json,application/json" />
-          </label>
-          <label>
-            <span id="profileImportJsonLabel">JSON content</span>
-            <textarea id="profileImportJson" rows="12" spellcheck="false" autocomplete="off"></textarea>
-          </label>
+        <div class="profile-import-scroll-area">
+          <p id="profileImportBody" class="modal-copy">
+            Choose a JSON file or paste a versioned profile document, then review every change before saving.
+          </p>
+          <div class="profile-import-inputs">
+            <label>
+              <span id="profileImportFileLabel">JSON file</span>
+              <input id="profileImportFile" type="file" accept=".json,application/json" />
+            </label>
+            <label>
+              <span id="profileImportJsonLabel">JSON content</span>
+              <textarea id="profileImportJson" rows="12" spellcheck="false" autocomplete="off"></textarea>
+            </label>
+          </div>
+          <div id="profileImportReview" class="profile-import-review" hidden></div>
+          <p id="profileImportStatus" class="status-text muted" aria-live="polite"></p>
         </div>
-        <div id="profileImportReview" class="profile-import-review" hidden></div>
-        <p id="profileImportStatus" class="status-text muted" aria-live="polite"></p>
         <div class="modal-actions">
           <button id="profileImportCancel" class="ghost-button" type="button">Cancel</button>
           <button id="profileImportAnalyze" class="ghost-button" type="button">Review import</button>
