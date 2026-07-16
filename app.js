@@ -1367,8 +1367,23 @@ function buildDraftProfileFromForm() {
 
 function openProfilePicker(provider) {
   state.profilePickerProvider = normalizeProvider(provider);
+  resetProfilePickerSearch();
+  refreshProfilePicker();
+  elements.profilePickerModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  if (!elements.profileSearchInput.hidden) {
+    elements.profileSearchInput.focus();
+  } else {
+    elements.profilePickerAddButton.focus();
+  }
+}
+
+function resetProfilePickerSearch() {
   state.profileSearchTerm = "";
   elements.profileSearchInput.value = "";
+}
+
+function refreshProfilePicker() {
   const profileCount = getProfilesForProvider(state.profilePickerProvider).length;
   elements.profilePickerKicker.textContent = t("providers.kicker");
   elements.profilePickerTitle.textContent = t("profiles.title", { provider: state.profilePickerProvider.toUpperCase() });
@@ -1384,13 +1399,6 @@ function openProfilePicker(provider) {
   elements.profilePickerClose.textContent = t("common.close");
   elements.profileSearchLabel.textContent = t("profiles.search");
   renderProfilePickerList();
-  elements.profilePickerModal.hidden = false;
-  document.body.style.overflow = "hidden";
-  if (!elements.profileSearchInput.hidden) {
-    elements.profileSearchInput.focus();
-  } else {
-    elements.profilePickerAddButton.focus();
-  }
 }
 
 function closeProfilePicker() {
@@ -1763,7 +1771,8 @@ async function confirmProfileImport() {
     const replaced = analysis.profiles.filter((profile) => profile.action === "replace").length;
     const created = analysis.profiles.length - replaced;
     closeProfileImportModal();
-    renderProfilePickerList();
+    resetProfilePickerSearch();
+    refreshProfilePicker();
     setConnectionStatus(t("imports.completed", { created, replaced }));
   } catch {
     setProfileImportStatus(t("imports.saveFailed"), true);
